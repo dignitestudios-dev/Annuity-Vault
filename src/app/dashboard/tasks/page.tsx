@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Search, CheckSquare } from "lucide-react";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Plus, Search, FileText, Download, Calendar as CalendarIcon, List as ListIcon, LayoutGrid, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import {
   Table,
   TableHeader,
@@ -11,63 +19,455 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import DeleteModal from "@/components/shared/delete-modal";
+import NewTaskDialog, { TaskItem } from "@/features/tasks/components/new-task-dialog";
+import EditTaskDialog from "@/features/tasks/components/edit-task-dialog";
+import TaskDetailsDialog from "@/features/tasks/components/task-details-dialog";
+import DateTasksDialog from "@/features/tasks/components/date-tasks-dialog";
 import SuccessModal from "@/components/shared/success-modal";
+import DeleteModal from "@/components/shared/delete-modal";
+import TablePagination from "@/components/shared/table-pagination";
 import { cn } from "@/lib/utils";
 
-const INITIAL_TASKS = [
+// Seed initial task items matching the Figma design screenshot accurately
+const INITIAL_TASKS: TaskItem[] = [
+  // --- JUNE 2026 SEED TASKS ---
   {
-    id: "t1",
-    title: "Schedule annual review meeting",
-    client: "Jacob Thompson",
-    due: "2026-06-14",
-    priority: "Medium",
-    priorityStyle: "bg-[#33BBFF] text-white border-0",
-    status: "In Progress",
-    statusStyle: "bg-[#FF9D00] text-black border-0 font-semibold",
+    id: "t-1",
+    title: "Confirm RMD distribution",
+    priority: "Urgent",
+    desc: "Discussed beneficiary update during quarterly review.",
+    due: "2026-06-01",
+    status: "In progress",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
   },
   {
-    id: "t2",
-    title: "Follow up on 1035 exchange paperwork",
-    client: "Eleanor Vance",
-    due: "2026-06-20",
+    id: "t-2",
+    title: "Confirm RMD distribution",
     priority: "High",
-    priorityStyle: "bg-[#FF3E46] text-white border-0",
-    status: "Pending",
-    statusStyle: "bg-[#FFE600] text-black border-0 font-semibold",
+    desc: "Discussed beneficiary update during quarterly review.",
+    due: "2026-06-01",
+    status: "To do",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
   },
   {
-    id: "t3",
-    title: "Send beneficiary update forms",
-    client: "Marcus Brody",
-    due: "2026-07-01",
+    id: "t-3",
+    title: "Prepare quarterly performance summary",
     priority: "Low",
-    priorityStyle: "bg-[#42CD7F] text-white border-0",
-    status: "Completed",
-    statusStyle: "bg-[#42CD7F] text-white border-0",
+    desc: "Reminder to follow up on outstanding paperwork.",
+    due: "2026-06-03",
+    status: "Done",
+    client: "William Anderson",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-4",
+    title: "Follow up on suitability questionnaire",
+    priority: "Medium",
+    desc: "Reviewed performance vs. benchmark for prior year.",
+    due: "2026-06-04",
+    status: "To do",
+    client: "Jacob Thompson",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-5",
+    title: "Verify contact information on file",
+    priority: "Urgent",
+    desc: "Annual check for address and email updates.",
+    due: "2026-06-05",
+    status: "In progress",
+    client: "Sarah Jenkins",
+    assignedTo: "Adam Smith",
+  },
+  {
+    id: "t-6",
+    title: "Upload signed beneficiary form",
+    priority: "Low",
+    desc: "Client considering 1035 exchange to lower-fee product.",
+    due: "2026-06-06",
+    status: "In progress",
+    client: "David Wilson",
+    assignedTo: "Sarah Connor",
+  },
+  {
+    id: "t-7",
+    title: "Confirm RMD distribution",
+    priority: "Urgent",
+    desc: "Required minimum distribution verification.",
+    due: "2026-06-07",
+    status: "In progress",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-8",
+    title: "Confirm RMD distribution",
+    priority: "Medium",
+    desc: "Discussed beneficiary update during quarterly review.",
+    due: "2026-06-08",
+    status: "To do",
+    client: "Robert Chen",
+    assignedTo: "Adam Smith",
+  },
+  {
+    id: "t-9",
+    title: "Prepare quarterly performance summary",
+    priority: "High",
+    desc: "Reviewed performance vs. benchmark for prior year.",
+    due: "2026-06-10",
+    status: "Done",
+    client: "James Miller",
+    assignedTo: "Adam Smith",
+  },
+  {
+    id: "t-10",
+    title: "Follow up on suitability questionnaire",
+    priority: "Urgent",
+    desc: "Client inquiring about income rider activation.",
+    due: "2026-06-11",
+    status: "To do",
+    client: "Eleanor Vance",
+    assignedTo: "Sarah Connor",
+  },
+  {
+    id: "t-11",
+    title: "Verify contact information on file",
+    priority: "Medium",
+    desc: "Updated address and contact preferences in CRM.",
+    due: "2026-06-12",
+    status: "Done",
+    client: "Charles Harris",
+    assignedTo: "Michael Scott",
+  },
+  {
+    id: "t-12",
+    title: "Upload signed beneficiary form",
+    priority: "High",
+    desc: "Client considering 1035 exchange to lower-fee product.",
+    due: "2026-06-13",
+    status: "In progress",
+    client: "David Wilson",
+    assignedTo: "Sarah Connor",
+  },
+  {
+    id: "t-13",
+    title: "Confirm RMD distribution",
+    priority: "High",
+    desc: "Annual distribution paperwork verification.",
+    due: "2026-06-15",
+    status: "In progress",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-14",
+    title: "Confirm RMD distribution",
+    priority: "Urgent",
+    desc: "Discussed beneficiary update during quarterly review.",
+    due: "2026-06-16",
+    status: "To do",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-15",
+    title: "Confirm RMD distribution",
+    priority: "Low",
+    desc: "Quarterly distribution review.",
+    due: "2026-06-16",
+    status: "To do",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-16",
+    title: "Confirm RMD distribution",
+    priority: "Low",
+    desc: "Verified distribution details.",
+    due: "2026-06-16",
+    status: "Done",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-17",
+    title: "Prepare quarterly performance summary",
+    priority: "Medium",
+    desc: "Reviewed performance vs. benchmark for prior year.",
+    due: "2026-06-17",
+    status: "Done",
+    client: "James Miller",
+    assignedTo: "Adam Smith",
+  },
+  {
+    id: "t-18",
+    title: "Follow up on suitability questionnaire",
+    priority: "Urgent",
+    desc: "Anniversary review completed; no changes requested.",
+    due: "2026-06-18",
+    status: "In progress",
+    client: "Linda White",
+    assignedTo: "Sarah Connor",
+  },
+  {
+    id: "t-19",
+    title: "Verify contact information on file",
+    priority: "High",
+    desc: "Updated phone number and email.",
+    due: "2026-06-19",
+    status: "Done",
+    client: "Sarah Jenkins",
+    assignedTo: "Adam Smith",
+  },
+  {
+    id: "t-20",
+    title: "Upload signed beneficiary form",
+    priority: "Urgent",
+    desc: "Paperwork ready for filing.",
+    due: "2026-06-20",
+    status: "To do",
+    client: "David Wilson",
+    assignedTo: "Sarah Connor",
+  },
+  {
+    id: "t-21",
+    title: "Prepare quarterly performance summary",
+    priority: "Urgent",
+    desc: "Reminder to follow up on outstanding paperwork.",
+    due: "2026-06-21",
+    status: "Done",
+    client: "William Anderson",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-22",
+    title: "Confirm RMD distribution",
+    priority: "Medium",
+    desc: "Discussed beneficiary update during quarterly review.",
+    due: "2026-06-22",
+    status: "In progress",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-23",
+    title: "Confirm RMD distribution",
+    priority: "Urgent",
+    desc: "Required distribution processing.",
+    due: "2026-06-24",
+    status: "To do",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-24",
+    title: "Confirm RMD distribution",
+    priority: "Low",
+    desc: "Annual check.",
+    due: "2026-06-24",
+    status: "Done",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-25",
+    title: "Confirm RMD distribution",
+    priority: "High",
+    desc: "Paperwork submitted.",
+    due: "2026-06-24",
+    status: "In progress",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-26",
+    title: "Follow up on suitability questionnaire",
+    priority: "Medium",
+    desc: "Reviewed performance vs. benchmark.",
+    due: "2026-06-25",
+    status: "To do",
+    client: "Jacob Thompson",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-27",
+    title: "Verify contact information on file",
+    priority: "Low",
+    desc: "Contact information verified.",
+    due: "2026-06-26",
+    status: "Done",
+    client: "Sarah Jenkins",
+    assignedTo: "Adam Smith",
+  },
+  {
+    id: "t-28",
+    title: "Upload signed beneficiary form",
+    priority: "Urgent",
+    desc: "Client submitted signed copy.",
+    due: "2026-06-27",
+    status: "In progress",
+    client: "David Wilson",
+    assignedTo: "Sarah Connor",
+  },
+  {
+    id: "t-29",
+    title: "Confirm RMD distribution",
+    priority: "Urgent",
+    desc: "Final distribution signoff.",
+    due: "2026-06-28",
+    status: "To do",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-30",
+    title: "Confirm RMD distribution",
+    priority: "High",
+    desc: "Updated address and contact preferences.",
+    due: "2026-06-28",
+    status: "In progress",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-31",
+    title: "Confirm RMD distribution",
+    priority: "High",
+    desc: "Quarterly check.",
+    due: "2026-06-28",
+    status: "Done",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
+  },
+  {
+    id: "t-32",
+    title: "Confirm RMD distribution",
+    priority: "Medium",
+    desc: "End of month summary.",
+    due: "2026-06-29",
+    status: "In progress",
+    client: "Elizabeth Taylor",
+    assignedTo: "Jordan Reed",
   },
 ];
 
-export default function TasksPage() {
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+function TasksContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const tabParam = searchParams.get("tab") as "kanban" | "list" | "calendar" | null;
   const [searchTerm, setSearchTerm] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [tasksList, setTasksList] = useState(INITIAL_TASKS);
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<"kanban" | "list" | "calendar">(
+    tabParam && ["kanban", "list", "calendar"].includes(tabParam) ? tabParam : "kanban"
+  );
+  const [tasksList, setTasksList] = useState<TaskItem[]>(INITIAL_TASKS);
 
+  // Synchronize activeTab when tabParam in searchParams updates
+  useEffect(() => {
+    if (tabParam && ["kanban", "list", "calendar"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (newTab: "kanban" | "list" | "calendar") => {
+    setActiveTab(newTab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", newTab);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  // Month Navigation State (Default to June 2026)
+  const [listCurrentPage, setListCurrentPage] = useState(1);
+  const listItemsPerPage = 7;
+  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(5); // 0-indexed: 5 = June
+
+  // Modal / Dialog States
+  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
+  const [newTaskInitialDate, setNewTaskInitialDate] = useState<string | undefined>();
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [selectedDetailsTask, setSelectedDetailsTask] = useState<TaskItem | null>(null);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
-  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [feedbackModal, setFeedbackModal] = useState<{ isOpen: boolean; title: string; desc: string }>({
+    isOpen: false,
+    title: "",
+    desc: "",
+  });
 
+  // Navigation Handlers for Months
+  const handlePrevMonth = () => {
+    if (currentMonthIndex === 0) {
+      setCurrentMonthIndex(11);
+      setCurrentYear((prev) => prev - 1);
+    } else {
+      setCurrentMonthIndex((prev) => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentMonthIndex === 11) {
+      setCurrentMonthIndex(0);
+      setCurrentYear((prev) => prev + 1);
+    } else {
+      setCurrentMonthIndex((prev) => prev + 1);
+    }
+  };
+
+  // Task Status Transition Handler
+  const handleMoveStatus = (id: string, newStatus: "To do" | "In progress" | "Done") => {
+    setTasksList((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+    );
+  };
+
+  // Add Task Handler
+  const handleAddTask = (newTask: TaskItem) => {
+    setTasksList((prev) => [newTask, ...prev]);
+    setFeedbackModal({
+      isOpen: true,
+      title: "Task Created!",
+      desc: "You have successfully created the task!",
+    });
+  };
+
+  // Update Task Handler
+  const handleUpdateTask = (updatedTask: TaskItem) => {
+    setTasksList((prev) =>
+      prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+    );
+    setEditingTask(null);
+    setFeedbackModal({
+      isOpen: true,
+      title: "Task Updated!",
+      desc: "The task details have been updated successfully.",
+    });
+  };
+
+  // Confirm Delete Task Handler
+  const confirmDeleteTask = () => {
+    if (deletingTaskId) {
+      setTasksList((prev) => prev.filter((t) => t.id !== deletingTaskId));
+      setDeletingTaskId(null);
+    }
+  };
+
+  // Filter tasks based on search, status, priority
   const filteredTasks = tasksList.filter((task) => {
     const matchesSearch =
       task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.client.toLowerCase().includes(searchTerm.toLowerCase());
+      task.desc.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (task.client && task.client.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesPriority =
       priorityFilter === "all" || task.priority === priorityFilter;
     const matchesStatus =
@@ -75,170 +475,801 @@ export default function TasksPage() {
     return matchesSearch && matchesPriority && matchesStatus;
   });
 
-  const confirmDeleteTask = () => {
-    if (deletingTaskId) {
-      setTasksList(tasksList.filter((t) => t.id !== deletingTaskId));
-      setDeletingTaskId(null);
-      setIsSuccessOpen(true);
+  // Column arrays for Kanban
+  const todoTasks = filteredTasks.filter((t) => t.status === "To do");
+  const inProgressTasks = filteredTasks.filter((t) => t.status === "In progress");
+  const doneTasks = filteredTasks.filter((t) => t.status === "Done");
+
+  // Helper for priority badge rendering
+  const renderPriorityBadge = (priority: TaskItem["priority"]) => {
+    switch (priority) {
+      case "Urgent":
+        return (
+          <Badge className="bg-[#FF0000] text-white font-medium text-[11px] px-2.5 py-0.5 rounded-[8px] border-0 hover:bg-[#FF0000]">
+            Urgent
+          </Badge>
+        );
+      case "High":
+        return (
+          <Badge className="bg-[#FFB302] text-[#181818] font-medium text-[11px] px-2.5 py-0.5 rounded-[8px] border-0 hover:bg-[#FFB302]">
+            High
+          </Badge>
+        );
+      case "Medium":
+        return (
+          <Badge className="bg-[#33BBFF] text-white font-medium text-[11px] px-2.5 py-0.5 rounded-[8px] border-0 hover:bg-[#33BBFF]">
+            Medium
+          </Badge>
+        );
+      case "Low":
+        return (
+          <Badge className="bg-[#CACACA] text-[#181818] font-medium text-[11px] px-2.5 py-0.5 rounded-[8px] border-0 hover:bg-[#CACACA]">
+            Low
+          </Badge>
+        );
+      default:
+        return null;
     }
   };
 
-  return (
-    <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans">
-      {/* Top Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <CheckSquare className="w-7 h-7 text-[#6887A0]" />
-          <h1 className="text-2xl lg:text-[32px] font-semibold text-white tracking-tight leading-tight">
-            Tasks Management
-          </h1>
-        </div>
+  // Calendar Days Calculation
+  const daysInMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
+  const firstDayOfWeek = new Date(currentYear, currentMonthIndex, 1).getDay(); // 0 = Sun, 1 = Mon...
 
-        <button className="h-9 px-4 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-xs sm:text-sm font-medium transition-all flex items-center gap-2 shadow-sm self-start sm:self-auto">
-          <Plus className="w-3.5 h-3.5 text-white" />
-          <span>New Task</span>
-        </button>
+  // Format month string e.g. "2026-06"
+  const formattedMonthStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, "0")}`;
+
+  return (
+    <div className="w-full flex flex-col gap-5 max-w-[1440px] mx-auto pb-12 font-sans">
+      {/* 1. Top Header Row (Title & Action Buttons) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-2xl sm:text-[32px] font-semibold text-white tracking-tight leading-tight">
+          Task Management
+        </h1>
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() =>
+              setFeedbackModal({
+                isOpen: true,
+                title: "PDF Export Complete",
+                desc: "Your task management overview has been downloaded as a PDF report.",
+              })
+            }
+            className="h-10 px-4 bg-[#141C24] hover:bg-white/10 text-white rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-white/5 shadow-sm cursor-pointer"
+          >
+            <FileText className="w-4 h-4 text-[#919191]" />
+            <span>Export PDF</span>
+          </button>
+
+          <button
+            onClick={() =>
+              setFeedbackModal({
+                isOpen: true,
+                title: "CSV Export Complete",
+                desc: "Your task records have been exported to CSV format successfully.",
+              })
+            }
+            className="h-10 px-4 bg-[#141C24] hover:bg-white/10 text-white rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-white/5 shadow-sm cursor-pointer"
+          >
+            <Download className="w-4 h-4 text-[#919191]" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            onClick={() => setIsNewTaskOpen(true)}
+            className="h-10 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-95 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-2 shadow-md cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-white" />
+            <span>New Task</span>
+          </button>
+        </div>
       </div>
 
-      {/* Filter & Search Header (#394A58) */}
-      <div className="w-full bg-[#394A58] p-3 rounded-[12px] flex flex-wrap items-center justify-between gap-3 shadow-sm">
-        {/* Search Bar */}
-        <div className="flex items-center gap-2.5 px-3.5 h-10 bg-[#141C24] rounded-[12px] border-0 text-white text-xs w-full max-w-[400px]">
+      {/* 2. Filter & Search Bar (#394A58 Container) */}
+      <div className="w-full bg-[#394A58] p-3 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        {/* Search Input Bar */}
+        <div className="flex items-center gap-2.5 px-3.5 h-10 bg-[#141C24] rounded-xl text-white text-xs sm:text-sm flex-1 min-w-[240px] max-w-[738px]">
           <Search className="w-4 h-4 text-[#919191] flex-shrink-0" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search tasks..."
-            className="w-full bg-transparent text-xs text-white placeholder-[#919191] outline-none"
+            placeholder="Search"
+            className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-[#919191] outline-none"
           />
         </div>
 
         {/* Filter Dropdowns */}
         <div className="flex items-center gap-3">
-          <Select value={priorityFilter} onValueChange={(val: string | null) => setPriorityFilter(val || "all")}>
-            <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal min-w-[130px] justify-between shadow-none">
-              <SelectValue placeholder="All priorities" />
+          {/* Status Filter */}
+          <Select
+            value={statusFilter}
+            onValueChange={(val: string | null) => setStatusFilter(val || "all")}
+          >
+            <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-xl text-xs sm:text-sm font-normal min-w-[140px] justify-between shadow-none focus:ring-0">
+              <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
-            <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-              <SelectItem value="all" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                All priorities
+            <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-xl">
+              <SelectItem value="all" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
+                All Statuses
               </SelectItem>
-              <SelectItem value="High" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+              <SelectItem value="To do" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
+                To do
+              </SelectItem>
+              <SelectItem value="In progress" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
+                In progress
+              </SelectItem>
+              <SelectItem value="Done" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
+                Done
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Priority Filter */}
+          <Select
+            value={priorityFilter}
+            onValueChange={(val: string | null) => setPriorityFilter(val || "all")}
+          >
+            <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-xl text-xs sm:text-sm font-normal min-w-[140px] justify-between shadow-none focus:ring-0">
+              <SelectValue placeholder="All Priorities" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-xl">
+              <SelectItem value="all" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
+                All Priorities
+              </SelectItem>
+              <SelectItem value="Urgent" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
+                Urgent
+              </SelectItem>
+              <SelectItem value="High" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
                 High
               </SelectItem>
-              <SelectItem value="Medium" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+              <SelectItem value="Medium" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
                 Medium
               </SelectItem>
-              <SelectItem value="Low" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+              <SelectItem value="Low" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
                 Low
               </SelectItem>
             </SelectContent>
           </Select>
-
-          <Select value={statusFilter} onValueChange={(val: string | null) => setStatusFilter(val || "all")}>
-            <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal min-w-[130px] justify-between shadow-none">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-              <SelectItem value="all" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                All statuses
-              </SelectItem>
-              <SelectItem value="In Progress" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                In Progress
-              </SelectItem>
-              <SelectItem value="Pending" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                Pending
-              </SelectItem>
-              <SelectItem value="Completed" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                Completed
-              </SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
-      {/* Tasks Table */}
-      <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] overflow-hidden shadow-sm">
-        <div className="overflow-x-auto w-full">
-          <Table className="w-full">
-            <TableHeader className="bg-[#394A58] border-b border-white/10">
-              <TableRow className="border-b border-white/10 hover:bg-transparent h-10">
-                <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
-                  Title
-                </TableHead>
-                <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
-                  Client
-                </TableHead>
-                <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
-                  Due Date
-                </TableHead>
-                <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
-                  Priority
-                </TableHead>
-                <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
-                  Status
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTasks.map((task) => (
-                <TableRow
+      {/* 3. View Switcher Tabs (Kanban, List, Calendar) + Priority Legend for Calendar */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="bg-[#394A58] p-1 rounded-xl flex items-center gap-1 w-fit">
+          <button
+            onClick={() => handleTabChange("kanban")}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer",
+              activeTab === "kanban"
+                ? "bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white shadow-sm"
+                : "text-[#919191] hover:text-white"
+            )}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>Kanban</span>
+          </button>
+
+          <button
+            onClick={() => handleTabChange("list")}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer",
+              activeTab === "list"
+                ? "bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white shadow-sm"
+                : "text-[#919191] hover:text-white"
+            )}
+          >
+            <ListIcon className="w-3.5 h-3.5" />
+            <span>List</span>
+          </button>
+
+          <button
+            onClick={() => handleTabChange("calendar")}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer",
+              activeTab === "calendar"
+                ? "bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white shadow-sm"
+                : "text-[#919191] hover:text-white"
+            )}
+          >
+            <CalendarIcon className="w-3.5 h-3.5" />
+            <span>Calendar</span>
+          </button>
+        </div>
+
+        {/* Calendar View Legend */}
+        {activeTab === "calendar" && (
+          <div className="flex items-center gap-4 text-xs font-medium text-[#919191]">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FF0000]"></span>
+              <span className="text-white">Urgent</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FFB302]"></span>
+              <span className="text-white">High</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#33BBFF]"></span>
+              <span className="text-white">Medium</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#CACACA]"></span>
+              <span className="text-white">Low</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 4. Tab Content Area */}
+      {/* KANBAN VIEW TAB */}
+      {activeTab === "kanban" && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full mt-1">
+          {/* Column 1: To do */}
+          <div className="bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-3.5 flex flex-col gap-3 h-[640px]">
+            <div className="flex items-center justify-between pb-1 flex-shrink-0">
+              <h2 className="text-sm sm:text-base font-semibold text-white">To do</h2>
+              <span className="text-xs text-[#919191] font-normal">{34 + (todoTasks.length - 4)}</span>
+            </div>
+
+            <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
+              {todoTasks.map((task) => (
+                <div
                   key={task.id}
-                  className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14"
+                  className="bg-[#0C1116] rounded-[8px] p-3 border border-white/5 hover:border-[#66859E]/40 transition-all flex flex-col justify-between cursor-pointer group flex-shrink-0"
+                  onClick={() => setSelectedDetailsTask(task)}
                 >
-                  <TableCell className="px-6 py-3.5 text-sm font-medium text-white">
-                    {task.title}
-                  </TableCell>
-                  <TableCell className="px-6 py-3.5 text-sm text-white">
-                    {task.client}
-                  </TableCell>
-                  <TableCell className="px-6 py-3.5 text-sm text-white">
-                    {task.due}
-                  </TableCell>
-                  <TableCell className="px-6 py-3.5">
-                    <Badge
-                      className={cn(
-                        "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize",
-                        task.priorityStyle
-                      )}
-                    >
-                      {task.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="px-6 py-3.5">
-                    <Badge
-                      className={cn(
-                        "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize",
-                        task.statusStyle
-                      )}
-                    >
-                      {task.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-xs sm:text-[13px] font-medium text-white leading-tight flex-1">
+                      {task.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {renderPriorityBadge(task.priority)}
 
-      {/* Delete Modal */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTask(task);
+                        }}
+                        title="Edit task"
+                        className="p-1 rounded text-[#919191] hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingTaskId(task.id);
+                        }}
+                        title="Delete task"
+                        className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-[#919191] font-normal mt-1.5 line-clamp-1">
+                    {task.desc}
+                  </p>
+
+                  <p className="text-[11px] text-[#919191] font-normal mt-2">
+                    Due {task.due}
+                  </p>
+
+                  <div
+                    className="flex items-center gap-2 mt-3 pt-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => handleMoveStatus(task.id, "In progress")}
+                      className="bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF9D00]/20 transition-all cursor-pointer"
+                    >
+                      In progress
+                    </button>
+                    <button
+                      onClick={() => handleMoveStatus(task.id, "Done")}
+                      className="bg-[#42CD7F]/10 border border-[#42CD7F] text-[#42CD7F] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#42CD7F]/20 transition-all cursor-pointer"
+                    >
+                      Done →
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {todoTasks.length === 0 && (
+                <div className="py-8 text-center text-xs text-[#919191]">
+                  No tasks in To do.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Column 2: In progress */}
+          <div className="bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-3.5 flex flex-col gap-3 h-[640px]">
+            <div className="flex items-center justify-between pb-1 flex-shrink-0">
+              <h2 className="text-sm sm:text-base font-semibold text-white">In progress</h2>
+              <span className="text-xs text-[#919191] font-normal">{30 + (inProgressTasks.length - 4)}</span>
+            </div>
+
+            <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
+              {inProgressTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="bg-[#0C1116] rounded-[8px] p-3 border border-white/5 hover:border-[#66859E]/40 transition-all flex flex-col justify-between cursor-pointer group flex-shrink-0"
+                  onClick={() => setSelectedDetailsTask(task)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-xs sm:text-[13px] font-medium text-white leading-tight flex-1">
+                      {task.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {renderPriorityBadge(task.priority)}
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTask(task);
+                        }}
+                        title="Edit task"
+                        className="p-1 rounded text-[#919191] hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingTaskId(task.id);
+                        }}
+                        title="Delete task"
+                        className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-[#919191] font-normal mt-1.5 line-clamp-1">
+                    {task.desc}
+                  </p>
+
+                  <p className="text-[11px] text-[#919191] font-normal mt-2">
+                    Due {task.due}
+                  </p>
+
+                  <div
+                    className="flex items-center gap-2 mt-3 pt-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => handleMoveStatus(task.id, "To do")}
+                      className="bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF3E46]/20 transition-all cursor-pointer"
+                    >
+                      ← To do
+                    </button>
+                    <button
+                      onClick={() => handleMoveStatus(task.id, "Done")}
+                      className="bg-[#42CD7F]/10 border border-[#42CD7F] text-[#42CD7F] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#42CD7F]/20 transition-all cursor-pointer"
+                    >
+                      Done →
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {inProgressTasks.length === 0 && (
+                <div className="py-8 text-center text-xs text-[#919191]">
+                  No tasks in progress.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Column 3: Done */}
+          <div className="bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-3.5 flex flex-col gap-3 h-[640px]">
+            <div className="flex items-center justify-between pb-1 flex-shrink-0">
+              <h2 className="text-sm sm:text-base font-semibold text-white">Done</h2>
+              <span className="text-xs text-[#919191] font-normal">{36 + (doneTasks.length - 4)}</span>
+            </div>
+
+            <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
+              {doneTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="bg-[#0C1116] rounded-[8px] p-3 border border-white/5 hover:border-[#66859E]/40 transition-all flex flex-col justify-between cursor-pointer group flex-shrink-0"
+                  onClick={() => setSelectedDetailsTask(task)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-xs sm:text-[13px] font-medium text-white leading-tight flex-1">
+                      {task.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {renderPriorityBadge(task.priority)}
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTask(task);
+                        }}
+                        title="Edit task"
+                        className="p-1 rounded text-[#919191] hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingTaskId(task.id);
+                        }}
+                        title="Delete task"
+                        className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-[#919191] font-normal mt-1.5 line-clamp-1">
+                    {task.desc}
+                  </p>
+
+                  <p className="text-[11px] text-[#919191] font-normal mt-2">
+                    Due {task.due}
+                  </p>
+
+                  <div
+                    className="flex items-center gap-2 mt-3 pt-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => handleMoveStatus(task.id, "To do")}
+                      className="bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF3E46]/20 transition-all cursor-pointer"
+                    >
+                      ← To do
+                    </button>
+                    <button
+                      onClick={() => handleMoveStatus(task.id, "In progress")}
+                      className="bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF9D00]/20 transition-all cursor-pointer"
+                    >
+                      In progress
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {doneTasks.length === 0 && (
+                <div className="py-8 text-center text-xs text-[#919191]">
+                  No completed tasks yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LIST VIEW TAB CONTENT */}
+      {activeTab === "list" && (
+        <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl overflow-hidden shadow-sm mt-1">
+          <div className="overflow-x-auto w-full">
+            <Table className="w-full border-collapse">
+              <TableHeader className="bg-[#394A58] border-b border-white/10">
+                <TableRow className="border-b border-white/10 hover:bg-transparent h-[40px]">
+                  <TableHead className="text-white font-medium text-xs sm:text-sm px-6 py-2 w-[40%]">
+                    Title
+                  </TableHead>
+                  <TableHead className="text-white font-medium text-xs sm:text-sm px-6 py-2 w-[18%]">
+                    Due
+                  </TableHead>
+                  <TableHead className="text-white font-medium text-xs sm:text-sm px-6 py-2 w-[16%]">
+                    Priority
+                  </TableHead>
+                  <TableHead className="text-white font-medium text-xs sm:text-sm px-6 py-2 w-[14%]">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-white font-medium text-xs sm:text-sm px-6 py-2 text-right w-[12%]">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {filteredTasks
+                  .slice((listCurrentPage - 1) * listItemsPerPage, listCurrentPage * listItemsPerPage)
+                  .map((task) => (
+                  <TableRow
+                    key={task.id}
+                    className="border-b border-white/[0.08] hover:bg-white/[0.02] transition-colors h-[66px] cursor-pointer"
+                    onClick={() => setSelectedDetailsTask(task)}
+                  >
+                    <TableCell className="px-6 py-2.5">
+                      <div className="flex flex-col">
+                        <span className="text-xs sm:text-sm font-medium text-white leading-snug">
+                          {task.title}
+                        </span>
+                        <span className="text-[12px] text-[#919191] font-normal leading-tight line-clamp-1 mt-0.5">
+                          {task.desc}
+                        </span>
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
+                      {task.due}
+                    </TableCell>
+
+                    <TableCell className="px-6 py-2.5 whitespace-nowrap">
+                      {renderPriorityBadge(task.priority)}
+                    </TableCell>
+
+                    <TableCell className="px-6 py-2.5 whitespace-nowrap">
+                      <span
+                        className={cn(
+                          "px-2.5 py-0.5 rounded-[8px] text-[12px] font-medium capitalize inline-block",
+                          task.status === "To do" && "bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46]",
+                          task.status === "In progress" && "bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00]",
+                          task.status === "Done" && "bg-[#42CD7F]/10 border border-[#42CD7F] text-[#42CD7F]"
+                        )}
+                      >
+                        {task.status === "To do" ? "Todo" : task.status}
+                      </span>
+                    </TableCell>
+
+                    <TableCell
+                      className="px-6 py-2.5 text-right whitespace-nowrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingTask(task)}
+                          title="Edit Task"
+                          className="w-9 h-9 flex items-center justify-center rounded-[6px] bg-[#6887A0] text-white hover:bg-[#5b7890] transition-colors cursor-pointer shadow-sm"
+                        >
+                          <Pencil className="w-4 h-4 text-white" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setDeletingTaskId(task.id)}
+                          title="Delete Task"
+                          className="w-9 h-9 flex items-center justify-center rounded-[6px] bg-[#FF0000] text-white hover:bg-red-600 transition-colors cursor-pointer shadow-sm"
+                        >
+                          <Trash2 className="w-4 h-4 text-white" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {filteredTasks.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-12 text-center text-xs text-[#919191]">
+                      No tasks found matching your filter criteria.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="px-6 pb-4">
+            <TablePagination
+              currentPage={listCurrentPage}
+              totalPages={Math.ceil(filteredTasks.length / listItemsPerPage)}
+              onPageChange={setListCurrentPage}
+              totalItems={filteredTasks.length}
+              itemsPerPage={listItemsPerPage}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* CALENDAR VIEW TAB CONTENT */}
+      {activeTab === "calendar" && (
+        <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-5 shadow-sm mt-1">
+          {/* Calendar Header: Month Navigation & Controls */}
+          <div className="flex items-center justify-between pb-4 mb-2 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-white tracking-tight">
+                {MONTH_NAMES[currentMonthIndex]} {currentYear}
+              </h2>
+              <div className="flex items-center gap-1 bg-[#394A58] p-1 rounded-lg">
+                <button
+                  type="button"
+                  onClick={handlePrevMonth}
+                  className="p-1 rounded text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Previous Month"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  className="p-1 rounded text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Next Month"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="text-xs text-[#919191]">
+              Click any date box to view or manage tasks for that day
+            </div>
+          </div>
+
+          {/* Weekday Names Bar */}
+          <div className="grid grid-cols-7 gap-2 mb-2 text-center">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((dayName) => (
+              <div key={dayName} className="text-xs font-medium text-white py-1">
+                {dayName}
+              </div>
+            ))}
+          </div>
+
+          {/* Month Days Grid */}
+          <div className="grid grid-cols-7 gap-2">
+            {/* Empty Offset Boxes for Month Start */}
+            {Array.from({ length: firstDayOfWeek }).map((_, index) => (
+              <div
+                key={`empty-${index}`}
+                className="h-[100px] rounded-xl border border-white/5 bg-[#0C1116]/40 opacity-40"
+              />
+            ))}
+
+            {/* Days of Month */}
+            {Array.from({ length: daysInMonth }).map((_, index) => {
+              const dayNum = index + 1;
+              const dateStr = `${formattedMonthStr}-${String(dayNum).padStart(2, "0")}`;
+              const dayTasks = filteredTasks.filter((t) => t.due === dateStr);
+              const hasTasks = dayTasks.length > 0;
+
+              return (
+                <div
+                  key={dayNum}
+                  onClick={() => setSelectedCalendarDate(dateStr)}
+                  className={cn(
+                    "h-[105px] p-2 rounded-xl transition-all flex flex-col gap-1 cursor-pointer border relative group",
+                    hasTasks
+                      ? "bg-[#394A58] border-white/10 hover:border-[#6887A0]"
+                      : "bg-[#0C1116] border-white/5 hover:bg-[#141C24] hover:border-white/10"
+                  )}
+                >
+                  {/* Day Number Header */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-white">{dayNum}</span>
+                    {hasTasks && (
+                      <span className="text-[10px] bg-[#141C24] text-white px-1.5 py-0.2 rounded-full font-medium">
+                        {dayTasks.length}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Task Pills inside Day Box */}
+                  <div className="flex flex-col gap-1 overflow-y-auto no-scrollbar flex-1 pt-0.5">
+                    {dayTasks.slice(0, 3).map((t) => {
+                      const borderColor =
+                        t.priority === "Urgent"
+                          ? "border-[#FF0000]"
+                          : t.priority === "High"
+                          ? "border-[#FFB302]"
+                          : t.priority === "Medium"
+                          ? "border-[#33BBFF]"
+                          : "border-[#CACACA]";
+
+                      const dotColor =
+                        t.priority === "Urgent"
+                          ? "bg-[#FF0000]"
+                          : t.priority === "High"
+                          ? "bg-[#FFB302]"
+                          : t.priority === "Medium"
+                          ? "bg-[#33BBFF]"
+                          : "bg-[#CACACA]";
+
+                      return (
+                        <div
+                          key={t.id}
+                          className={cn(
+                            "bg-[#141C24] border px-1.5 py-1 rounded-[4px] flex items-center justify-between gap-1 shadow-sm text-[10px] text-white hover:opacity-90",
+                            borderColor
+                          )}
+                        >
+                          <span className="truncate flex-1 font-normal leading-tight">
+                            {t.title}
+                          </span>
+                          <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", dotColor)} />
+                        </div>
+                      );
+                    })}
+
+                    {dayTasks.length > 3 && (
+                      <span className="text-[9px] text-[#919191] font-medium pl-0.5">
+                        +{dayTasks.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 5. MODAL DIALOGS SYSTEM */}
+
+      {/* Create New Task Dialog */}
+      <NewTaskDialog
+        isOpen={isNewTaskOpen}
+        onClose={() => {
+          setIsNewTaskOpen(false);
+          setNewTaskInitialDate(undefined);
+        }}
+        onAddTask={handleAddTask}
+      />
+
+      {/* Edit Task Dialog */}
+      <EditTaskDialog
+        task={editingTask}
+        isOpen={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onUpdateTask={handleUpdateTask}
+      />
+
+      {/* Task Details Dialog (View Full Details) */}
+      <TaskDetailsDialog
+        task={selectedDetailsTask}
+        isOpen={!!selectedDetailsTask}
+        onClose={() => setSelectedDetailsTask(null)}
+        onEdit={(taskToEdit) => setEditingTask(taskToEdit)}
+        onDelete={(idToDelete) => setDeletingTaskId(idToDelete)}
+      />
+
+      {/* Date Tasks Dialog (Clicking on Calendar Date) */}
+      <DateTasksDialog
+        dateString={selectedCalendarDate}
+        tasks={filteredTasks.filter((t) => t.due === selectedCalendarDate)}
+        isOpen={!!selectedCalendarDate}
+        onClose={() => setSelectedCalendarDate(null)}
+        onSelectTask={(task) => setSelectedDetailsTask(task)}
+        onEditTask={(task) => setEditingTask(task)}
+        onDeleteTask={(id) => setDeletingTaskId(id)}
+        onAddNewTaskForDate={(dStr) => {
+          setNewTaskInitialDate(dStr);
+          setIsNewTaskOpen(true);
+        }}
+      />
+
+      {/* Reusable Success/Feedback Modal */}
+      <SuccessModal
+        isOpen={feedbackModal.isOpen}
+        onClose={() => setFeedbackModal((prev) => ({ ...prev, isOpen: false }))}
+        title={feedbackModal.title}
+        description={feedbackModal.desc}
+      />
+
+      {/* Reusable Delete Modal */}
       <DeleteModal
         isOpen={!!deletingTaskId}
         onClose={() => setDeletingTaskId(null)}
         onConfirm={confirmDeleteTask}
         title="Delete Task"
         description="Are you sure you want to delete this task?"
-      />
-
-      {/* Success Popup */}
-      <SuccessModal
-        isOpen={isSuccessOpen}
-        onClose={() => setIsSuccessOpen(false)}
-        title="Task Deleted!"
-        description="The task has been deleted successfully."
+        cancelText="No, keep it"
+        confirmText="Yes, Delete Now"
       />
     </div>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <Suspense fallback={<div className="text-white p-6">Loading task management...</div>}>
+      <TasksContent />
+    </Suspense>
   );
 }

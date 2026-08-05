@@ -1,255 +1,449 @@
 "use client";
 
-import { useState } from "react";
-import { Search, RotateCcw, Trash2, Archive, AlertCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Search, RotateCcw, Trash2, User, FileText, FileCode, Folder } from "lucide-react";
 import DeleteModal from "@/components/shared/delete-modal";
+import RestoreModal from "@/components/shared/restore-modal";
 import SuccessModal from "@/components/shared/success-modal";
+import TablePagination from "@/components/shared/table-pagination";
+import { cn } from "@/lib/utils";
 
-const INITIAL_ARCHIVED_ITEMS = [
+interface ArchivedItem {
+  id: string;
+  type: "clients" | "contracts" | "notes" | "documents";
+  title: string;
+  subtitle: string;
+  deletedDate: string;
+  daysLeft: string;
+}
+
+const INITIAL_ARCHIVED_ITEMS: ArchivedItem[] = [
+  // --- CLIENTS TAB ITEMS ---
   {
-    id: "arc-1",
-    name: "Jacob Thompson (Client Folder)",
-    type: "Client Folder",
-    archivedDate: "2026-08-03",
-    expiresIn: "60 days left",
-    archivedBy: "A. Smith",
+    id: "cli-1",
+    type: "clients",
+    title: "James Ellington",
+    subtitle: "4 contracts",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "60d left",
   },
   {
-    id: "arc-2",
-    name: "Pacific Life Policy Contract.pdf",
-    type: "Document",
-    archivedDate: "2026-07-28",
-    expiresIn: "54 days left",
-    archivedBy: "A. Smith",
+    id: "cli-2",
+    type: "clients",
+    title: "Eleanor Vance",
+    subtitle: "2 contracts",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "52d left",
   },
   {
-    id: "arc-3",
-    name: "Note: Client requested allocation rebalance...",
-    type: "Note",
-    archivedDate: "2026-07-15",
-    expiresIn: "41 days left",
-    archivedBy: "A. Smith",
+    id: "cli-3",
+    type: "clients",
+    title: "Robert Jackson",
+    subtitle: "5 contracts",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "46d left",
   },
   {
-    id: "arc-4",
-    name: "Contract IX-239032 (Surrendered)",
-    type: "Contract",
-    archivedDate: "2026-07-02",
-    expiresIn: "28 days left",
-    archivedBy: "A. Smith",
+    id: "cli-4",
+    type: "clients",
+    title: "Michael Mitchell",
+    subtitle: "3 contracts",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "30d left",
+  },
+  {
+    id: "cli-5",
+    type: "clients",
+    title: "Sarah Jenkins",
+    subtitle: "1 contract",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "10d left",
+  },
+  {
+    id: "cli-6",
+    type: "clients",
+    title: "David Brooks",
+    subtitle: "2 contracts",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "5d left",
+  },
+
+  // --- CONTRACTS TAB ITEMS ---
+  {
+    id: "cnt-1",
+    type: "contracts",
+    title: "IX-841719",
+    subtitle: "Jennifer Wilson",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "60d left",
+  },
+  {
+    id: "cnt-2",
+    type: "contracts",
+    title: "VR-357824",
+    subtitle: "Jeffrey Clark",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "52d left",
+  },
+  {
+    id: "cnt-3",
+    type: "contracts",
+    title: "AN-697414",
+    subtitle: "Jerry Anderson",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "46d left",
+  },
+  {
+    id: "cnt-4",
+    type: "contracts",
+    title: "FX-256585",
+    subtitle: "George Nguyen",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "30d left",
+  },
+  {
+    id: "cnt-5",
+    type: "contracts",
+    title: "VR-287929",
+    subtitle: "Steven Jackson",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "12d left",
+  },
+  {
+    id: "cnt-6",
+    type: "contracts",
+    title: "IM-991204",
+    subtitle: "Karen Scott",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "4d left",
+  },
+
+  // --- NOTES TAB ITEMS ---
+  {
+    id: "nt-1",
+    type: "notes",
+    title: "Client requested allocation rebalance after market volatility.",
+    subtitle: "Note for Jacob Thompson",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "60d left",
+  },
+  {
+    id: "nt-2",
+    type: "notes",
+    title: "Client considering 1035 exchange to lower-fee product.",
+    subtitle: "Note for Eleanor Vance",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "52d left",
+  },
+  {
+    id: "nt-3",
+    type: "notes",
+    title: "Discussed beneficiary update during quarterly review.",
+    subtitle: "Note for Robert Jackson",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "46d left",
+  },
+  {
+    id: "nt-4",
+    type: "notes",
+    title: "Anniversary review completed; no changes requested.",
+    subtitle: "Note for Sarah Jenkins",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "30d left",
+  },
+  {
+    id: "nt-5",
+    type: "notes",
+    title: "Followed up on missing suitability questionnaire form.",
+    subtitle: "Note for David Brooks",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "8d left",
+  },
+
+  // --- DOCUMENTS TAB ITEMS ---
+  {
+    id: "doc-1",
+    type: "documents",
+    title: "Signed_Annuity_Application_2026.pdf",
+    subtitle: "Document for Jacob Thompson",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "60d left",
+  },
+  {
+    id: "doc-2",
+    type: "documents",
+    title: "Beneficiary_Designation_Form.pdf",
+    subtitle: "Document for Eleanor Vance",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "52d left",
+  },
+  {
+    id: "doc-3",
+    type: "documents",
+    title: "Quarterly_Performance_Statement.pdf",
+    subtitle: "Document for Robert Jackson",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "46d left",
+  },
+  {
+    id: "doc-4",
+    type: "documents",
+    title: "Suitability_Questionnaire_2025.pdf",
+    subtitle: "Document for Sarah Jenkins",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "30d left",
+  },
+  {
+    id: "doc-5",
+    type: "documents",
+    title: "Driver_License_Copy.pdf",
+    subtitle: "Document for David Brooks",
+    deletedDate: "Deleted Jul 9, 2026",
+    daysLeft: "15d left",
   },
 ];
 
-export default function ArchivedPage() {
+const TABS = [
+  { id: "clients", label: "Clients", icon: User },
+  { id: "contracts", label: "Contracts", icon: FileText },
+  { id: "notes", label: "Notes", icon: FileCode },
+  { id: "documents", label: "Documents", icon: Folder },
+] as const;
+
+function ArchivedContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const tabParam = searchParams.get("tab") as ArchivedItem["type"] | null;
+  const [activeTab, setActiveTab] = useState<ArchivedItem["type"]>(
+    tabParam && ["clients", "contracts", "notes", "documents"].includes(tabParam)
+      ? tabParam
+      : "clients"
+  );
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [archivedList, setArchivedList] = useState(INITIAL_ARCHIVED_ITEMS);
+  const [items, setItems] = useState<ArchivedItem[]>(INITIAL_ARCHIVED_ITEMS);
+  const [restoringItem, setRestoringItem] = useState<ArchivedItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<ArchivedItem | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [successMessage, setSuccessMessage] = useState({ title: "", description: "" });
-
-  const filteredItems = archivedList.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.archivedBy.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === "all" || item.type === typeFilter;
-    return matchesSearch && matchesType;
+  const [feedbackModal, setFeedbackModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    desc: string;
+  }>({
+    isOpen: false,
+    title: "",
+    desc: "",
   });
 
-  const handleRestore = (id: string, name: string) => {
-    setArchivedList(archivedList.filter((item) => item.id !== id));
-    setSuccessMessage({
-      title: "File Restored!",
-      description: `"${name}" has been successfully restored to active records.`,
-    });
-    setIsSuccessOpen(true);
+  // Sync state with search params
+  useEffect(() => {
+    if (tabParam && ["clients", "contracts", "notes", "documents"].includes(tabParam)) {
+      setActiveTab(tabParam);
+      setCurrentPage(1);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tabId: ArchivedItem["type"]) => {
+    setActiveTab(tabId);
+    setCurrentPage(1);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tabId);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
-  const handleConfirmPermanentDelete = () => {
-    if (deletingId) {
-      setArchivedList(archivedList.filter((item) => item.id !== deletingId));
-      setDeletingId(null);
-      setSuccessMessage({
-        title: "Permanently Deleted",
-        description: "The archived file has been permanently deleted from storage.",
+  const filteredItems = items.filter(
+    (item) =>
+      item.type === activeTab &&
+      (item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.subtitle.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleConfirmRestore = () => {
+    if (restoringItem) {
+      setItems((prev) => prev.filter((i) => i.id !== restoringItem.id));
+      setFeedbackModal({
+        isOpen: true,
+        title: "Item Restored!",
+        desc: `"${restoringItem.title}" has been restored back to active records.`,
       });
-      setIsSuccessOpen(true);
+      setRestoringItem(null);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (deletingItem) {
+      setItems((prev) => prev.filter((i) => i.id !== deletingItem.id));
+      setFeedbackModal({
+        isOpen: true,
+        title: "Item Deleted!",
+        desc: `"${deletingItem.title}" has been permanently deleted.`,
+      });
+      setDeletingItem(null);
     }
   };
 
   return (
-    <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans">
-      {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <Archive className="w-7 h-7 text-[#6887A0]" />
-            <h1 className="text-2xl lg:text-[32px] font-semibold text-white tracking-tight leading-tight">
-              Archived Items
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-[#919191]">
-            Archived records are retained for 60 days before permanent deletion. You can restore items at any time.
-          </p>
-        </div>
-      </div>
+    <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-10 font-sans">
+      {/* 1. Header Title */}
+      <h1 className="text-2xl sm:text-[32px] font-semibold text-white tracking-tight leading-tight">
+        Archived
+      </h1>
 
-      {/* Info Warning Banner */}
-      <div className="w-full bg-[#141C24] border border-[#6887A0]/30 rounded-[12px] p-4 flex items-center gap-3 text-xs sm:text-sm text-[#829CB0]">
-        <AlertCircle className="w-5 h-5 text-[#6887A0] flex-shrink-0" />
-        <span>
-          Files moved to Archive remain available for 60 days. After 60 days, they will be automatically and permanently removed.
-        </span>
-      </div>
-
-      {/* Search & Filter Header (#394A58) */}
-      <div className="w-full bg-[#394A58] p-3 rounded-[12px] flex flex-wrap items-center justify-between gap-3 shadow-sm">
-        {/* Search Bar */}
-        <div className="flex items-center gap-2.5 px-3.5 h-10 bg-[#141C24] rounded-[12px] border-0 text-white text-xs w-full max-w-[400px]">
+      {/* 2. Search & Tab Switcher Bar (#394A58 Container) */}
+      <div className="w-full bg-[#394A58] p-3 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+        {/* Search Input Box */}
+        <div className="flex items-center gap-2.5 px-3.5 h-10 bg-[#141C24] rounded-xl text-white text-xs sm:text-sm w-full sm:w-[320px]">
           <Search className="w-4 h-4 text-[#919191] flex-shrink-0" />
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search archived files..."
-            className="w-full bg-transparent text-xs text-white placeholder-[#919191] outline-none"
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="Search"
+            className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-[#919191] outline-none font-sans"
           />
         </div>
 
-        {/* Type Filter */}
-        <Select value={typeFilter} onValueChange={(val: string | null) => setTypeFilter(val || "all")}>
-          <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal min-w-[140px] justify-between shadow-none">
-            <SelectValue placeholder="All types" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-            <SelectItem value="all" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-              All types
-            </SelectItem>
-            <SelectItem value="Client Folder" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-              Client Folder
-            </SelectItem>
-            <SelectItem value="Contract" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-              Contract
-            </SelectItem>
-            <SelectItem value="Document" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-              Document
-            </SelectItem>
-            <SelectItem value="Note" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-              Note
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Archived Table */}
-      <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] overflow-hidden shadow-sm">
-        <div className="overflow-x-auto w-full">
-          <Table className="w-full">
-            <TableHeader className="bg-[#394A58] border-b border-white/10">
-              <TableRow className="border-b border-white/10 hover:bg-transparent h-10">
-                <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
-                  Item Name
-                </TableHead>
-                <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
-                  Type
-                </TableHead>
-                <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
-                  Archived Date
-                </TableHead>
-                <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
-                  Retention Timer
-                </TableHead>
-                <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6 text-right">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-sm text-[#919191]">
-                    No archived items found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredItems.map((item) => (
-                  <TableRow
-                    key={item.id}
-                    className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14"
-                  >
-                    <TableCell className="px-6 py-3.5 text-sm font-medium text-white">
-                      {item.name}
-                    </TableCell>
-                    <TableCell className="px-6 py-3.5 text-sm text-white">
-                      <Badge className="bg-[#394A58] text-white border-0 px-2.5 py-0.5 rounded-[8px] text-xs font-normal">
-                        {item.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-6 py-3.5 text-sm text-white">
-                      {item.archivedDate}
-                    </TableCell>
-                    <TableCell className="px-6 py-3.5 text-sm text-[#33BBFF] font-medium">
-                      {item.expiresIn}
-                    </TableCell>
-                    <TableCell className="px-6 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleRestore(item.id, item.name)}
-                          className="h-8 px-3 bg-[#42CD7F] hover:bg-emerald-600 text-white rounded-[8px] text-xs font-medium transition-all flex items-center gap-1.5 shadow-sm"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5 text-white" />
-                          <span>Restore</span>
-                        </button>
-                        <button
-                          onClick={() => setDeletingId(item.id)}
-                          className="h-8 px-3 bg-[#FF0000] hover:bg-red-600 text-white rounded-[8px] text-xs font-medium transition-all flex items-center gap-1.5 shadow-sm"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-white" />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        {/* Navigation Category Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id as ArchivedItem["type"])}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer font-sans whitespace-nowrap",
+                  isActive
+                    ? "bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white shadow-sm font-semibold"
+                    : "bg-[#141C24] text-white hover:bg-white/10"
+                )}
+              >
+                <Icon className="w-4 h-4 text-white" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      <DeleteModal
-        isOpen={!!deletingId}
-        onClose={() => setDeletingId(null)}
-        onConfirm={handleConfirmPermanentDelete}
-        title="Permanently Delete Item"
-        description="Are you sure you want to permanently delete this archived item? This action cannot be undone."
+      {/* 3. Cards List Container */}
+      <div className="flex flex-col gap-3.5 w-full min-h-[380px] justify-between">
+        <div className="flex flex-col gap-3.5 w-full">
+          {paginatedItems.length === 0 ? (
+            <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-[#919191] text-sm">
+              No archived {activeTab} found.
+            </div>
+          ) : (
+            paginatedItems.map((item) => (
+              <div
+                key={item.id}
+                className="w-full bg-[#141C24] border border-[#0F1F3D]/20 hover:border-white/10 rounded-xl p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-sm"
+              >
+                {/* Left Column Details */}
+                <div className="flex flex-col gap-0.5">
+                  <h3 className="text-white font-medium text-sm sm:text-base tracking-tight">
+                    {item.title}
+                  </h3>
+                  <p className="text-[#919191] text-xs sm:text-sm">{item.subtitle}</p>
+                  <p className="text-[#919191] text-xs font-normal mt-0.5">{item.deletedDate}</p>
+                </div>
+
+                {/* Right Column Actions & Retention Counter */}
+                <div className="flex flex-col sm:items-end gap-2 sm:gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    {/* Restore Button */}
+                    <button
+                      onClick={() => setRestoringItem(item)}
+                      className="h-7 px-3.5 bg-[#42CD7F] hover:bg-emerald-400 text-[#181818] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-[#181818]" />
+                      <span>Restore</span>
+                    </button>
+
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => setDeletingItem(item)}
+                      className="w-7 h-7 bg-[#FF0000] hover:bg-red-600 text-white rounded-lg flex items-center justify-center transition-all shadow-sm cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-white" />
+                    </button>
+                  </div>
+
+                  <span className="text-white font-semibold text-sm sm:text-base text-right tracking-tight">
+                    {item.daysLeft}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Reusable Pagination */}
+        {filteredItems.length > 0 && (
+          <div className="pt-2">
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredItems.length}
+              itemsPerPage={itemsPerPage}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Restore Confirmation Modal */}
+      <RestoreModal
+        isOpen={!!restoringItem}
+        onClose={() => setRestoringItem(null)}
+        onConfirm={handleConfirmRestore}
+        title="Restore Archived Item"
+        description={`Are you sure you want to restore "${restoringItem?.title}" back to active records?`}
+        confirmText="Yes, Restore"
+        cancelText="Cancel"
       />
 
-      {/* Reusable Success Popup Modal */}
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={!!deletingItem}
+        onClose={() => setDeletingItem(null)}
+        onConfirm={handleConfirmDelete}
+        title="Permanently Delete Item"
+        description={`Are you sure you want to permanently delete "${deletingItem?.title}"? This action cannot be undone.`}
+        confirmText="Yes, Delete Now"
+        cancelText="No, keep it"
+      />
+
+      {/* Feedback / Success Notification Modal */}
       <SuccessModal
-        isOpen={isSuccessOpen}
-        onClose={() => setIsSuccessOpen(false)}
-        title={successMessage.title}
-        description={successMessage.description}
+        isOpen={feedbackModal.isOpen}
+        onClose={() => setFeedbackModal((prev) => ({ ...prev, isOpen: false }))}
+        title={feedbackModal.title}
+        description={feedbackModal.desc}
       />
     </div>
+  );
+}
+
+export default function ArchivedPage() {
+  return (
+    <Suspense fallback={<div className="text-white p-6">Loading archived items...</div>}>
+      <ArchivedContent />
+    </Suspense>
   );
 }

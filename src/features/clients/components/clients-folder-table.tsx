@@ -20,6 +20,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import TablePagination from "@/components/shared/table-pagination";
 import { cn } from "@/lib/utils";
 
 export type ClientStatus = "Active" | "Archived" | "Inactive" | "Prospect";
@@ -182,6 +183,8 @@ export default function ClientsFolderTable() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("All statuses");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   const filteredClients = CLIENTS_DATA.filter((client) => {
     const matchesSearch =
@@ -195,56 +198,62 @@ export default function ClientsFolderTable() {
     return matchesSearch && matchesStatus;
   });
 
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+  const paginatedClients = filteredClients.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div className="w-full flex flex-col gap-4">
       {/* Top Search & Filter Bar Container matching Figma (#394A58) */}
-      <div className="w-full bg-[#394A58] p-3 rounded-[12px] flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="w-full bg-[#394A58] border border-white/5 rounded-[12px] p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Search Input Box */}
-        <div className="relative flex-1 w-full max-w-[918px]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#919191] z-10" />
+        <div className="relative w-full sm:w-[320px]">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8C8C8C]" />
           <Input
             type="text"
+            placeholder="Search clients..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search"
-            className="w-full h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-sm rounded-[12px] pl-10 pr-4 outline-none focus-visible:ring-1 focus-visible:ring-[#6887A0] font-sans"
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full h-10 pl-10 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-sm focus-visible:ring-0 focus-visible:border-white/20 font-sans"
           />
         </div>
 
-        {/* Status Dropdown Filter using Shadcn UI Select */}
-        <Select
-          value={selectedStatus}
-          onValueChange={(val: string | null) =>
-            setSelectedStatus(val ?? "All statuses")
-          }
-        >
-          <SelectTrigger className="h-10 px-4 bg-[#141C24] border-0 text-white rounded-[12px] text-sm font-normal w-full sm:w-[176px] justify-between font-sans shadow-none">
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px] shadow-xl">
-            <SelectItem value="All statuses" className="text-white hover:bg-white/10 cursor-pointer">
-              All statuses
-            </SelectItem>
-            <SelectItem value="Active" className="text-white hover:bg-white/10 cursor-pointer">
-              Active
-            </SelectItem>
-            <SelectItem value="Archived" className="text-white hover:bg-white/10 cursor-pointer">
-              Archived
-            </SelectItem>
-            <SelectItem value="Inactive" className="text-white hover:bg-white/10 cursor-pointer">
-              Inactive
-            </SelectItem>
-            <SelectItem value="Prospect" className="text-white hover:bg-white/10 cursor-pointer">
-              Prospect
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Status Dropdown Filter */}
+        <div className="w-full sm:w-[220px]">
+          <Select
+            value={selectedStatus}
+            onValueChange={(val: string | null) => {
+              if (val) setSelectedStatus(val);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full h-10 bg-[#141C24] border border-white/5 text-white rounded-[12px] text-sm focus:ring-0 font-sans">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent
+              side="bottom"
+              alignItemWithTrigger={false}
+              className="bg-[#141C24] border-white/10 text-white font-sans"
+            >
+              <SelectItem value="All statuses">All statuses</SelectItem>
+              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Archived">Archived</SelectItem>
+              <SelectItem value="Inactive">Inactive</SelectItem>
+              <SelectItem value="Prospect">Prospect</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* Main Table Card matching Figma */}
-      <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] overflow-hidden shadow-sm">
-        <div className="overflow-x-auto w-full">
-          <Table className="w-full">
+      {/* Main Table Card Container (#141C24) */}
+      <div className="w-full bg-[#141C24] border border-white/5 rounded-[12px] overflow-hidden shadow-sm flex flex-col justify-between min-h-[420px]">
+        <div className="w-full overflow-x-auto">
+          <Table>
             <TableHeader className="bg-[#394A58] border-b border-white/10">
               <TableRow className="border-b border-white/10 hover:bg-transparent h-10">
                 <TableHead className="text-white font-medium text-sm h-10 px-6 font-sans">
@@ -270,8 +279,8 @@ export default function ClientsFolderTable() {
             </TableHeader>
 
             <TableBody>
-              {filteredClients.length > 0 ? (
-                filteredClients.map((client) => (
+              {paginatedClients.length > 0 ? (
+                paginatedClients.map((client) => (
                   <TableRow
                     key={client.id}
                     onClick={() => router.push(`/dashboard/clients/${client.id}`)}
@@ -344,6 +353,17 @@ export default function ClientsFolderTable() {
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Reusable Pagination */}
+        <div className="px-6 pb-4">
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredClients.length}
+            itemsPerPage={itemsPerPage}
+          />
         </div>
       </div>
     </div>

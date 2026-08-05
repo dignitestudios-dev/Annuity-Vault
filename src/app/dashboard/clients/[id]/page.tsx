@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   FileText,
   FileCode,
@@ -184,13 +184,31 @@ const TABS = [
   { id: "activity", label: "Activity", icon: ActivityIcon },
 ];
 
-export default function ClientDetailsPage() {
+function ClientDetailsContent() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("contracts");
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(tabParam || "contracts");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+
+  // Synchronize state when URL query parameter changes
+  useEffect(() => {
+    if (tabParam && TABS.some((t) => t.id === tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", newTab);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const handleDeleteClientConfirm = () => {
     setIsArchiveOpen(true);
@@ -229,9 +247,9 @@ export default function ClientDetailsPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={cn(
-                "h-8 px-4 rounded-[10px] text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all font-sans",
+                "h-8 px-4 rounded-[10px] text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all font-sans cursor-pointer",
                 isActive
                   ? "bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white shadow-sm"
                   : "text-[#919191] hover:text-white hover:bg-white/5"
@@ -282,5 +300,13 @@ export default function ClientDetailsPage() {
         onClose={handleArchiveClose}
       />
     </div>
+  );
+}
+
+export default function ClientDetailsPage() {
+  return (
+    <Suspense fallback={<div className="text-white p-6">Loading client details...</div>}>
+      <ClientDetailsContent />
+    </Suspense>
   );
 }
