@@ -1,52 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SuccessModal from "@/components/shared/success-modal";
 import { cn } from "@/lib/utils";
+import { useNotificationPreferences, useUpdateNotificationPreferences } from "@/features/settings/api/settings.service";
+import { Loader2 } from "lucide-react";
 
 interface NotificationSettingItem {
-  id: string;
+  id: "days30" | "days60" | "days90" | "days180" | "taskDueDates" | "systemAlerts";
   title: string;
   description: string;
   enabled: boolean;
+  category: "anniversaryAlerts" | "general";
 }
 
 const INITIAL_SETTINGS: NotificationSettingItem[] = [
   {
-    id: "anniv-30",
+    id: "days30",
     title: "Contract Anniversaries — 30 Days Out",
     description: "Receive an alert 30 days before a contract anniversary",
     enabled: true,
+    category: "anniversaryAlerts"
   },
   {
-    id: "anniv-60",
+    id: "days60",
     title: "Contract Anniversaries — 60 Days Out",
     description: "Receive an alert 60 days before a contract anniversary",
     enabled: true,
+    category: "anniversaryAlerts"
   },
   {
-    id: "anniv-90",
+    id: "days90",
     title: "Contract Anniversaries — 90 Days Out",
     description: "Receive an alert 90 days before a contract anniversary",
     enabled: true,
+    category: "anniversaryAlerts"
   },
   {
-    id: "anniv-180",
+    id: "days180",
     title: "Contract Anniversaries — 180 Days Out",
     description: "Receive an alert 180 days before a contract anniversary",
     enabled: true,
+    category: "anniversaryAlerts"
   },
   {
-    id: "task-due",
+    id: "taskDueDates",
     title: "Task Due Dates",
     description: "Alerts when tasks are approaching their due date",
     enabled: true,
+    category: "general"
   },
   {
-    id: "system-alerts",
+    id: "systemAlerts",
     title: "System Alerts",
     description: "Platform updates and maintenance notifications",
     enabled: true,
+    category: "general"
   },
 ];
 
@@ -57,6 +66,29 @@ export default function SettingsNotificationsPage() {
     title: "",
     desc: "",
   });
+  
+  const { data: preferences, isLoading, error } = useNotificationPreferences();
+  const updateMutation = useUpdateNotificationPreferences();
+
+  useEffect(() => {
+    if (preferences) {
+      setSettings(prev => prev.map(item => {
+        if (item.category === "anniversaryAlerts") {
+          return { ...item, enabled: preferences.anniversaryAlerts[item.id as "days30" | "days60" | "days90" | "days180"] ?? item.enabled };
+        } else {
+          return { ...item, enabled: preferences[item.id as "taskDueDates" | "systemAlerts"] ?? item.enabled };
+        }
+      }));
+    }
+  }, [preferences]);
+
+  if (isLoading) {
+    return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#6887A0]" /></div>;
+  }
+  
+  if (error && (error as any)?.response?.status === 403) {
+    return <div className="p-8 text-center text-[#919191]">Notification preferences are only available for Advisor accounts.</div>;
+  }
 
   const toggleSetting = (id: string) => {
     setSettings((prev) =>
@@ -66,12 +98,32 @@ export default function SettingsNotificationsPage() {
     );
   };
 
-  const handleSavePreferences = () => {
-    setFeedbackModal({
-      isOpen: true,
-      title: "Notification Settings Saved!",
-      desc: "Your notification alert preferences have been updated successfully.",
-    });
+  const handleSavePreferences = async () => {
+    try {
+      const anniversaryAlerts = {
+        days30: settings.find(s => s.id === "days30")?.enabled || false,
+        days60: settings.find(s => s.id === "days60")?.enabled || false,
+        days90: settings.find(s => s.id === "days90")?.enabled || false,
+        days180: settings.find(s => s.id === "days180")?.enabled || false,
+      };
+      const taskDueDates = settings.find(s => s.id === "taskDueDates")?.enabled || false;
+      const systemAlerts = settings.find(s => s.id === "systemAlerts")?.enabled || false;
+
+      await updateMutation.mutateAsync({
+        anniversaryAlerts,
+        taskDueDates,
+        systemAlerts
+      });
+
+      setFeedbackModal({
+        isOpen: true,
+        title: "Notification Settings Saved!",
+        desc: "Your notification alert preferences have been updated successfully.",
+      });
+    } catch (e: any) {
+      console.error(e);
+      // Could show error modal
+    }
   };
 
   return (
@@ -84,8 +136,10 @@ export default function SettingsNotificationsPage() {
 
         <button
           onClick={handleSavePreferences}
-          className="bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-semibold text-xs sm:text-sm h-9 px-5 rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm"
+          disabled={updateMutation.isPending}
+          className="bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-semibold text-xs sm:text-sm h-9 px-5 rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 disabled:opacity-70"
         >
+          {updateMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
           Save Preferences
         </button>
       </div>

@@ -54,16 +54,16 @@ export default function LoginForm() {
             {/* Email Address Field */}
             <div className="flex flex-col gap-1.5 w-full">
               <Label 
-                htmlFor="username" 
+                htmlFor="email" 
                 className="text-xs font-medium text-white capitalize leading-[15px]"
               >
                 Email Address
               </Label>
               <Input
-                id="username"
-                type="text"
+                id="email"
+                type="email"
                 placeholder="Enter email address"
-                {...form.register("username")}
+                {...form.register("email")}
                 className="h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] px-3 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E]"
               />
             </div>

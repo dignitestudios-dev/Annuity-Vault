@@ -28,33 +28,15 @@ import {
 } from "@/components/ui/select";
 import SearchableSelect from "@/components/ui/searchable-select";
 
-const CLIENT_OPTIONS = [
-  { label: "Jacob Thompson", value: "Jacob Thompson" },
-  { label: "Eleanor Vance", value: "Eleanor Vance" },
-  { label: "Marcus Brody", value: "Marcus Brody" },
-  { label: "Sophia Martinez", value: "Sophia Martinez" },
-  { label: "Alexander Smith", value: "Alexander Smith" },
-  { label: "Charlotte Davis", value: "Charlotte Davis" },
-  { label: "Benjamin Wright", value: "Benjamin Wright" },
-];
+import { useUpdateContract } from "@/features/contracts/api/contracts.service";
+import { useClients } from "@/features/clients/api/clients.service";
+import { Contract } from "@/features/contracts/types/contracts.types";
 
 interface EditContractDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess: () => void;
-  contract?: {
-    contractNo: string;
-    client: string;
-    insuranceCompany: string;
-    contractType: string;
-    status: string;
-    premiumAmount: string;
-    contractValue: string;
-    beneficiaryInfo: string;
-    notes: string;
-    startDate?: string;
-    anniversaryDate?: string;
-  };
+  contract?: Contract;
 }
 
 export default function EditContractDialog({
@@ -63,29 +45,54 @@ export default function EditContractDialog({
   onSubmitSuccess,
   contract,
 }: EditContractDialogProps) {
+  const { data: clientsData } = useClients({ limit: 100 });
+  const clientOptions = clientsData?.data?.map(client => ({
+    label: `${client.firstName} ${client.lastName}`,
+    value: client.id
+  })) || [];
+
+  const updateContract = useUpdateContract(contract?.id || "");
+
   const [startDate, setStartDate] = useState<Date | undefined>(
-    contract?.startDate ? new Date(contract.startDate) : new Date("2020-08-04")
+    contract?.startDate ? new Date(contract.startDate) : undefined
   );
   const [anniversaryDate, setAnniversaryDate] = useState<Date | undefined>(
-    contract?.anniversaryDate ? new Date(contract.anniversaryDate) : new Date("2027-03-06")
+    contract?.anniversaryDate ? new Date(contract.anniversaryDate) : undefined
   );
 
   const [formData, setFormData] = useState({
-    client: contract?.client || "Jacob Thompson",
-    policyNumber: contract?.contractNo || "IX-239032",
-    insuranceCompany: contract?.insuranceCompany || "Equitable",
+    client: contract?.client?._id || "",
+    policyNumber: contract?.policyNumber || "",
+    insuranceCompany: contract?.provider || "Equitable",
     contractType: contract?.contractType || "Immediate",
     status: contract?.status || "Surrendered",
-    premiumAmount: contract?.premiumAmount || "305000",
-    contractValue: contract?.contractValue || "127416",
-    beneficiaryInfo: contract?.beneficiaryInfo || "Stephanie Lewis (Sibling) — 100%",
-    notes: contract?.notes || "Client requested allocation rebalance after market",
+    premiumAmount: contract?.premiumAmount?.toString() || "",
+    contractValue: contract?.contractValue?.toString() || "",
+    beneficiaryInfo: contract?.beneficiaryInformation || "",
+    notes: contract?.notes || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onClose();
-    onSubmitSuccess();
+    if (!contract?.id) return;
+    updateContract.mutate({
+      client: formData.client,
+      policyNumber: formData.policyNumber,
+      provider: formData.insuranceCompany,
+      contractType: formData.contractType,
+      status: formData.status,
+      premiumAmount: Number(formData.premiumAmount) || 0,
+      contractValue: Number(formData.contractValue) || 0,
+      beneficiaryInformation: formData.beneficiaryInfo,
+      notes: formData.notes,
+      startDate: startDate ? startDate.toISOString() : undefined,
+      anniversaryDate: anniversaryDate ? anniversaryDate.toISOString() : undefined,
+    }, {
+      onSuccess: () => {
+        onClose();
+        onSubmitSuccess();
+      }
+    });
   };
 
   return (
@@ -102,7 +109,7 @@ export default function EditContractDialog({
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-white">Client</Label>
             <SearchableSelect
-              options={CLIENT_OPTIONS}
+              options={clientOptions}
               value={formData.client}
               onChange={(val) => setFormData({ ...formData, client: val })}
               placeholder="Select Client"
@@ -120,8 +127,9 @@ export default function EditContractDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, policyNumber: e.target.value })
                 }
-                placeholder="IX-239032"
+                placeholder="Policy Number"
                 className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+                required
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -277,8 +285,9 @@ export default function EditContractDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, premiumAmount: e.target.value })
                 }
-                placeholder="305000"
+                placeholder="100000"
                 className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+                required
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -289,8 +298,9 @@ export default function EditContractDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, contractValue: e.target.value })
                 }
-                placeholder="127416"
+                placeholder="100000"
                 className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+                required
               />
             </div>
           </div>
@@ -336,8 +346,9 @@ export default function EditContractDialog({
             <Button
               type="submit"
               className="w-[150px] h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-sm font-medium border-0 shadow-sm"
+              disabled={updateContract.isPending}
             >
-              Update Contract
+              {updateContract.isPending ? "Updating..." : "Update Contract"}
             </Button>
           </DialogFooter>
         </form>

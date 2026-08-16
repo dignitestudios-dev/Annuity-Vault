@@ -27,6 +27,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { ClientStatus } from "./clients-folder-table";
+import { useCreateClient } from "@/features/clients/api/clients.service";
 
 interface NewClientDialogProps {
   isOpen: boolean;
@@ -50,10 +51,39 @@ export default function NewClientDialog({
     notes: "",
   });
 
+  const createClientMutation = useCreateClient();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onClose();
-    onSubmitSuccess();
+    createClientMutation.mutate(
+      {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        status: formData.status,
+        dateOfBirth: selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+        notes: formData.notes,
+      },
+      {
+        onSuccess: () => {
+          onClose();
+          onSubmitSuccess();
+          // Reset form
+          setFormData({
+            firstName: "",
+            lastName: "",
+            email: "",
+            phone: "",
+            address: "",
+            status: "Active",
+            notes: "",
+          });
+          setSelectedDate(undefined);
+        },
+      }
+    );
   };
 
   return (
@@ -224,9 +254,10 @@ export default function NewClientDialog({
             </Button>
             <Button
               type="submit"
-              className="w-[140px] h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-sm font-medium border-0 shadow-sm"
+              disabled={createClientMutation.isPending}
+              className="w-[140px] h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-sm font-medium border-0 shadow-sm disabled:opacity-50"
             >
-              Create Client
+              {createClientMutation.isPending ? "Creating..." : "Create Client"}
             </Button>
           </DialogFooter>
         </form>

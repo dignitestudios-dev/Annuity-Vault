@@ -28,15 +28,8 @@ import {
 } from "@/components/ui/select";
 import SearchableSelect from "@/components/ui/searchable-select";
 
-const CLIENT_OPTIONS = [
-  { label: "Jacob Thompson", value: "Jacob Thompson" },
-  { label: "Eleanor Vance", value: "Eleanor Vance" },
-  { label: "Marcus Brody", value: "Marcus Brody" },
-  { label: "Sophia Martinez", value: "Sophia Martinez" },
-  { label: "Alexander Smith", value: "Alexander Smith" },
-  { label: "Charlotte Davis", value: "Charlotte Davis" },
-  { label: "Benjamin Wright", value: "Benjamin Wright" },
-];
+import { useCreateContract } from "@/features/contracts/api/contracts.service";
+import { useClients } from "@/features/clients/api/clients.service";
 
 interface NewContractDialogProps {
   isOpen: boolean;
@@ -51,24 +44,60 @@ export default function NewContractDialog({
   onSubmitSuccess,
   defaultClient = "Jacob Thompson",
 }: NewContractDialogProps) {
+  const { data: clientsData } = useClients({ limit: 100 });
+  const clientOptions = clientsData?.data?.map(client => ({
+    label: `${client.firstName} ${client.lastName}`,
+    value: client.id
+  })) || [];
+
+  const createContract = useCreateContract();
+
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [anniversaryDate, setAnniversaryDate] = useState<Date | undefined>(new Date());
   const [formData, setFormData] = useState({
-    client: defaultClient,
-    policyNumber: "AN-210520",
+    client: defaultClient || "",
+    policyNumber: "",
     insuranceCompany: "Nationwide",
     contractType: "Fixed",
     status: "Active",
-    premiumAmount: "100000",
-    contractValue: "100000",
+    premiumAmount: "",
+    contractValue: "",
     beneficiaryInfo: "",
     notes: "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onClose();
-    onSubmitSuccess();
+    createContract.mutate({
+      client: formData.client,
+      policyNumber: formData.policyNumber,
+      provider: formData.insuranceCompany,
+      contractType: formData.contractType,
+      status: formData.status,
+      premiumAmount: Number(formData.premiumAmount) || 0,
+      contractValue: Number(formData.contractValue) || 0,
+      beneficiaryInformation: formData.beneficiaryInfo,
+      notes: formData.notes,
+      startDate: startDate ? startDate.toISOString() : undefined,
+      anniversaryDate: anniversaryDate ? anniversaryDate.toISOString() : undefined,
+    }, {
+      onSuccess: () => {
+        onClose();
+        onSubmitSuccess();
+        // Reset form
+        setFormData({
+          client: defaultClient || "",
+          policyNumber: "",
+          insuranceCompany: "Nationwide",
+          contractType: "Fixed",
+          status: "Active",
+          premiumAmount: "",
+          contractValue: "",
+          beneficiaryInfo: "",
+          notes: "",
+        });
+      }
+    });
   };
 
   return (
@@ -85,7 +114,7 @@ export default function NewContractDialog({
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-white">Client</Label>
             <SearchableSelect
-              options={CLIENT_OPTIONS}
+              options={clientOptions}
               value={formData.client}
               onChange={(val) => setFormData({ ...formData, client: val })}
               placeholder="Select Client"
@@ -103,8 +132,9 @@ export default function NewContractDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, policyNumber: e.target.value })
                 }
-                placeholder="AN-210520"
+                placeholder="Policy Number"
                 className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+                required
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -270,6 +300,7 @@ export default function NewContractDialog({
                 }
                 placeholder="100000"
                 className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+                required
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -282,6 +313,7 @@ export default function NewContractDialog({
                 }
                 placeholder="100000"
                 className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+                required
               />
             </div>
           </div>
@@ -327,8 +359,9 @@ export default function NewContractDialog({
             <Button
               type="submit"
               className="w-[150px] h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-sm font-medium border-0 shadow-sm"
+              disabled={createContract.isPending}
             >
-              Create Contract
+              {createContract.isPending ? "Creating..." : "Create Contract"}
             </Button>
           </DialogFooter>
         </form>

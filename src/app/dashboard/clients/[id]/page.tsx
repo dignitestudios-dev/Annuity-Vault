@@ -20,21 +20,9 @@ import DocumentsTab from "@/features/clients/components/profile/documents-tab";
 import TasksTab from "@/features/clients/components/profile/tasks-tab";
 import ActivityTab from "@/features/clients/components/profile/activity-tab";
 import { cn } from "@/lib/utils";
+import { useClient, useDeleteClient } from "@/features/clients/api/clients.service";
+import { useParams } from "next/navigation";
 
-const CLIENT_DATA = {
-  id: "1",
-  initials: "JT",
-  name: "Jacob Thompson",
-  dob: "DOB 1947-06-01",
-  email: "jacob.thompson0@example.com",
-  phone: "(322) 573-3458",
-  address: "5722 Magnolia Pkwy, Seattle, WA",
-  contracts: 4,
-  status: "Archived" as const,
-  created: "2024-10-07",
-  clientSince: "2024-10-07",
-  notes: "Client prefers quarterly review calls.",
-};
 
 const CONTRACTS = [
   {
@@ -196,6 +184,12 @@ function ClientDetailsContent() {
   const [isDeleteClientOpen, setIsDeleteClientOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
 
+  const params = useParams();
+  const clientId = typeof params?.id === "string" ? params.id : "";
+
+  const { data: client, isLoading } = useClient(clientId);
+  const deleteClientMutation = useDeleteClient();
+
   // Synchronize state when URL query parameter changes
   useEffect(() => {
     if (tabParam && TABS.some((t) => t.id === tabParam)) {
@@ -211,7 +205,12 @@ function ClientDetailsContent() {
   };
 
   const handleDeleteClientConfirm = () => {
-    setIsArchiveOpen(true);
+    deleteClientMutation.mutate(clientId, {
+      onSuccess: () => {
+        setIsDeleteClientOpen(false);
+        setIsArchiveOpen(true);
+      }
+    });
   };
 
   const handleArchiveClose = () => {
@@ -219,24 +218,34 @@ function ClientDetailsContent() {
     router.push("/dashboard/archived");
   };
 
+  if (isLoading) {
+    return <div className="text-white p-6 font-sans">Loading client details...</div>;
+  }
+
+  if (!client) {
+    return <div className="text-white p-6 font-sans">Client not found.</div>;
+  }
+
+  const fullName = `${client.firstName} ${client.lastName}`;
+
   return (
     <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans">
       {/* Top Header */}
       <ClientProfileHeader
-        status={CLIENT_DATA.status}
+        status={client.status as any}
         onEditClick={() => setIsEditOpen(true)}
         onDeleteClick={() => setIsDeleteClientOpen(true)}
       />
 
       {/* Client Information Card */}
       <ClientInfoCard
-        name={CLIENT_DATA.name}
-        clientSince={CLIENT_DATA.clientSince}
-        created={CLIENT_DATA.created}
-        email={CLIENT_DATA.email}
-        phone={CLIENT_DATA.phone}
-        address={CLIENT_DATA.address}
-        dob={CLIENT_DATA.dob}
+        name={fullName}
+        clientSince={new Date(client.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+        created={new Date(client.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+        email={client.email}
+        phone={client.phone || "No phone"}
+        address={client.address || "No address"}
+        dob={client.dateOfBirth ? `DOB ${new Date(client.dateOfBirth).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}` : "No DOB"}
       />
 
       {/* Tab Navigation Header Bar */}
@@ -273,7 +282,7 @@ function ClientDetailsContent() {
       <EditClientDialog
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
-        client={CLIENT_DATA}
+        client={client}
         onUpdateSuccess={() => setIsSuccessOpen(true)}
       />
 

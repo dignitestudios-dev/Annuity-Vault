@@ -5,51 +5,7 @@ import { Bell } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-interface NotificationPreviewItem {
-  id: string;
-  title: string;
-  description: string;
-  time: string;
-  isUnread: boolean;
-}
-
-const PREVIEW_NOTIFICATIONS: NotificationPreviewItem[] = [
-  {
-    id: "1",
-    title: "Contract Anniversary Approaching",
-    description: "Robert Jackson's contract #AV-88421 anniversary is in 30 days.",
-    time: "7:30 PM",
-    isUnread: true,
-  },
-  {
-    id: "2",
-    title: "Task Due Today",
-    description: "Review quarterly index performance options for Sarah Jenkins.",
-    time: "7:30 PM",
-    isUnread: true,
-  },
-  {
-    id: "3",
-    title: "System Maintenance Scheduled",
-    description: "Platform system update scheduled for Sunday at 2:00 AM EST.",
-    time: "7:30 PM",
-    isUnread: false,
-  },
-  {
-    id: "4",
-    title: "Contract Anniversary Approaching",
-    description: "Michael Vance's annuity contract renewal date is approaching.",
-    time: "7:30 PM",
-    isUnread: false,
-  },
-  {
-    id: "5",
-    title: "Client Document Uploaded",
-    description: "Signed annuity application agreement uploaded by Eleanor Vance.",
-    time: "7:30 PM",
-    isUnread: false,
-  },
-];
+import { useNotifications } from "@/features/notifications/api/notifications.service";
 
 export default function DashboardHeader() {
   const [isOpen, setIsOpen] = useState(false);
@@ -74,7 +30,9 @@ export default function DashboardHeader() {
     router.push("/dashboard/notifications");
   };
 
-  const unreadCount = PREVIEW_NOTIFICATIONS.filter((n) => n.isUnread).length;
+  const { data } = useNotifications({ limit: 5 });
+  const notifications = data?.data?.notifications || [];
+  const unreadCount = data?.data?.unreadCount || 0;
 
   return (
     <header className="relative w-full h-20 bg-[#141C24] px-6 lg:px-8 flex items-center justify-between border-b border-white/5 flex-shrink-0 z-40">
@@ -124,7 +82,7 @@ export default function DashboardHeader() {
 
             {/* Notifications List */}
             <div className="flex flex-col max-h-[380px] overflow-y-auto divide-y divide-white/10">
-              {PREVIEW_NOTIFICATIONS.map((item) => (
+              {notifications.map((item) => (
                 <div
                   key={item.id}
                   onClick={handleViewAll}
@@ -136,17 +94,17 @@ export default function DashboardHeader() {
                       {item.title}
                     </h4>
                     <span className="text-[#919191] text-xs font-normal flex-shrink-0">
-                      {item.time}
+                      {new Date(item.createdAt).toLocaleDateString("en-US", { month: 'short', day: 'numeric' })}
                     </span>
                   </div>
 
                   {/* Bottom Row: Description + Unread Badge */}
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[#919191] text-xs font-normal leading-relaxed line-clamp-2 flex-1">
-                      {item.description}
+                      {item.message}
                     </p>
 
-                    {item.isUnread && (
+                    {!item.isRead && (
                       <span className="w-4 h-4 rounded-full bg-[#FF0000] text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 shadow-sm">
                         1
                       </span>
@@ -154,6 +112,11 @@ export default function DashboardHeader() {
                   </div>
                 </div>
               ))}
+              {notifications.length === 0 && (
+                <div className="p-4 text-center text-[#919191] text-sm">
+                  No notifications.
+                </div>
+              )}
             </div>
           </div>
         )}

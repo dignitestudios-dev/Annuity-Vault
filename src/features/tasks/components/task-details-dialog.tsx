@@ -10,14 +10,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TaskItem } from "./new-task-dialog";
+import { Task } from "../types/tasks.types";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface TaskDetailsDialogProps {
-  task: TaskItem | null;
+  task: Task | null;
   isOpen: boolean;
   onClose: () => void;
-  onEdit: (task: TaskItem) => void;
+  onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
 }
 
@@ -30,7 +31,7 @@ export default function TaskDetailsDialog({
 }: TaskDetailsDialogProps) {
   if (!task) return null;
 
-  const renderPriorityBadge = (priority: TaskItem["priority"]) => {
+  const renderPriorityBadge = (priority: Task["priority"]) => {
     switch (priority) {
       case "Urgent":
         return (
@@ -59,7 +60,7 @@ export default function TaskDetailsDialog({
     }
   };
 
-  const renderStatusBadge = (status: TaskItem["status"]) => {
+  const renderStatusBadge = (status: Task["status"]) => {
     return (
       <span
         className={cn(
@@ -94,7 +95,9 @@ export default function TaskDetailsDialog({
               <CalendarIcon className="w-4 h-4 text-[#6887A0]" />
               <div>
                 <p className="text-[11px] text-[#919191]">Due Date</p>
-                <p className="text-xs sm:text-sm font-medium text-white">{task.due}</p>
+                <p className="text-xs sm:text-sm font-medium text-white">
+                  {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
+                </p>
               </div>
             </div>
 
@@ -102,7 +105,7 @@ export default function TaskDetailsDialog({
               <UserCheck className="w-4 h-4 text-[#6887A0]" />
               <div>
                 <p className="text-[11px] text-[#919191]">Assigned To</p>
-                <p className="text-xs sm:text-sm font-medium text-white">{task.assignedTo || "Jordan Reed"}</p>
+                <p className="text-xs sm:text-sm font-medium text-white">{task.assignedTo?.name || "N/A"}</p>
               </div>
             </div>
 
@@ -111,7 +114,7 @@ export default function TaskDetailsDialog({
                 <User className="w-4 h-4 text-[#6887A0]" />
                 <div>
                   <p className="text-[11px] text-[#919191]">Client</p>
-                  <p className="text-xs sm:text-sm font-medium text-white">{task.client}</p>
+                  <p className="text-xs sm:text-sm font-medium text-white">{task.client.name}</p>
                 </div>
               </div>
             )}
@@ -124,7 +127,7 @@ export default function TaskDetailsDialog({
             </h4>
             <div className="bg-[#141C24] p-3.5 rounded-[12px] border border-white/5 min-h-[90px]">
               <p className="text-xs sm:text-sm text-white/90 leading-relaxed whitespace-pre-wrap">
-                {task.desc}
+                {task.description || "No description provided."}
               </p>
             </div>
           </div>
@@ -136,7 +139,7 @@ export default function TaskDetailsDialog({
             type="button"
             onClick={() => {
               onClose();
-              onDelete(task.id);
+              if (task._id) onDelete(task._id);
             }}
             className="h-10 px-4 bg-[#FF0000] hover:bg-red-600 text-white rounded-[12px] text-xs font-medium border-0 flex items-center gap-2 cursor-pointer"
           >

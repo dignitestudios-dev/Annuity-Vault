@@ -14,119 +14,28 @@ import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
 import { cn } from "@/lib/utils";
 
-interface AnniversaryItem {
-  id: string;
-  client: string;
-  contract: string;
-  provider: string;
-  anniversary: string;
-  days: number;
-}
+import { useAnniversaries, exportAnniversaries } from "@/features/anniversaries/api/anniversaries.service";
 
-const INITIAL_ANNIVERSARIES: AnniversaryItem[] = [
-  {
-    id: "ann-1",
-    client: "Edward Wright",
-    contract: "VR-104342",
-    provider: "Brighthouse",
-    anniversary: "2026-06-24",
-    days: 0,
-  },
-  {
-    id: "ann-2",
-    client: "Christopher Mitchell",
-    contract: "IM-746162",
-    provider: "Lincoln Financial",
-    anniversary: "2026-06-24",
-    days: 0,
-  },
-  {
-    id: "ann-3",
-    client: "Jessica Jones",
-    contract: "FX-685256",
-    provider: "New York Life",
-    anniversary: "2026-06-24",
-    days: 0,
-  },
-  {
-    id: "ann-4",
-    client: "Emma Robinson",
-    contract: "FX-358047",
-    provider: "Brighthouse",
-    anniversary: "2026-06-25",
-    days: 1,
-  },
-  {
-    id: "ann-5",
-    client: "Susan Anderson",
-    contract: "AN-938671",
-    provider: "Equitable",
-    anniversary: "2026-06-26",
-    days: 2,
-  },
-  {
-    id: "ann-6",
-    client: "Gary Young",
-    contract: "IM-317261",
-    provider: "Jackson National",
-    anniversary: "2026-06-28",
-    days: 4,
-  },
-  {
-    id: "ann-7",
-    client: "Shirley Lee",
-    contract: "FX-335372",
-    provider: "Allianz Life",
-    anniversary: "2026-06-28",
-    days: 4,
-  },
-  {
-    id: "ann-8",
-    client: "Patricia Williams",
-    contract: "IM-512498",
-    provider: "Symetra",
-    anniversary: "2026-06-29",
-    days: 5,
-  },
-  {
-    id: "ann-9",
-    client: "Sandra Thompson",
-    contract: "IM-108731",
-    provider: "Lincoln Financial",
-    anniversary: "2026-07-01",
-    days: 7,
-  },
-  {
-    id: "ann-10",
-    client: "Ronald Martinez",
-    contract: "FX-908123",
-    provider: "MassMutual",
-    anniversary: "2026-07-10",
-    days: 16,
-  },
-  {
-    id: "ann-11",
-    client: "Cynthia Lee",
-    contract: "VR-451298",
-    provider: "Pacific Life",
-    anniversary: "2026-07-25",
-    days: 31,
-  },
-  {
-    id: "ann-12",
-    client: "David Brooks",
-    contract: "IX-238901",
-    provider: "Prudential",
-    anniversary: "2026-08-15",
-    days: 52,
-  },
-];
+
 
 export default function AnniversariesPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDaysFilter, setSelectedDaysFilter] = useState<number | "all">("all");
+  const [selectedDaysFilter, setSelectedDaysFilter] = useState<30 | 60 | 90 | 120 | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
+
+  const { data, isLoading } = useAnniversaries({
+    page: currentPage,
+    limit: itemsPerPage,
+    search: searchTerm || undefined,
+    window: selectedDaysFilter !== "all" ? selectedDaysFilter : 120, // Backend default is 90, so we specify explicitly if possible
+  });
+
+  const anniversariesData = data?.data;
+  const stats = anniversariesData?.stats;
+  const rows = anniversariesData?.rows || [];
+  const totalItems = data?.pagination?.totalItems || 0;
+  const totalPages = data?.pagination?.totalPages || 1;
 
   const [feedbackModal, setFeedbackModal] = useState<{
     isOpen: boolean;
@@ -138,46 +47,41 @@ export default function AnniversariesPage() {
     desc: "",
   });
 
-  // Calculate dynamic metric card counts
-  const next30Count = INITIAL_ANNIVERSARIES.filter((item) => item.days <= 30).length;
-  const next60Count = INITIAL_ANNIVERSARIES.filter((item) => item.days <= 60).length;
-  const next90Count = INITIAL_ANNIVERSARIES.filter((item) => item.days <= 90).length;
-  const next180Count = INITIAL_ANNIVERSARIES.filter((item) => item.days <= 180).length;
-
-  // Filtered dataset
-  const filteredAnniversaries = INITIAL_ANNIVERSARIES.filter((item) => {
-    const matchesSearch =
-      item.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.contract.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.provider.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesDays =
-      selectedDaysFilter === "all" || item.days <= (selectedDaysFilter as number);
-
-    return matchesSearch && matchesDays;
-  });
-
-  const totalPages = Math.ceil(filteredAnniversaries.length / itemsPerPage);
-  const paginatedAnniversaries = filteredAnniversaries.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const handleExportPDF = () => {
-    setFeedbackModal({
-      isOpen: true,
-      title: "PDF Export Started!",
-      desc: "Your contract anniversaries report is being generated and will download automatically.",
-    });
+  const handleExportPDF = async () => {
+    try {
+      await exportAnniversaries(
+        "pdf",
+        searchTerm || undefined,
+        selectedDaysFilter !== "all" ? selectedDaysFilter : 120
+      );
+      setFeedbackModal({
+        isOpen: true,
+        title: "PDF Export Started!",
+        desc: "Your contract anniversaries report is being generated and will download automatically.",
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+    }
   };
 
-  const handleExportCSV = () => {
-    setFeedbackModal({
-      isOpen: true,
-      title: "CSV Export Started!",
-      desc: "Your contract anniversaries CSV dataset is ready for download.",
-    });
+  const handleExportCSV = async () => {
+    try {
+      await exportAnniversaries(
+        "csv",
+        searchTerm || undefined,
+        selectedDaysFilter !== "all" ? selectedDaysFilter : 120
+      );
+      setFeedbackModal({
+        isOpen: true,
+        title: "CSV Export Started!",
+        desc: "Your contract anniversaries CSV dataset is ready for download.",
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+    }
   };
+
+
 
   return (
     <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-10 font-sans">
@@ -214,7 +118,7 @@ export default function AnniversariesPage() {
           </div>
           <div className="flex flex-col">
             <span className="text-2xl sm:text-[24px] font-semibold text-white leading-tight font-sans tracking-tight">
-              {next30Count}
+              {stats?.next30Days || 0}
             </span>
             <span className="text-xs sm:text-sm text-[#919191] font-normal">
               In next 30 days
@@ -229,7 +133,7 @@ export default function AnniversariesPage() {
           </div>
           <div className="flex flex-col">
             <span className="text-2xl sm:text-[24px] font-semibold text-white leading-tight font-sans tracking-tight">
-              {next60Count}
+              {stats?.next60Days || 0}
             </span>
             <span className="text-xs sm:text-sm text-[#919191] font-normal">
               In next 60 days
@@ -244,7 +148,7 @@ export default function AnniversariesPage() {
           </div>
           <div className="flex flex-col">
             <span className="text-2xl sm:text-[24px] font-semibold text-white leading-tight font-sans tracking-tight">
-              {next90Count}
+              {stats?.next90Days || 0}
             </span>
             <span className="text-xs sm:text-sm text-[#919191] font-normal">
               In next 90 days
@@ -252,17 +156,17 @@ export default function AnniversariesPage() {
           </div>
         </div>
 
-        {/* Card 4: Next 180 Days */}
+        {/* Card 4: Next 120 Days */}
         <div className="bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-5 flex items-center gap-4 shadow-sm">
           <div className="w-10 h-10 rounded-xl bg-[#394A58]/50 flex items-center justify-center flex-shrink-0">
             <CalendarDays className="w-6 h-6 text-[#6887A0]" />
           </div>
           <div className="flex flex-col">
             <span className="text-2xl sm:text-[24px] font-semibold text-white leading-tight font-sans tracking-tight">
-              {next180Count}
+              {stats?.next120Days || 0}
             </span>
             <span className="text-xs sm:text-sm text-[#919191] font-normal">
-              In next 180 days
+              In next 120 days
             </span>
           </div>
         </div>
@@ -285,9 +189,9 @@ export default function AnniversariesPage() {
           />
         </div>
 
-        {/* Time Horizon Preset Buttons (30d, 60d, 90d, 180d) */}
+        {/* Time Horizon Preset Buttons (30d, 60d, 90d, 120d) */}
         <div className="flex items-center gap-1 bg-transparent p-0.5 rounded-lg">
-          {[30, 60, 90, 180].map((daysVal) => {
+          {([30, 60, 90, 120] as const).map((daysVal) => {
             const isActive = selectedDaysFilter === daysVal;
             return (
               <button
@@ -335,20 +239,26 @@ export default function AnniversariesPage() {
             </TableHeader>
 
             <TableBody>
-              {paginatedAnniversaries.length > 0 ? (
-                paginatedAnniversaries.map((row) => (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-12 text-center text-xs text-[#919191]">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : rows.length > 0 ? (
+                rows.map((row) => (
                   <TableRow
-                    key={row.id}
+                    key={row.contractId}
                     className="border-b border-white/[0.08] hover:bg-white/[0.02] transition-colors h-[62px] cursor-pointer"
                   >
                     {/* Client */}
                     <TableCell className="px-6 py-3.5 text-xs sm:text-sm font-medium text-white whitespace-nowrap">
-                      {row.client}
+                      {row.client ? `${row.client.firstName} ${row.client.lastName}` : "No Client"}
                     </TableCell>
 
                     {/* Contract */}
                     <TableCell className="px-6 py-3.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
-                      {row.contract}
+                      {row.contractNumber}
                     </TableCell>
 
                     {/* Provider */}
@@ -358,12 +268,12 @@ export default function AnniversariesPage() {
 
                     {/* Anniversary Date */}
                     <TableCell className="px-6 py-3.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
-                      {row.anniversary}
+                      {new Date(row.anniversaryDate).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
                     </TableCell>
 
                     {/* Days Countdown */}
                     <TableCell className="px-6 py-3.5 text-xs sm:text-sm text-white font-medium whitespace-nowrap">
-                      {row.days} days
+                      {row.daysUntil} days
                     </TableCell>
                   </TableRow>
                 ))
@@ -384,7 +294,7 @@ export default function AnniversariesPage() {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
-            totalItems={filteredAnniversaries.length}
+            totalItems={totalItems}
             itemsPerPage={itemsPerPage}
           />
         </div>

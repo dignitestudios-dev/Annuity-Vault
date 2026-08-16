@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import SuccessModal from "@/components/shared/success-modal";
+import { useUpdatePassword } from "@/features/settings/api/settings.service";
 
 const changePasswordSchema = z
   .object({
@@ -29,12 +30,15 @@ export default function SettingsChangePasswordPage() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const updatePasswordMutation = useUpdatePassword();
 
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<ChangePasswordValues>({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: {
@@ -44,9 +48,19 @@ export default function SettingsChangePasswordPage() {
     },
   });
 
-  const onSubmit = (_data: ChangePasswordValues) => {
-    setIsSuccessOpen(true);
-    reset();
+  const onSubmit = async (data: ChangePasswordValues) => {
+    setErrorMessage("");
+    try {
+      await updatePasswordMutation.mutateAsync({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword,
+      });
+      setIsSuccessOpen(true);
+      reset();
+    } catch (error: any) {
+      setErrorMessage(error?.response?.data?.message || "Failed to update password.");
+    }
   };
 
   return (
@@ -145,12 +159,20 @@ export default function SettingsChangePasswordPage() {
           </div>
         </div>
 
+        {errorMessage && (
+          <div className="text-[#FF3E46] text-sm max-w-[760px]">{errorMessage}</div>
+        )}
+
         {/* Action Button: Update */}
         <div className="flex justify-end max-w-[760px] mt-4">
           <button
             type="submit"
-            className="bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-semibold text-xs sm:text-sm h-11 px-8 rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm"
+            disabled={isSubmitting || updatePasswordMutation.isPending}
+            className="bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-semibold text-xs sm:text-sm h-11 px-8 rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 disabled:opacity-70"
           >
+            {(isSubmitting || updatePasswordMutation.isPending) && (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            )}
             Update
           </button>
         </div>

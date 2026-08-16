@@ -19,7 +19,10 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import NewTaskDialog, { TaskItem } from "@/features/tasks/components/new-task-dialog";
+import NewTaskDialog from "@/features/tasks/components/new-task-dialog";
+import { Task } from "@/features/tasks/types/tasks.types";
+import { useTasks, useUpdateTask, useDeleteTask } from "@/features/tasks/api/tasks.service";
+import { format, parseISO } from "date-fns";
 import EditTaskDialog from "@/features/tasks/components/edit-task-dialog";
 import TaskDetailsDialog from "@/features/tasks/components/task-details-dialog";
 import DateTasksDialog from "@/features/tasks/components/date-tasks-dialog";
@@ -29,329 +32,6 @@ import TablePagination from "@/components/shared/table-pagination";
 import { cn } from "@/lib/utils";
 
 // Seed initial task items matching the Figma design screenshot accurately
-const INITIAL_TASKS: TaskItem[] = [
-  // --- JUNE 2026 SEED TASKS ---
-  {
-    id: "t-1",
-    title: "Confirm RMD distribution",
-    priority: "Urgent",
-    desc: "Discussed beneficiary update during quarterly review.",
-    due: "2026-06-01",
-    status: "In progress",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-2",
-    title: "Confirm RMD distribution",
-    priority: "High",
-    desc: "Discussed beneficiary update during quarterly review.",
-    due: "2026-06-01",
-    status: "To do",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-3",
-    title: "Prepare quarterly performance summary",
-    priority: "Low",
-    desc: "Reminder to follow up on outstanding paperwork.",
-    due: "2026-06-03",
-    status: "Done",
-    client: "William Anderson",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-4",
-    title: "Follow up on suitability questionnaire",
-    priority: "Medium",
-    desc: "Reviewed performance vs. benchmark for prior year.",
-    due: "2026-06-04",
-    status: "To do",
-    client: "Jacob Thompson",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-5",
-    title: "Verify contact information on file",
-    priority: "Urgent",
-    desc: "Annual check for address and email updates.",
-    due: "2026-06-05",
-    status: "In progress",
-    client: "Sarah Jenkins",
-    assignedTo: "Adam Smith",
-  },
-  {
-    id: "t-6",
-    title: "Upload signed beneficiary form",
-    priority: "Low",
-    desc: "Client considering 1035 exchange to lower-fee product.",
-    due: "2026-06-06",
-    status: "In progress",
-    client: "David Wilson",
-    assignedTo: "Sarah Connor",
-  },
-  {
-    id: "t-7",
-    title: "Confirm RMD distribution",
-    priority: "Urgent",
-    desc: "Required minimum distribution verification.",
-    due: "2026-06-07",
-    status: "In progress",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-8",
-    title: "Confirm RMD distribution",
-    priority: "Medium",
-    desc: "Discussed beneficiary update during quarterly review.",
-    due: "2026-06-08",
-    status: "To do",
-    client: "Robert Chen",
-    assignedTo: "Adam Smith",
-  },
-  {
-    id: "t-9",
-    title: "Prepare quarterly performance summary",
-    priority: "High",
-    desc: "Reviewed performance vs. benchmark for prior year.",
-    due: "2026-06-10",
-    status: "Done",
-    client: "James Miller",
-    assignedTo: "Adam Smith",
-  },
-  {
-    id: "t-10",
-    title: "Follow up on suitability questionnaire",
-    priority: "Urgent",
-    desc: "Client inquiring about income rider activation.",
-    due: "2026-06-11",
-    status: "To do",
-    client: "Eleanor Vance",
-    assignedTo: "Sarah Connor",
-  },
-  {
-    id: "t-11",
-    title: "Verify contact information on file",
-    priority: "Medium",
-    desc: "Updated address and contact preferences in CRM.",
-    due: "2026-06-12",
-    status: "Done",
-    client: "Charles Harris",
-    assignedTo: "Michael Scott",
-  },
-  {
-    id: "t-12",
-    title: "Upload signed beneficiary form",
-    priority: "High",
-    desc: "Client considering 1035 exchange to lower-fee product.",
-    due: "2026-06-13",
-    status: "In progress",
-    client: "David Wilson",
-    assignedTo: "Sarah Connor",
-  },
-  {
-    id: "t-13",
-    title: "Confirm RMD distribution",
-    priority: "High",
-    desc: "Annual distribution paperwork verification.",
-    due: "2026-06-15",
-    status: "In progress",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-14",
-    title: "Confirm RMD distribution",
-    priority: "Urgent",
-    desc: "Discussed beneficiary update during quarterly review.",
-    due: "2026-06-16",
-    status: "To do",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-15",
-    title: "Confirm RMD distribution",
-    priority: "Low",
-    desc: "Quarterly distribution review.",
-    due: "2026-06-16",
-    status: "To do",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-16",
-    title: "Confirm RMD distribution",
-    priority: "Low",
-    desc: "Verified distribution details.",
-    due: "2026-06-16",
-    status: "Done",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-17",
-    title: "Prepare quarterly performance summary",
-    priority: "Medium",
-    desc: "Reviewed performance vs. benchmark for prior year.",
-    due: "2026-06-17",
-    status: "Done",
-    client: "James Miller",
-    assignedTo: "Adam Smith",
-  },
-  {
-    id: "t-18",
-    title: "Follow up on suitability questionnaire",
-    priority: "Urgent",
-    desc: "Anniversary review completed; no changes requested.",
-    due: "2026-06-18",
-    status: "In progress",
-    client: "Linda White",
-    assignedTo: "Sarah Connor",
-  },
-  {
-    id: "t-19",
-    title: "Verify contact information on file",
-    priority: "High",
-    desc: "Updated phone number and email.",
-    due: "2026-06-19",
-    status: "Done",
-    client: "Sarah Jenkins",
-    assignedTo: "Adam Smith",
-  },
-  {
-    id: "t-20",
-    title: "Upload signed beneficiary form",
-    priority: "Urgent",
-    desc: "Paperwork ready for filing.",
-    due: "2026-06-20",
-    status: "To do",
-    client: "David Wilson",
-    assignedTo: "Sarah Connor",
-  },
-  {
-    id: "t-21",
-    title: "Prepare quarterly performance summary",
-    priority: "Urgent",
-    desc: "Reminder to follow up on outstanding paperwork.",
-    due: "2026-06-21",
-    status: "Done",
-    client: "William Anderson",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-22",
-    title: "Confirm RMD distribution",
-    priority: "Medium",
-    desc: "Discussed beneficiary update during quarterly review.",
-    due: "2026-06-22",
-    status: "In progress",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-23",
-    title: "Confirm RMD distribution",
-    priority: "Urgent",
-    desc: "Required distribution processing.",
-    due: "2026-06-24",
-    status: "To do",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-24",
-    title: "Confirm RMD distribution",
-    priority: "Low",
-    desc: "Annual check.",
-    due: "2026-06-24",
-    status: "Done",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-25",
-    title: "Confirm RMD distribution",
-    priority: "High",
-    desc: "Paperwork submitted.",
-    due: "2026-06-24",
-    status: "In progress",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-26",
-    title: "Follow up on suitability questionnaire",
-    priority: "Medium",
-    desc: "Reviewed performance vs. benchmark.",
-    due: "2026-06-25",
-    status: "To do",
-    client: "Jacob Thompson",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-27",
-    title: "Verify contact information on file",
-    priority: "Low",
-    desc: "Contact information verified.",
-    due: "2026-06-26",
-    status: "Done",
-    client: "Sarah Jenkins",
-    assignedTo: "Adam Smith",
-  },
-  {
-    id: "t-28",
-    title: "Upload signed beneficiary form",
-    priority: "Urgent",
-    desc: "Client submitted signed copy.",
-    due: "2026-06-27",
-    status: "In progress",
-    client: "David Wilson",
-    assignedTo: "Sarah Connor",
-  },
-  {
-    id: "t-29",
-    title: "Confirm RMD distribution",
-    priority: "Urgent",
-    desc: "Final distribution signoff.",
-    due: "2026-06-28",
-    status: "To do",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-30",
-    title: "Confirm RMD distribution",
-    priority: "High",
-    desc: "Updated address and contact preferences.",
-    due: "2026-06-28",
-    status: "In progress",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-31",
-    title: "Confirm RMD distribution",
-    priority: "High",
-    desc: "Quarterly check.",
-    due: "2026-06-28",
-    status: "Done",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-  {
-    id: "t-32",
-    title: "Confirm RMD distribution",
-    priority: "Medium",
-    desc: "End of month summary.",
-    due: "2026-06-29",
-    status: "In progress",
-    client: "Elizabeth Taylor",
-    assignedTo: "Jordan Reed",
-  },
-];
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -370,7 +50,13 @@ function TasksContent() {
   const [activeTab, setActiveTab] = useState<"kanban" | "list" | "calendar">(
     tabParam && ["kanban", "list", "calendar"].includes(tabParam) ? tabParam : "kanban"
   );
-  const [tasksList, setTasksList] = useState<TaskItem[]>(INITIAL_TASKS);
+
+  const { data: tasksData, isLoading, refetch } = useTasks();
+  const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
+
+  const tasksList: Task[] = tasksData?.data || [];
+
 
   // Synchronize activeTab when tabParam in searchParams updates
   useEffect(() => {
@@ -395,8 +81,8 @@ function TasksContent() {
   // Modal / Dialog States
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const [newTaskInitialDate, setNewTaskInitialDate] = useState<string | undefined>();
-  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
-  const [selectedDetailsTask, setSelectedDetailsTask] = useState<TaskItem | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [selectedDetailsTask, setSelectedDetailsTask] = useState<Task | null>(null);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [feedbackModal, setFeedbackModal] = useState<{ isOpen: boolean; title: string; desc: string }>({
@@ -426,14 +112,17 @@ function TasksContent() {
 
   // Task Status Transition Handler
   const handleMoveStatus = (id: string, newStatus: "To do" | "In progress" | "Done") => {
-    setTasksList((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+    updateTaskMutation.mutate(
+      { id, data: { status: newStatus } },
+      {
+        onSuccess: () => refetch(),
+      }
     );
   };
 
   // Add Task Handler
-  const handleAddTask = (newTask: TaskItem) => {
-    setTasksList((prev) => [newTask, ...prev]);
+  const handleAddTask = () => {
+    refetch();
     setFeedbackModal({
       isOpen: true,
       title: "Task Created!",
@@ -442,10 +131,8 @@ function TasksContent() {
   };
 
   // Update Task Handler
-  const handleUpdateTask = (updatedTask: TaskItem) => {
-    setTasksList((prev) =>
-      prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-    );
+  const handleUpdateTask = () => {
+    refetch();
     setEditingTask(null);
     setFeedbackModal({
       isOpen: true,
@@ -457,8 +144,12 @@ function TasksContent() {
   // Confirm Delete Task Handler
   const confirmDeleteTask = () => {
     if (deletingTaskId) {
-      setTasksList((prev) => prev.filter((t) => t.id !== deletingTaskId));
-      setDeletingTaskId(null);
+      deleteTaskMutation.mutate(deletingTaskId, {
+        onSuccess: () => {
+          refetch();
+          setDeletingTaskId(null);
+        }
+      });
     }
   };
 
@@ -466,8 +157,8 @@ function TasksContent() {
   const filteredTasks = tasksList.filter((task) => {
     const matchesSearch =
       task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.desc.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (task.client && task.client.toLowerCase().includes(searchTerm.toLowerCase()));
+      (task.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (task.client && task.client.name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesPriority =
       priorityFilter === "all" || task.priority === priorityFilter;
     const matchesStatus =
@@ -481,7 +172,7 @@ function TasksContent() {
   const doneTasks = filteredTasks.filter((t) => t.status === "Done");
 
   // Helper for priority badge rendering
-  const renderPriorityBadge = (priority: TaskItem["priority"]) => {
+  const renderPriorityBadge = (priority: Task["priority"]) => {
     switch (priority) {
       case "Urgent":
         return (
@@ -715,7 +406,7 @@ function TasksContent() {
             <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
               {todoTasks.map((task) => (
                 <div
-                  key={task.id}
+                  key={task._id}
                   className="bg-[#0C1116] rounded-[8px] p-3 border border-white/5 hover:border-[#66859E]/40 transition-all flex flex-col justify-between cursor-pointer group flex-shrink-0"
                   onClick={() => setSelectedDetailsTask(task)}
                 >
@@ -741,7 +432,7 @@ function TasksContent() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDeletingTaskId(task.id);
+                          setDeletingTaskId(task._id!);
                         }}
                         title="Delete task"
                         className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors"
@@ -752,11 +443,11 @@ function TasksContent() {
                   </div>
 
                   <p className="text-[11px] text-[#919191] font-normal mt-1.5 line-clamp-1">
-                    {task.desc}
+                    {task.description || "No description provided."}
                   </p>
 
                   <p className="text-[11px] text-[#919191] font-normal mt-2">
-                    Due {task.due}
+                    Due {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
                   </p>
 
                   <div
@@ -764,13 +455,13 @@ function TasksContent() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      onClick={() => handleMoveStatus(task.id, "In progress")}
+                      onClick={() => handleMoveStatus(task._id!, "In progress")}
                       className="bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF9D00]/20 transition-all cursor-pointer"
                     >
                       In progress
                     </button>
                     <button
-                      onClick={() => handleMoveStatus(task.id, "Done")}
+                      onClick={() => handleMoveStatus(task._id!, "Done")}
                       className="bg-[#42CD7F]/10 border border-[#42CD7F] text-[#42CD7F] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#42CD7F]/20 transition-all cursor-pointer"
                     >
                       Done →
@@ -797,7 +488,7 @@ function TasksContent() {
             <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
               {inProgressTasks.map((task) => (
                 <div
-                  key={task.id}
+                  key={task._id}
                   className="bg-[#0C1116] rounded-[8px] p-3 border border-white/5 hover:border-[#66859E]/40 transition-all flex flex-col justify-between cursor-pointer group flex-shrink-0"
                   onClick={() => setSelectedDetailsTask(task)}
                 >
@@ -823,7 +514,7 @@ function TasksContent() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDeletingTaskId(task.id);
+                          setDeletingTaskId(task._id!);
                         }}
                         title="Delete task"
                         className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors"
@@ -834,11 +525,11 @@ function TasksContent() {
                   </div>
 
                   <p className="text-[11px] text-[#919191] font-normal mt-1.5 line-clamp-1">
-                    {task.desc}
+                    {task.description || "No description provided."}
                   </p>
 
                   <p className="text-[11px] text-[#919191] font-normal mt-2">
-                    Due {task.due}
+                    Due {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
                   </p>
 
                   <div
@@ -846,13 +537,13 @@ function TasksContent() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      onClick={() => handleMoveStatus(task.id, "To do")}
+                      onClick={() => handleMoveStatus(task._id!, "To do")}
                       className="bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF3E46]/20 transition-all cursor-pointer"
                     >
                       ← To do
                     </button>
                     <button
-                      onClick={() => handleMoveStatus(task.id, "Done")}
+                      onClick={() => handleMoveStatus(task._id!, "Done")}
                       className="bg-[#42CD7F]/10 border border-[#42CD7F] text-[#42CD7F] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#42CD7F]/20 transition-all cursor-pointer"
                     >
                       Done →
@@ -879,7 +570,7 @@ function TasksContent() {
             <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
               {doneTasks.map((task) => (
                 <div
-                  key={task.id}
+                  key={task._id}
                   className="bg-[#0C1116] rounded-[8px] p-3 border border-white/5 hover:border-[#66859E]/40 transition-all flex flex-col justify-between cursor-pointer group flex-shrink-0"
                   onClick={() => setSelectedDetailsTask(task)}
                 >
@@ -905,7 +596,7 @@ function TasksContent() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDeletingTaskId(task.id);
+                          setDeletingTaskId(task._id!);
                         }}
                         title="Delete task"
                         className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors"
@@ -916,11 +607,11 @@ function TasksContent() {
                   </div>
 
                   <p className="text-[11px] text-[#919191] font-normal mt-1.5 line-clamp-1">
-                    {task.desc}
+                    {task.description || "No description provided."}
                   </p>
 
                   <p className="text-[11px] text-[#919191] font-normal mt-2">
-                    Due {task.due}
+                    Due {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
                   </p>
 
                   <div
@@ -928,13 +619,13 @@ function TasksContent() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      onClick={() => handleMoveStatus(task.id, "To do")}
+                      onClick={() => handleMoveStatus(task._id!, "To do")}
                       className="bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF3E46]/20 transition-all cursor-pointer"
                     >
                       ← To do
                     </button>
                     <button
-                      onClick={() => handleMoveStatus(task.id, "In progress")}
+                      onClick={() => handleMoveStatus(task._id!, "In progress")}
                       className="bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF9D00]/20 transition-all cursor-pointer"
                     >
                       In progress
@@ -983,7 +674,7 @@ function TasksContent() {
                   .slice((listCurrentPage - 1) * listItemsPerPage, listCurrentPage * listItemsPerPage)
                   .map((task) => (
                   <TableRow
-                    key={task.id}
+                    key={task._id}
                     className="border-b border-white/[0.08] hover:bg-white/[0.02] transition-colors h-[66px] cursor-pointer"
                     onClick={() => setSelectedDetailsTask(task)}
                   >
@@ -993,13 +684,13 @@ function TasksContent() {
                           {task.title}
                         </span>
                         <span className="text-[12px] text-[#919191] font-normal leading-tight line-clamp-1 mt-0.5">
-                          {task.desc}
+                          {task.description || "No description provided."}
                         </span>
                       </div>
                     </TableCell>
 
                     <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
-                      {task.due}
+                      {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
                     </TableCell>
 
                     <TableCell className="px-6 py-2.5 whitespace-nowrap">
@@ -1035,7 +726,7 @@ function TasksContent() {
 
                         <button
                           type="button"
-                          onClick={() => setDeletingTaskId(task.id)}
+                          onClick={() => setDeletingTaskId(task._id!)}
                           title="Delete Task"
                           className="w-9 h-9 flex items-center justify-center rounded-[6px] bg-[#FF0000] text-white hover:bg-red-600 transition-colors cursor-pointer shadow-sm"
                         >
@@ -1126,7 +817,7 @@ function TasksContent() {
             {Array.from({ length: daysInMonth }).map((_, index) => {
               const dayNum = index + 1;
               const dateStr = `${formattedMonthStr}-${String(dayNum).padStart(2, "0")}`;
-              const dayTasks = filteredTasks.filter((t) => t.due === dateStr);
+              const dayTasks = filteredTasks.filter((t) => t.dueDate && t.dueDate.startsWith(dateStr));
               const hasTasks = dayTasks.length > 0;
 
               return (
@@ -1209,7 +900,7 @@ function TasksContent() {
           setIsNewTaskOpen(false);
           setNewTaskInitialDate(undefined);
         }}
-        onAddTask={handleAddTask}
+        onSuccess={handleAddTask}
       />
 
       {/* Edit Task Dialog */}
@@ -1217,7 +908,7 @@ function TasksContent() {
         task={editingTask}
         isOpen={!!editingTask}
         onClose={() => setEditingTask(null)}
-        onUpdateTask={handleUpdateTask}
+        onSuccess={handleUpdateTask}
       />
 
       {/* Task Details Dialog (View Full Details) */}
@@ -1232,7 +923,7 @@ function TasksContent() {
       {/* Date Tasks Dialog (Clicking on Calendar Date) */}
       <DateTasksDialog
         dateString={selectedCalendarDate}
-        tasks={filteredTasks.filter((t) => t.due === selectedCalendarDate)}
+        tasks={filteredTasks.filter((t) => t.dueDate && selectedCalendarDate && t.dueDate.startsWith(selectedCalendarDate))}
         isOpen={!!selectedCalendarDate}
         onClose={() => setSelectedCalendarDate(null)}
         onSelectTask={(task) => setSelectedDetailsTask(task)}

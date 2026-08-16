@@ -9,200 +9,12 @@ import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
 import { cn } from "@/lib/utils";
 
-interface ArchivedItem {
-  id: string;
-  type: "clients" | "contracts" | "notes" | "documents";
-  title: string;
-  subtitle: string;
-  deletedDate: string;
-  daysLeft: string;
-}
-
-const INITIAL_ARCHIVED_ITEMS: ArchivedItem[] = [
-  // --- CLIENTS TAB ITEMS ---
-  {
-    id: "cli-1",
-    type: "clients",
-    title: "James Ellington",
-    subtitle: "4 contracts",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "60d left",
-  },
-  {
-    id: "cli-2",
-    type: "clients",
-    title: "Eleanor Vance",
-    subtitle: "2 contracts",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "52d left",
-  },
-  {
-    id: "cli-3",
-    type: "clients",
-    title: "Robert Jackson",
-    subtitle: "5 contracts",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "46d left",
-  },
-  {
-    id: "cli-4",
-    type: "clients",
-    title: "Michael Mitchell",
-    subtitle: "3 contracts",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "30d left",
-  },
-  {
-    id: "cli-5",
-    type: "clients",
-    title: "Sarah Jenkins",
-    subtitle: "1 contract",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "10d left",
-  },
-  {
-    id: "cli-6",
-    type: "clients",
-    title: "David Brooks",
-    subtitle: "2 contracts",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "5d left",
-  },
-
-  // --- CONTRACTS TAB ITEMS ---
-  {
-    id: "cnt-1",
-    type: "contracts",
-    title: "IX-841719",
-    subtitle: "Jennifer Wilson",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "60d left",
-  },
-  {
-    id: "cnt-2",
-    type: "contracts",
-    title: "VR-357824",
-    subtitle: "Jeffrey Clark",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "52d left",
-  },
-  {
-    id: "cnt-3",
-    type: "contracts",
-    title: "AN-697414",
-    subtitle: "Jerry Anderson",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "46d left",
-  },
-  {
-    id: "cnt-4",
-    type: "contracts",
-    title: "FX-256585",
-    subtitle: "George Nguyen",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "30d left",
-  },
-  {
-    id: "cnt-5",
-    type: "contracts",
-    title: "VR-287929",
-    subtitle: "Steven Jackson",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "12d left",
-  },
-  {
-    id: "cnt-6",
-    type: "contracts",
-    title: "IM-991204",
-    subtitle: "Karen Scott",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "4d left",
-  },
-
-  // --- NOTES TAB ITEMS ---
-  {
-    id: "nt-1",
-    type: "notes",
-    title: "Client requested allocation rebalance after market volatility.",
-    subtitle: "Note for Jacob Thompson",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "60d left",
-  },
-  {
-    id: "nt-2",
-    type: "notes",
-    title: "Client considering 1035 exchange to lower-fee product.",
-    subtitle: "Note for Eleanor Vance",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "52d left",
-  },
-  {
-    id: "nt-3",
-    type: "notes",
-    title: "Discussed beneficiary update during quarterly review.",
-    subtitle: "Note for Robert Jackson",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "46d left",
-  },
-  {
-    id: "nt-4",
-    type: "notes",
-    title: "Anniversary review completed; no changes requested.",
-    subtitle: "Note for Sarah Jenkins",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "30d left",
-  },
-  {
-    id: "nt-5",
-    type: "notes",
-    title: "Followed up on missing suitability questionnaire form.",
-    subtitle: "Note for David Brooks",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "8d left",
-  },
-
-  // --- DOCUMENTS TAB ITEMS ---
-  {
-    id: "doc-1",
-    type: "documents",
-    title: "Signed_Annuity_Application_2026.pdf",
-    subtitle: "Document for Jacob Thompson",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "60d left",
-  },
-  {
-    id: "doc-2",
-    type: "documents",
-    title: "Beneficiary_Designation_Form.pdf",
-    subtitle: "Document for Eleanor Vance",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "52d left",
-  },
-  {
-    id: "doc-3",
-    type: "documents",
-    title: "Quarterly_Performance_Statement.pdf",
-    subtitle: "Document for Robert Jackson",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "46d left",
-  },
-  {
-    id: "doc-4",
-    type: "documents",
-    title: "Suitability_Questionnaire_2025.pdf",
-    subtitle: "Document for Sarah Jenkins",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "30d left",
-  },
-  {
-    id: "doc-5",
-    type: "documents",
-    title: "Driver_License_Copy.pdf",
-    subtitle: "Document for David Brooks",
-    deletedDate: "Deleted Jul 9, 2026",
-    daysLeft: "15d left",
-  },
-];
+import { 
+  useArchived, 
+  useRestoreArchived, 
+  useDeleteArchived, 
+  ArchivedItem 
+} from "@/features/archived/api/archived.service";
 
 const TABS = [
   { id: "clients", label: "Clients", icon: User },
@@ -216,15 +28,14 @@ function ArchivedContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  const tabParam = searchParams.get("tab") as ArchivedItem["type"] | null;
-  const [activeTab, setActiveTab] = useState<ArchivedItem["type"]>(
+  const tabParam = searchParams.get("tab") as "clients" | "contracts" | "notes" | "documents" | null;
+  const [activeTab, setActiveTab] = useState<"clients" | "contracts" | "notes" | "documents">(
     tabParam && ["clients", "contracts", "notes", "documents"].includes(tabParam)
       ? tabParam
       : "clients"
   );
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [items, setItems] = useState<ArchivedItem[]>(INITIAL_ARCHIVED_ITEMS);
   const [restoringItem, setRestoringItem] = useState<ArchivedItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<ArchivedItem | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -240,15 +51,14 @@ function ArchivedContent() {
     desc: "",
   });
 
-  // Sync state with search params
-  useEffect(() => {
-    if (tabParam && ["clients", "contracts", "notes", "documents"].includes(tabParam)) {
-      setActiveTab(tabParam);
-      setCurrentPage(1);
-    }
-  }, [tabParam]);
+  const { data, isLoading } = useArchived({
+    type: activeTab,
+    page: currentPage,
+    limit: itemsPerPage,
+    search: searchTerm || undefined,
+  });
 
-  const handleTabChange = (tabId: ArchivedItem["type"]) => {
+  const handleTabChange = (tabId: "clients" | "contracts" | "notes" | "documents") => {
     setActiveTab(tabId);
     setCurrentPage(1);
     const params = new URLSearchParams(searchParams.toString());
@@ -256,39 +66,41 @@ function ArchivedContent() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const filteredItems = items.filter(
-    (item) =>
-      item.type === activeTab &&
-      (item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.subtitle.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const restoreMutation = useRestoreArchived(activeTab);
+  const deleteMutation = useDeleteArchived(activeTab);
 
-  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
-  const paginatedItems = filteredItems.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const items = data?.data || [];
+  const totalItems = data?.pagination?.totalItems || 0;
+  const totalPages = data?.pagination?.totalPages || 1;
 
-  const handleConfirmRestore = () => {
+  const handleConfirmRestore = async () => {
     if (restoringItem) {
-      setItems((prev) => prev.filter((i) => i.id !== restoringItem.id));
-      setFeedbackModal({
-        isOpen: true,
-        title: "Item Restored!",
-        desc: `"${restoringItem.title}" has been restored back to active records.`,
-      });
+      try {
+        await restoreMutation.mutateAsync(restoringItem.id);
+        setFeedbackModal({
+          isOpen: true,
+          title: "Item Restored!",
+          desc: `"${restoringItem.label}" has been restored back to active records.`,
+        });
+      } catch (error) {
+        console.error("Failed to restore:", error);
+      }
       setRestoringItem(null);
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deletingItem) {
-      setItems((prev) => prev.filter((i) => i.id !== deletingItem.id));
-      setFeedbackModal({
-        isOpen: true,
-        title: "Item Deleted!",
-        desc: `"${deletingItem.title}" has been permanently deleted.`,
-      });
+      try {
+        await deleteMutation.mutateAsync(deletingItem.id);
+        setFeedbackModal({
+          isOpen: true,
+          title: "Item Deleted!",
+          desc: `"${deletingItem.label}" has been permanently deleted.`,
+        });
+      } catch (error) {
+        console.error("Failed to delete:", error);
+      }
       setDeletingItem(null);
     }
   };
@@ -325,7 +137,7 @@ function ArchivedContent() {
             return (
               <button
                 key={tab.id}
-                onClick={() => handleTabChange(tab.id as ArchivedItem["type"])}
+                onClick={() => handleTabChange(tab.id as "clients" | "contracts" | "notes" | "documents")}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer font-sans whitespace-nowrap",
                   isActive
@@ -344,12 +156,16 @@ function ArchivedContent() {
       {/* 3. Cards List Container */}
       <div className="flex flex-col gap-3.5 w-full min-h-[380px] justify-between">
         <div className="flex flex-col gap-3.5 w-full">
-          {paginatedItems.length === 0 ? (
+          {isLoading ? (
+            <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-[#919191] text-sm">
+              Loading...
+            </div>
+          ) : items.length === 0 ? (
             <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-[#919191] text-sm">
               No archived {activeTab} found.
             </div>
           ) : (
-            paginatedItems.map((item) => (
+            items.map((item) => (
               <div
                 key={item.id}
                 className="w-full bg-[#141C24] border border-[#0F1F3D]/20 hover:border-white/10 rounded-xl p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-sm"
@@ -357,10 +173,12 @@ function ArchivedContent() {
                 {/* Left Column Details */}
                 <div className="flex flex-col gap-0.5">
                   <h3 className="text-white font-medium text-sm sm:text-base tracking-tight">
-                    {item.title}
+                    {item.label}
                   </h3>
                   <p className="text-[#919191] text-xs sm:text-sm">{item.subtitle}</p>
-                  <p className="text-[#919191] text-xs font-normal mt-0.5">{item.deletedDate}</p>
+                  <p className="text-[#919191] text-xs font-normal mt-0.5">
+                    Deleted {new Date(item.archivedAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                  </p>
                 </div>
 
                 {/* Right Column Actions & Retention Counter */}
@@ -385,7 +203,7 @@ function ArchivedContent() {
                   </div>
 
                   <span className="text-white font-semibold text-sm sm:text-base text-right tracking-tight">
-                    {item.daysLeft}
+                    {item.daysLeft}d left
                   </span>
                 </div>
               </div>
@@ -394,17 +212,13 @@ function ArchivedContent() {
         </div>
 
         {/* Reusable Pagination */}
-        {filteredItems.length > 0 && (
-          <div className="pt-2">
             <TablePagination
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              totalItems={filteredItems.length}
+              totalItems={totalItems}
               itemsPerPage={itemsPerPage}
             />
-          </div>
-        )}
       </div>
 
       {/* Restore Confirmation Modal */}
@@ -413,7 +227,7 @@ function ArchivedContent() {
         onClose={() => setRestoringItem(null)}
         onConfirm={handleConfirmRestore}
         title="Restore Archived Item"
-        description={`Are you sure you want to restore "${restoringItem?.title}" back to active records?`}
+        description={`Are you sure you want to restore "${restoringItem?.label}" back to active records?`}
         confirmText="Yes, Restore"
         cancelText="Cancel"
       />
@@ -424,7 +238,7 @@ function ArchivedContent() {
         onClose={() => setDeletingItem(null)}
         onConfirm={handleConfirmDelete}
         title="Permanently Delete Item"
-        description={`Are you sure you want to permanently delete "${deletingItem?.title}"? This action cannot be undone.`}
+        description={`Are you sure you want to permanently delete "${deletingItem?.label}"? This action cannot be undone.`}
         confirmText="Yes, Delete Now"
         cancelText="No, keep it"
       />

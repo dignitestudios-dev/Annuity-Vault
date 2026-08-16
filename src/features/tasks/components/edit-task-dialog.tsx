@@ -21,31 +21,17 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { TaskItem } from "./new-task-dialog";
+import { Task } from "../types/tasks.types";
+import { useUpdateTask } from "../api/tasks.service";
+import { useUsers } from "@/features/users/api/users.service";
+import { useClients } from "@/features/clients/api/clients.service";
 
 interface EditTaskDialogProps {
-  task: TaskItem | null;
+  task: Task | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdateTask: (updatedTask: TaskItem) => void;
+  onSuccess?: () => void;
 }
-
-const CLIENT_OPTIONS = [
-  "Jacob Thompson",
-  "Eleanor Vance",
-  "Marcus Brody",
-  "Sophia Martinez",
-  "Robert Chen",
-  "Amelia Davis",
-  "David Wilson",
-];
-
-const ADVISOR_OPTIONS = [
-  "Jordan Reed",
-  "Adam Smith",
-  "Sarah Connor",
-  "Michael Scott",
-];
 
 const editTaskSchema = z.object({
   title: z
@@ -70,7 +56,7 @@ export default function EditTaskDialog({
   task,
   isOpen,
   onClose,
-  onUpdateTask,
+  onSuccess,
 }: EditTaskDialogProps) {
   const {
     register,
@@ -86,31 +72,44 @@ export default function EditTaskDialog({
     if (task) {
       reset({
         title: task.title,
-        desc: task.desc,
+        desc: task.description || "",
         priority: task.priority,
         status: task.status,
-        due: task.due,
-        assignedTo: task.assignedTo || "Jordan Reed",
-        client: task.client || "Jacob Thompson",
+        due: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
+        assignedTo: task.assignedTo?._id || "",
+        client: task.client?._id || "none",
       });
     }
   }, [task, reset]);
 
+  const { data: usersData } = useUsers({ limit: 100, status: "Active" });
+  const advisors = usersData?.data?.filter(u => u.role === "Advisor" || u.role === "Admin") || [];
+
+  const { data: clientsData } = useClients({ limit: 100 });
+  const clients = clientsData?.data || [];
+
+  const updateTask = useUpdateTask();
+
   const onSubmit = (data: EditTaskFormData) => {
     if (!task) return;
 
-    onUpdateTask({
-      ...task,
-      title: data.title,
-      desc: data.desc || "No description provided.",
-      due: data.due,
-      priority: data.priority,
-      status: data.status,
-      assignedTo: data.assignedTo,
-      client: data.client,
+    updateTask.mutate({
+      id: task._id || "",
+      data: {
+        title: data.title,
+        description: data.desc,
+        dueDate: data.due,
+        priority: data.priority,
+        status: data.status,
+        assignedTo: data.assignedTo,
+        client: data.client !== "none" ? data.client : undefined,
+      }
+    }, {
+      onSuccess: () => {
+        onClose();
+        onSuccess?.();
+      }
     });
-
-    onClose();
   };
 
   if (!task) return null;
@@ -236,9 +235,9 @@ export default function EditTaskDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      {ADVISOR_OPTIONS.map((name) => (
-                        <SelectItem key={name} value={name} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                          {name}
+                      {advisors.map((advisor) => (
+                        <SelectItem key={advisor._id} value={advisor._id} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                          {advisor.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -260,9 +259,12 @@ export default function EditTaskDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                    {CLIENT_OPTIONS.map((cName) => (
-                      <SelectItem key={cName} value={cName} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                        {cName}
+                    <SelectItem value="none" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer text-gray-400">
+                      None
+                    </SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                        {client.firstName} {client.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -283,8 +285,9 @@ export default function EditTaskDialog({
             <Button
               type="submit"
               className="w-[150px] h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] hover:opacity-95 text-white rounded-[12px] text-sm font-medium border-0 shadow-md cursor-pointer"
+              disabled={updateTask.isPending}
             >
-              Update Task
+              {updateTask.isPending ? "Updating..." : "Update Task"}
             </Button>
           </div>
         </form>

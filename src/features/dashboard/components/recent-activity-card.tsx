@@ -2,26 +2,18 @@
 
 import { Card } from "@/components/ui/card";
 
-const ACTIVITIES = [
-  {
-    action: "Update in contracts",
-    date: "2026-06-18",
-  },
-  {
-    action: "Create in notes",
-    date: "2026-06-18",
-  },
-  {
-    action: "Update in tasks",
-    date: "2026-06-17",
-  },
-  {
-    action: "Delete in notes",
-    date: "2026-04-06",
-  },
-];
+import { useDashboardSummary } from "@/features/dashboard/api/dashboard.service";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function RecentActivityCard() {
+  const { data, isLoading } = useDashboardSummary();
+
+  if (isLoading) {
+    return <Skeleton className="h-[300px] w-full bg-[#141C24] rounded-[12px]" />;
+  }
+
+  const activities = data?.recentActivity || [];
+
   return (
     <Card className="bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] flex flex-col overflow-hidden shadow-sm h-full">
       {/* Card Header */}
@@ -33,19 +25,25 @@ export default function RecentActivityCard() {
 
       {/* Card List Items */}
       <div className="flex flex-col divide-y divide-white/10">
-        {ACTIVITIES.map((activity, index) => (
-          <div
-            key={index}
-            className="px-5 py-3.5 flex flex-col gap-1 hover:bg-white/[0.02] transition-colors"
-          >
-            <span className="text-sm font-medium text-white font-sans capitalize leading-tight">
-              {activity.action}
-            </span>
-            <span className="text-xs font-normal text-[#8C8C8C] font-sans">
-              {activity.date}
-            </span>
+        {activities.length === 0 ? (
+          <div className="p-5 text-sm text-[#8C8C8C] text-center font-sans">
+            No recent activity.
           </div>
-        ))}
+        ) : (
+          activities.slice(0, 5).map((activity) => (
+            <div
+              key={activity.id}
+              className="px-5 py-3.5 flex flex-col gap-1 hover:bg-white/[0.02] transition-colors"
+            >
+              <span className="text-sm font-medium text-white font-sans capitalize leading-tight">
+                {activity.action} in {activity.entityType}
+              </span>
+              <span className="text-xs font-normal text-[#8C8C8C] font-sans">
+                {new Date(activity.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })} by {activity.userName}
+              </span>
+            </div>
+          ))
+        )}
       </div>
     </Card>
   );

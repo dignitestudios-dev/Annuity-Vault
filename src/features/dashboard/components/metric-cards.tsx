@@ -3,40 +3,57 @@
 import { Users, FileText, Calendar, CheckSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
-const METRICS = [
-  {
-    title: "Total Clients",
-    value: "100",
-    subtext: "53 Active",
-    icon: Users,
-  },
-  {
-    title: "Active Contracts",
-    value: "143",
-    subtext: "Across all Clients",
-    icon: FileText,
-  },
-  {
-    title: "Assets Under Management",
-    value: "$100,608,523",
-    subtext: "Total AUM",
-    icon: FileText,
-  },
-  {
-    title: "Anniversaries",
-    value: "12",
-    subtext: "Next 90 Days",
-    icon: Calendar,
-  },
-  {
-    title: "Open Tasks",
-    value: "64",
-    subtext: "36 Completed",
-    icon: CheckSquare,
-  },
-];
+import { useDashboardSummary } from "@/features/dashboard/api/dashboard.service";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MetricCards() {
+  const { data, isLoading, isError } = useDashboardSummary();
+
+  const kpis = data?.kpis;
+
+  const METRICS = [
+    {
+      title: "Total Clients",
+      value: kpis?.totalClients?.toString() || "0",
+      subtext: "Total",
+      icon: Users,
+    },
+    {
+      title: "Active Contracts",
+      value: kpis?.activeContracts?.toString() || "0",
+      subtext: "Across all Clients",
+      icon: FileText,
+    },
+    {
+      title: "Assets Under Management",
+      value: kpis ? `$${kpis.assetsUnderManagement.toLocaleString()}` : "$0",
+      subtext: "Total AUM",
+      icon: FileText,
+    },
+    {
+      title: "Anniversaries",
+      value: kpis?.anniversariesNext30Days?.toString() || "0",
+      subtext: "Next 30 Days",
+      icon: Calendar,
+    },
+    {
+      title: "Open Tasks",
+      value: kpis?.openTasks?.toString() || "0",
+      subtext: "Pending",
+      icon: CheckSquare,
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 w-full">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-[94px] w-full bg-[#141C24] rounded-[12px]" />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 w-full">
       {METRICS.map((metric) => {

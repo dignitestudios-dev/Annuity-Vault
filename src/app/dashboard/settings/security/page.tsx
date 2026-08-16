@@ -1,30 +1,22 @@
 "use client";
 
-interface SecurityItem {
-  label: string;
-  value: string;
-}
-
-const SECURITY_ITEMS: SecurityItem[] = [
-  {
-    label: "Two-factor authentication",
-    value: "Enforced",
-  },
-  {
-    label: "Session timeout",
-    value: "30 Minutes",
-  },
-  {
-    label: "Audit retention",
-    value: "7 Years",
-  },
-  {
-    label: "Encryption at rest",
-    value: "AES-256",
-  },
-];
+import { useSecuritySettings } from "@/features/settings/api/settings.service";
+import { Loader2 } from "lucide-react";
 
 export default function SettingsSecurityPage() {
+  const { data: security, isLoading } = useSecuritySettings();
+
+  if (isLoading) {
+    return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#6887A0]" /></div>;
+  }
+
+  const securityItems = security ? [
+    { label: "Two-factor authentication", value: security.twoFactorAuthentication ? "Enabled" : "Disabled" },
+    { label: "Session timeout", value: security.sessionTimeout },
+    { label: "Audit retention", value: security.auditRetention },
+    { label: "Encryption at rest", value: security.encryptionAtRest ? "Enabled" : "Disabled" },
+  ] : [];
+
   return (
     <div className="w-full flex flex-col font-sans">
       {/* Header */}
@@ -34,7 +26,7 @@ export default function SettingsSecurityPage() {
 
       {/* Security Status Items List */}
       <div className="flex flex-col gap-3.5 w-full">
-        {SECURITY_ITEMS.map((item) => (
+        {securityItems.map((item) => (
           <div
             key={item.label}
             className="w-full bg-[#141C24] border border-white/5 rounded-xl p-4 sm:p-[17px] flex items-center justify-between gap-4 transition-all shadow-sm"

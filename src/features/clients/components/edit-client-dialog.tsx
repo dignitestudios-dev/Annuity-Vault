@@ -26,12 +26,13 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { ClientItem, ClientStatus } from "./clients-folder-table";
+import { Client } from "@/features/clients/types/clients.types";
+import { useUpdateClient } from "@/features/clients/api/clients.service";
 
 interface EditClientDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  client: ClientItem & { address?: string; notes?: string };
+  client: Client;
   onUpdateSuccess?: () => void;
 }
 
@@ -41,27 +42,44 @@ export default function EditClientDialog({
   client,
   onUpdateSuccess,
 }: EditClientDialogProps) {
-  const nameParts = client.name.split(" ");
-  const defaultFirstName = nameParts[0] || "";
-  const defaultLastName = nameParts.slice(1).join(" ") || "";
-
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    client.dob ? new Date(client.dob.replace("DOB ", "")) : undefined
+    client.dateOfBirth ? new Date(client.dateOfBirth) : undefined
   );
   const [formData, setFormData] = useState({
-    firstName: defaultFirstName,
-    lastName: defaultLastName,
+    firstName: client.firstName,
+    lastName: client.lastName,
     email: client.email,
-    phone: client.phone,
-    address: client.address || "5722 Magnolia Pkwy, Seattle, WA",
-    status: client.status,
-    notes: client.notes || "Client prefers quarterly review calls.",
+    phone: client.phone || "",
+    address: client.address || "",
+    status: client.status || "Active",
+    notes: client.notes || "",
   });
+
+  const updateClientMutation = useUpdateClient();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onClose();
-    if (onUpdateSuccess) onUpdateSuccess();
+    updateClientMutation.mutate(
+      {
+        id: client.id,
+        data: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          status: formData.status,
+          dateOfBirth: selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
+          notes: formData.notes,
+        }
+      },
+      {
+        onSuccess: () => {
+          onClose();
+          if (onUpdateSuccess) onUpdateSuccess();
+        },
+      }
+    );
   };
 
   return (
@@ -181,7 +199,7 @@ export default function EditClientDialog({
                 onValueChange={(val: string | null) =>
                   setFormData({
                     ...formData,
-                    status: (val as ClientStatus) || "Active",
+                    status: val || "Active",
                   })
                 }
               >
@@ -232,9 +250,10 @@ export default function EditClientDialog({
             </Button>
             <Button
               type="submit"
-              className="w-[140px] h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-sm font-medium border-0 shadow-sm"
+              disabled={updateClientMutation.isPending}
+              className="w-[140px] h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-sm font-medium border-0 shadow-sm disabled:opacity-50"
             >
-              Update Client
+              {updateClientMutation.isPending ? "Updating..." : "Update Client"}
             </Button>
           </DialogFooter>
         </form>

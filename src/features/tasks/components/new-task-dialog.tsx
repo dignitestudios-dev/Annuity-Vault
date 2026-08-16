@@ -20,6 +20,9 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { useCreateTask } from "../api/tasks.service";
+import { useUsers } from "@/features/users/api/users.service";
+import { useClients } from "@/features/clients/api/clients.service";
 
 export interface TaskItem {
   id: string;
@@ -32,28 +35,13 @@ export interface TaskItem {
   assignedTo?: string;
 }
 
-interface NewTaskDialogProps {
+export interface NewTaskDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddTask: (task: TaskItem) => void;
+  onSuccess?: () => void;
 }
 
-const CLIENT_OPTIONS = [
-  "Jacob Thompson",
-  "Eleanor Vance",
-  "Marcus Brody",
-  "Sophia Martinez",
-  "Robert Chen",
-  "Amelia Davis",
-  "David Wilson",
-];
 
-const ADVISOR_OPTIONS = [
-  "Jordan Reed",
-  "Adam Smith",
-  "Sarah Connor",
-  "Michael Scott",
-];
 
 // Zod Validation Schema
 const newTaskSchema = z.object({
@@ -78,7 +66,7 @@ type NewTaskFormData = z.infer<typeof newTaskSchema>;
 export default function NewTaskDialog({
   isOpen,
   onClose,
-  onAddTask,
+  onSuccess,
 }: NewTaskDialogProps) {
   const {
     register,
@@ -93,26 +81,37 @@ export default function NewTaskDialog({
       desc: "",
       priority: "Medium",
       status: "To do",
-      due: "2026-06-23",
-      assignedTo: "Jordan Reed",
-      client: "Jacob Thompson",
+      due: new Date().toISOString().split('T')[0],
+      assignedTo: "",
+      client: "none",
     },
   });
 
+  const { data: usersData } = useUsers({ limit: 100, status: "Active" });
+  // Currently the API returns all users (advisors) when queried by Admin
+  const advisors = usersData?.data?.filter(u => u.role === "Advisor" || u.role === "Admin") || [];
+
+  const { data: clientsData } = useClients({ limit: 100 });
+  const clients = clientsData?.data || [];
+
+  const createTask = useCreateTask();
+
   const onSubmit = (data: NewTaskFormData) => {
-    onAddTask({
-      id: `t-${Date.now()}`,
+    createTask.mutate({
       title: data.title,
-      desc: data.desc || "No description provided.",
-      due: data.due,
+      description: data.desc,
+      dueDate: data.due,
       priority: data.priority,
       status: data.status,
       assignedTo: data.assignedTo,
-      client: data.client,
+      client: data.client !== "none" ? data.client : undefined,
+    }, {
+      onSuccess: () => {
+        reset();
+        onClose();
+        onSuccess?.();
+      }
     });
-
-    reset();
-    onClose();
   };
 
   const handleClose = () => {
@@ -263,9 +262,9 @@ export default function NewTaskDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      {ADVISOR_OPTIONS.map((name) => (
-                        <SelectItem key={name} value={name} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                          {name}
+                      {advisors.map((advisor) => (
+                        <SelectItem key={advisor._id} value={advisor._id} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                          {advisor.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -292,9 +291,12 @@ export default function NewTaskDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                    {CLIENT_OPTIONS.map((cName) => (
-                      <SelectItem key={cName} value={cName} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                        {cName}
+                    <SelectItem value="none" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer text-gray-400">
+                      None
+                    </SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                        {client.firstName} {client.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -315,8 +317,9 @@ export default function NewTaskDialog({
             <Button
               type="submit"
               className="w-[150px] h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] hover:opacity-95 text-white rounded-[12px] text-sm font-medium border-0 shadow-md cursor-pointer"
+              disabled={createTask.isPending}
             >
-              Create Task
+              {createTask.isPending ? "Creating..." : "Create Task"}
             </Button>
           </div>
         </form>

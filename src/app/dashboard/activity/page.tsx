@@ -14,127 +14,9 @@ import {
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
 
-interface AuditLogItem {
-  id: string;
-  date: string;
-  user: string;
-  action: string;
-  module: string;
-  record: string;
-  change: string;
-}
+import { useAuditLogs, exportAuditLogs, AuditLogItem } from "@/features/activity/api/activity.service";
 
-const AUDIT_LOGS: AuditLogItem[] = [
-  {
-    id: "log-1",
-    date: "2026-06-01",
-    user: "Avery Hayes",
-    action: "Update",
-    module: "Notes",
-    record: "Cli_e",
-    change: "Updated Value",
-  },
-  {
-    id: "log-2",
-    date: "2026-05-30",
-    user: "Jordan Reed",
-    action: "Archive",
-    module: "Notes",
-    record: "Cli_j",
-    change: "Updated Value",
-  },
-  {
-    id: "log-3",
-    date: "2026-05-28",
-    user: "Samantha Collins",
-    action: "Create",
-    module: "Documents",
-    record: "Cli_s",
-    change: "Updated Value",
-  },
-  {
-    id: "log-4",
-    date: "2026-05-27",
-    user: "Liam O'Connor",
-    action: "Upload",
-    module: "Clients",
-    record: "Cli_l",
-    change: "Updated Value",
-  },
-  {
-    id: "log-5",
-    date: "2026-05-25",
-    user: "Maya Patel",
-    action: "Update",
-    module: "Contracts",
-    record: "Cli_m",
-    change: "Updated Value",
-  },
-  {
-    id: "log-6",
-    date: "2026-05-24",
-    user: "Ethan Brooks",
-    action: "Archive",
-    module: "Documents",
-    record: "Cli_e",
-    change: "Updated Value",
-  },
-  {
-    id: "log-7",
-    date: "2026-05-22",
-    user: "Isabella Nguyen",
-    action: "Upload",
-    module: "Clients",
-    record: "Cli_i",
-    change: "Updated Value",
-  },
-  {
-    id: "log-8",
-    date: "2026-05-21",
-    user: "Noah Kim",
-    action: "Upload",
-    module: "Contracts",
-    record: "Cli_n",
-    change: "Updated Value",
-  },
-  {
-    id: "log-9",
-    date: "2026-05-20",
-    user: "Olivia Martinez",
-    action: "Update",
-    module: "Clients",
-    record: "Cli_o",
-    change: "Updated Value",
-  },
-  {
-    id: "log-10",
-    date: "2026-05-18",
-    user: "Lucas Scott",
-    action: "Create",
-    module: "Notes",
-    record: "Cli_lu",
-    change: "Created Record",
-  },
 
-  {
-    id: "log-11",
-    date: "2026-05-16",
-    user: "Sophia Taylor",
-    action: "Upload",
-    module: "Documents",
-    record: "Cli_so",
-    change: "Uploaded File",
-  },
-  {
-    id: "log-12",
-    date: "2026-05-15",
-    user: "Benjamin Adams",
-    action: "Update",
-    module: "Contracts",
-    record: "Cli_b",
-    change: "Status Changed",
-  },
-];
 
 export default function ActivityAuditPage() {
   const router = useRouter();
@@ -152,22 +34,41 @@ export default function ActivityAuditPage() {
     desc: "",
   });
 
-  const filteredLogs = AUDIT_LOGS.filter((log) => {
-    const term = searchTerm.toLowerCase();
-    return (
-      log.user.toLowerCase().includes(term) ||
-      log.action.toLowerCase().includes(term) ||
-      log.module.toLowerCase().includes(term) ||
-      log.record.toLowerCase().includes(term) ||
-      log.date.toLowerCase().includes(term)
-    );
+  const { data, isLoading } = useAuditLogs({
+    page: currentPage,
+    limit: itemsPerPage,
+    search: searchTerm || undefined,
   });
 
-  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
-  const paginatedLogs = filteredLogs.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const logs = data?.data || [];
+  const totalItems = data?.pagination?.totalItems || 0;
+  const totalPages = data?.pagination?.totalPages || 1;
+
+  const handleExportPDF = async () => {
+    try {
+      await exportAuditLogs("pdf", searchTerm || undefined);
+      setFeedbackModal({
+        isOpen: true,
+        title: "PDF Export Complete",
+        desc: "Your activity and audit logs have been exported to PDF format.",
+      });
+    } catch (error) {
+      console.error("Export PDF failed:", error);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      await exportAuditLogs("csv", searchTerm || undefined);
+      setFeedbackModal({
+        isOpen: true,
+        title: "CSV Export Complete",
+        desc: "Your audit log records have been exported to CSV format successfully.",
+      });
+    } catch (error) {
+      console.error("Export CSV failed:", error);
+    }
+  };
 
   const handleRowClick = (log: AuditLogItem) => {
     const mod = log.module.toLowerCase();
@@ -192,13 +93,7 @@ export default function ActivityAuditPage() {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() =>
-              setFeedbackModal({
-                isOpen: true,
-                title: "PDF Export Complete",
-                desc: "Your activity and audit logs have been exported to PDF format.",
-              })
-            }
+            onClick={handleExportPDF}
             className="h-10 px-4 bg-[#141C24] hover:bg-white/10 text-white rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-white/5 shadow-sm cursor-pointer"
           >
             <FileText className="w-4 h-4 text-[#919191]" />
@@ -206,13 +101,7 @@ export default function ActivityAuditPage() {
           </button>
 
           <button
-            onClick={() =>
-              setFeedbackModal({
-                isOpen: true,
-                title: "CSV Export Complete",
-                desc: "Your audit log records have been exported to CSV format successfully.",
-              })
-            }
+            onClick={handleExportCSV}
             className="h-10 px-4 bg-[#141C24] hover:bg-white/10 text-white rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-white/5 shadow-sm cursor-pointer"
           >
             <Download className="w-4 h-4 text-[#919191]" />
@@ -266,18 +155,24 @@ export default function ActivityAuditPage() {
             </TableHeader>
 
             <TableBody>
-              {paginatedLogs.length > 0 ? (
-                paginatedLogs.map((log) => (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-12 text-center text-xs text-[#919191]">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : logs.length > 0 ? (
+                logs.map((log) => (
                   <TableRow
-                    key={log.id}
+                    key={log._id}
                     onClick={() => handleRowClick(log)}
                     className="border-b border-white/[0.08] hover:bg-white/[0.02] transition-colors h-[51px] cursor-pointer"
                   >
                     <TableCell className="px-6 py-2.5 text-xs sm:text-sm font-medium text-white whitespace-nowrap">
-                      {log.date}
+                      {new Date(log.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
                     </TableCell>
                     <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
-                      {log.user}
+                      {log.performedBy ? `${log.performedBy.firstName} ${log.performedBy.lastName}` : "System"}
                     </TableCell>
                     <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
                       {log.action}
@@ -286,7 +181,7 @@ export default function ActivityAuditPage() {
                       {log.module}
                     </TableCell>
                     <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
-                      {log.record}
+                      {log.recordLabel}
                     </TableCell>
                     <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
                       {log.change}
@@ -310,7 +205,7 @@ export default function ActivityAuditPage() {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
-            totalItems={filteredLogs.length}
+            totalItems={totalItems}
             itemsPerPage={itemsPerPage}
           />
         </div>

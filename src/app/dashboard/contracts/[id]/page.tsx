@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Pencil,
@@ -17,50 +17,60 @@ import SuccessModal from "@/components/shared/success-modal";
 import DeleteModal from "@/components/shared/delete-modal";
 import ArchiveModal from "@/components/shared/archive-modal";
 
-const CONTRACT_DETAILS = {
-  id: "IX-239032",
-  client: "Jacob Thompson",
-  provider: "Equitable",
-  type: "Immediate",
-  status: "Surrendered",
-  issueDate: "2020-08-04",
-  anniversary: "2027-03-06 (in 256 days)",
-  premium: "$305,000",
-  currentValue: "$127,416",
-  beneficiary: "Stephanie Lewis (Sibling) — 100%",
-  notes: "Client requested allocation rebalance after market",
+import { Skeleton } from "@/components/ui/skeleton";
+import { format, differenceInDays } from "date-fns";
+import { cn } from "@/lib/utils";
+import {
+  useContract,
+  useDeleteContract,
+  useAddContractNote,
+  useDeleteContractNote,
+  // we will add useAddContractDocument / useDeleteContractDocument soon
+} from "@/features/contracts/api/contracts.service";
+
+const getStatusStyle = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case "active":
+      return "bg-[#42CD7F] text-white border-0";
+    case "surrendered":
+      return "bg-[#FF3E46] text-white border-0";
+    case "matured":
+      return "bg-[#39BDF6] text-white border-0";
+    case "pending":
+      return "bg-[#FFE600] text-black border-0 font-semibold";
+    default:
+      return "bg-gray-600 text-white border-0";
+  }
 };
 
-const INITIAL_DOCUMENTS = [
-  {
-    id: "d1",
-    name: "Pacific Life Policy Contract.pdf",
-    meta: "2.4 MB · Uploaded 2022-01-18 by A. Smith",
-  },
-  {
-    id: "d2",
-    name: "Suitability Form — Smith.pdf",
-    meta: "890 KB · Uploaded 2022-01-18 by A. Smith",
-  },
-  {
-    id: "d3",
-    name: "Beneficiary Designation.pdf",
-    meta: "450 KB · Uploaded 2022-02-03 by A. Smith",
-  },
-  {
-    id: "d4",
-    name: "Athene Application 2023.pdf",
-    meta: "1.8 MB · Uploaded 2023-06-22 by A. Smith",
-  },
-];
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value || 0);
+};
 
-const INITIAL_NOTES = [
-  {
-    id: "n1",
-    text: "Anniversary review completed; no changes requested",
-    date: "2025-09-02",
-  },
-];
+const formatAnniversary = (dateString?: string) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  // Create a date for this year's anniversary
+  const thisYearAnniversary = new Date(date);
+  thisYearAnniversary.setFullYear(now.getFullYear());
+  
+  // If anniversary already passed this year, look at next year's
+  if (thisYearAnniversary < now) {
+    thisYearAnniversary.setFullYear(now.getFullYear() + 1);
+  }
+  
+  const daysDiff = differenceInDays(thisYearAnniversary, now);
+  const formattedDate = format(thisYearAnniversary, "yyyy-MM-dd");
+  
+  return `${formattedDate} (${daysDiff > 0 ? 'in ' : ''}${Math.abs(daysDiff)} days)`;
+};
 
 export default function ContractDetailsPage() {
   const router = useRouter();
@@ -68,44 +78,49 @@ export default function ContractDetailsPage() {
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
-
-  const [documents, setDocuments] = useState(INITIAL_DOCUMENTS);
-  const [notes, setNotes] = useState(INITIAL_NOTES);
+  const [deletingItem, setDeletingItem] = useState<{ id: string; type: "note" | "document" | "contract" } | null>(null);
   const [newNote, setNewNote] = useState("");
 
-  const [deletingItem, setDeletingItem] = useState<{
-    type: "contract" | "document" | "note";
-    id?: string;
-  } | null>(null);
+  const params = useParams();
+  const contractId = params.id as string;
+  const { data: contract, isLoading } = useContract(contractId);
+  const deleteContract = useDeleteContract();
+  const addNote = useAddContractNote(contractId);
+  const deleteNote = useDeleteContractNote(contractId);
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deletingItem?.type === "document" && deletingItem.id) {
-      setDocuments(documents.filter((d) => d.id !== deletingItem.id));
+      // TODO: Delete Document API
     } else if (deletingItem?.type === "note" && deletingItem.id) {
-      setNotes(notes.filter((n) => n.id !== deletingItem.id));
+      await deleteNote.mutateAsync(deletingItem.id);
+    } else if (deletingItem?.type === "contract") {
+      await deleteContract.mutateAsync(contractId);
+      setIsArchiveOpen(true);
     }
     setDeletingItem(null);
-    setIsArchiveOpen(true);
   };
 
   const handleArchiveClose = () => {
     setIsArchiveOpen(false);
-    router.push("/dashboard/archived");
+    router.push("/dashboard/contracts");
   };
 
-  const handleAddNote = (e: React.FormEvent) => {
+  const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim()) return;
-    setNotes([
-      {
-        id: Date.now().toString(),
-        text: newNote.trim(),
-        date: new Date().toISOString().split("T")[0],
-      },
-      ...notes,
-    ]);
+    await addNote.mutateAsync(newNote.trim());
     setNewNote("");
   };
+
+  if (isLoading) {
+    return (
+      <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans p-6">
+        <Skeleton className="w-full h-[300px] bg-white/5 rounded-[12px]" />
+      </div>
+    );
+  }
+
+  if (!contract) return null;
 
   return (
     <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans">
@@ -123,14 +138,14 @@ export default function ContractDetailsPage() {
           </button>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl lg:text-[28px] font-semibold text-white tracking-tight leading-tight">
-              {CONTRACT_DETAILS.id}
+              {contract.contractNumber}
             </h1>
-            <Badge className="bg-[#FF3E46] text-white border-0 px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize">
-              {CONTRACT_DETAILS.status}
+            <Badge className={cn("px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize", getStatusStyle(contract.status))}>
+              {contract.status}
             </Badge>
           </div>
           <span className="text-sm font-normal text-[#919191]">
-            {CONTRACT_DETAILS.provider} • {CONTRACT_DETAILS.type}
+            {contract.provider} • {contract.contractType}
           </span>
         </div>
 
@@ -145,9 +160,9 @@ export default function ContractDetailsPage() {
           </button>
           <button
             onClick={() =>
-              setDeletingItem({ type: "contract" })
+              setDeletingItem({ id: contract.id, type: "contract" })
             }
-            className="h-9 px-4 bg-[#FF0000] text-white hover:bg-red-600 rounded-[12px] text-xs sm:text-sm font-medium transition-all flex items-center gap-2 shadow-sm"
+            className="h-9 px-4 bg-[#FF0000] text-white hover:bg-red-600 rounded-[12px] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
           >
             <Trash2 className="w-3.5 h-3.5 text-white" />
             <span>Delete</span>
@@ -170,7 +185,7 @@ export default function ContractDetailsPage() {
                 Client
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.client}
+                {contract.client?.name || "N/A"}
               </span>
             </div>
 
@@ -179,7 +194,7 @@ export default function ContractDetailsPage() {
                 Provider
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.provider}
+                {contract.provider}
               </span>
             </div>
 
@@ -188,7 +203,7 @@ export default function ContractDetailsPage() {
                 Type
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.type}
+                {contract.contractType}
               </span>
             </div>
 
@@ -197,18 +212,18 @@ export default function ContractDetailsPage() {
                 Status
               </span>
               <div>
-                <Badge className="bg-[#FF3E46] text-white border-0 px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize">
-                  {CONTRACT_DETAILS.status}
+                <Badge className={cn("px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize", getStatusStyle(contract.status))}>
+                  {contract.status}
                 </Badge>
               </div>
             </div>
 
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
-                Issue date
+                Start date
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.issueDate}
+                {contract.startDate ? format(new Date(contract.startDate), "yyyy-MM-dd") : "N/A"}
               </span>
             </div>
 
@@ -217,7 +232,7 @@ export default function ContractDetailsPage() {
                 Anniversary
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.anniversary}
+                {formatAnniversary(contract.anniversaryDate)}
               </span>
             </div>
 
@@ -226,7 +241,7 @@ export default function ContractDetailsPage() {
                 Premium
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.premium}
+                {formatCurrency(contract.premiumAmount)}
               </span>
             </div>
 
@@ -235,7 +250,7 @@ export default function ContractDetailsPage() {
                 Current value
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.currentValue}
+                {formatCurrency(contract.contractValue)}
               </span>
             </div>
 
@@ -244,7 +259,7 @@ export default function ContractDetailsPage() {
                 Beneficiary
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.beneficiary}
+                {contract.beneficiaryInformation || "N/A"}
               </span>
             </div>
 
@@ -252,8 +267,8 @@ export default function ContractDetailsPage() {
               <span className="text-xs uppercase tracking-wider text-[#919191]">
                 Notes
               </span>
-              <span className="text-white font-normal">
-                {CONTRACT_DETAILS.notes}
+              <span className="text-white font-normal whitespace-pre-wrap">
+                {contract.notes || "None"}
               </span>
             </div>
           </div>
@@ -272,21 +287,21 @@ export default function ContractDetailsPage() {
           </div>
 
           <div className="flex flex-col divide-y divide-white/10">
-            {documents.map((doc) => (
+            {(contract.documents || []).map((doc) => (
               <div
-                key={doc.id}
+                key={doc._id}
                 className="p-3.5 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-8 h-8 bg-white/10 rounded-[8px] flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">
-                    PDF
+                    {doc.fileType?.split("/").pop()?.toUpperCase().substring(0, 4) || "DOC"}
                   </div>
                   <div className="flex flex-col gap-0.5 truncate">
-                    <span className="text-xs font-medium text-white truncate">
-                      {doc.name}
-                    </span>
+                    <a href={doc.location} target="_blank" rel="noreferrer" className="text-xs font-medium text-white truncate hover:underline">
+                      {doc.fileName}
+                    </a>
                     <span className="text-[11px] text-[#919191] truncate">
-                      {doc.meta}
+                      {(doc.fileSize / 1024 / 1024).toFixed(2)} MB · Uploaded by {doc.uploadedBy || 'User'}
                     </span>
                   </div>
                 </div>
@@ -295,7 +310,7 @@ export default function ContractDetailsPage() {
                   <button className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors">
                     <Trash2
                       onClick={() =>
-                        setDeletingItem({ type: "document", id: doc.id })
+                        setDeletingItem({ type: "document", id: doc._id })
                       }
                       className="w-3.5 h-3.5 text-white"
                     />
@@ -335,20 +350,20 @@ export default function ContractDetailsPage() {
 
           {/* Notes List */}
           <div className="w-full flex flex-col">
-            {notes.map((note) => (
+            {(contract.contractNotes || []).map((note) => (
               <div
-                key={note.id}
+                key={note._id}
                 className="w-full bg-[#0C1116] rounded-[8px] p-3.5 flex items-center justify-between gap-4 border border-white/5"
               >
                 <div className="flex flex-col gap-1">
                   <p className="text-xs sm:text-sm text-white font-normal">
-                    {note.text}
+                    {note.body}
                   </p>
-                  <span className="text-[11px] text-[#919191]">{note.date}</span>
+                  <span className="text-[11px] text-[#919191]">{format(new Date(note.createdAt), "MMM d, yyyy h:mm a")}</span>
                 </div>
                 <button
                   onClick={() =>
-                    setDeletingItem({ type: "note", id: note.id })
+                    setDeletingItem({ type: "note", id: note._id })
                   }
                   className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors flex-shrink-0"
                 >

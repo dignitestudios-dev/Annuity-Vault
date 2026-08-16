@@ -1,40 +1,84 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { User, Camera } from "lucide-react";
+import { User as UserIcon, Camera, Loader2 } from "lucide-react";
 import SuccessModal from "@/components/shared/success-modal";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { updateUser } from "@/store/slices/auth.slice";
+import { useUpdateProfile } from "@/features/settings/api/settings.service";
 
 const profileSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
-  role: z.string().min(2, "Role is required"),
-  firm: z.string().min(2, "Firm name is required"),
+  jobTitle: z.string().optional(),
+  firm: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function SettingsProfilePage() {
+  const user = useAppSelector((state) => state.auth.user);
+  const dispatch = useAppDispatch();
+  const updateProfileMutation = useUpdateProfile();
+  
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    reset,
+    formState: { errors, isSubmitting },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      fullName: "Adam Smith",
-      email: "a.smith@annuityvault.com",
-      role: "Senior Advisor",
-      firm: "Annuity Vault Group",
+      fullName: "",
+      email: "",
+      jobTitle: "",
+      firm: "",
     },
   });
 
-  const onSubmit = (_data: ProfileFormValues) => {
-    setIsSuccessOpen(true);
+  useEffect(() => {
+    if (user) {
+      reset({
+        fullName: user.name || "",
+        email: user.email || "",
+        jobTitle: user.jobTitle || "",
+        firm: user.firm || "",
+      });
+    }
+  }, [user, reset]);
+
+  const onSubmit = async (data: ProfileFormValues) => {
+    setErrorMessage("");
+    try {
+      // Note: email is not editable per requirements, so we only send name, jobTitle, firm
+      const payload = {
+        name: data.fullName,
+        jobTitle: data.jobTitle,
+        firm: data.firm,
+      };
+      const response = await updateProfileMutation.mutateAsync(payload);
+      
+      const updatedUser = {
+        ...user,
+        name: data.fullName,
+        jobTitle: data.jobTitle,
+        firm: data.firm,
+      };
+      
+      // Update local storage and redux
+      dispatch(updateUser(updatedUser));
+      localStorage.setItem("auth-user", JSON.stringify(updatedUser));
+      
+      setIsSuccessOpen(true);
+    } catch (error: any) {
+      setErrorMessage(error?.response?.data?.message || "Failed to update profile.");
+    }
   };
 
   return (
@@ -48,7 +92,7 @@ export default function SettingsProfilePage() {
       <div className="flex items-center gap-4 py-6">
         {/* Avatar Circle Container with Camera Badge */}
         <div className="relative w-[78px] h-[78px] rounded-full bg-[#6887A0] flex items-center justify-center shadow-md flex-shrink-0">
-          <User className="w-10 h-10 text-white" />
+          <UserIcon className="w-10 h-10 text-white" />
           
           {/* Camera Overlay Icon Badge */}
           <div className="absolute -bottom-0.5 -right-0.5 w-[30px] h-[30px] rounded-full bg-[#F4F4F4] p-[1.5px] flex items-center justify-center shadow-sm">
@@ -93,12 +137,13 @@ export default function SettingsProfilePage() {
             <label className="text-sm font-medium text-white capitalize">
               Email Address
             </label>
-            <input
-              type="email"
-              {...register("email")}
-              placeholder="Email Address"
-              className="h-10 w-full bg-[#141C24] text-[#727272] px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all"
-            />
+              <input
+                type="email"
+                {...register("email")}
+                disabled
+                placeholder="Email Address"
+                className="h-10 w-full bg-[#141C24] text-[#727272] px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all disabled:opacity-50 cursor-not-allowed"
+              />
             {errors.email && (
               <span className="text-[#FF3E46] text-xs font-normal">
                 {errors.email.message}
@@ -106,20 +151,19 @@ export default function SettingsProfilePage() {
             )}
           </div>
 
-          {/* Role Field */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-white capitalize">
               Role
             </label>
             <input
               type="text"
-              {...register("role")}
+              {...register("jobTitle")}
               placeholder="Role"
               className="h-10 w-full bg-[#141C24] text-white px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all"
             />
-            {errors.role && (
+            {errors.jobTitle && (
               <span className="text-[#FF3E46] text-xs font-normal">
-                {errors.role.message}
+                {errors.jobTitle.message}
               </span>
             )}
           </div>
@@ -143,12 +187,20 @@ export default function SettingsProfilePage() {
           </div>
         </div>
 
+        {errorMessage && (
+          <div className="text-[#FF3E46] text-sm mt-2">{errorMessage}</div>
+        )}
+
         {/* Save Changes CTA Button */}
         <div className="flex justify-end mt-4 sm:mt-6">
           <button
             type="submit"
-            className="bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-semibold text-xs sm:text-sm h-11 px-8 rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm"
+            disabled={isSubmitting || updateProfileMutation.isPending}
+            className="bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-semibold text-xs sm:text-sm h-11 px-8 rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 disabled:opacity-70"
           >
+            {(isSubmitting || updateProfileMutation.isPending) && (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            )}
             Save Changes
           </button>
         </div>

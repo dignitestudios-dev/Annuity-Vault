@@ -9,16 +9,16 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TaskItem } from "./new-task-dialog";
+import { Task } from "../types/tasks.types";
 import { cn } from "@/lib/utils";
 
 interface DateTasksDialogProps {
   dateString: string | null;
-  tasks: TaskItem[];
+  tasks: Task[];
   isOpen: boolean;
   onClose: () => void;
-  onSelectTask: (task: TaskItem) => void;
-  onEditTask: (task: TaskItem) => void;
+  onSelectTask: (task: Task) => void;
+  onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
   onAddNewTaskForDate: (dateStr: string) => void;
 }
@@ -35,7 +35,7 @@ export default function DateTasksDialog({
 }: DateTasksDialogProps) {
   if (!dateString) return null;
 
-  const renderPriorityBadge = (priority: TaskItem["priority"]) => {
+  const renderPriorityBadge = (priority: Task["priority"]) => {
     switch (priority) {
       case "Urgent":
         return (
@@ -98,7 +98,7 @@ export default function DateTasksDialog({
           ) : (
             tasks.map((task) => (
               <div
-                key={task.id}
+                key={task._id}
                 onClick={() => {
                   onClose();
                   onSelectTask(task);
@@ -127,12 +127,12 @@ export default function DateTasksDialog({
 
                 {/* Description */}
                 <p className="text-xs text-[#919191] line-clamp-2 leading-relaxed">
-                  {task.desc}
+                  {task.description}
                 </p>
 
                 {/* Action Row */}
                 <div className="flex items-center justify-between pt-1 text-[11px] text-[#919191]">
-                  <span>Client: {task.client || "General Client"}</span>
+                  <span>Client: {task.client?.name || "General Client"}</span>
 
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
@@ -150,7 +150,7 @@ export default function DateTasksDialog({
                       type="button"
                       onClick={() => {
                         onClose();
-                        onDeleteTask(task.id);
+                        if (task._id) onDeleteTask(task._id);
                       }}
                       className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors"
                       title="Delete Task"
