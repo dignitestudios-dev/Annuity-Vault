@@ -1,4 +1,5 @@
 "use client";
+import { Loader } from "@/components/ui/loader";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -143,9 +144,7 @@ function NotificationsContent() {
       {/* 3. Notifications List */}
       <div className="flex flex-col gap-3.5 w-full">
         {isLoading ? (
-          <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-xs sm:text-sm text-[#919191]">
-            Loading...
-          </div>
+          <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-xs sm:text-sm text-[#919191]"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>
         ) : notifications.length === 0 ? (
           <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-xs sm:text-sm text-[#919191]">
             No notifications in this category.
@@ -207,7 +206,7 @@ function NotificationsContent() {
 
 export default function NotificationsPage() {
   return (
-    <Suspense fallback={<div className="text-white p-6">Loading notifications...</div>}>
+    <Suspense fallback={<div className="text-white p-6"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>}>
       <NotificationsContent />
     </Suspense>
   );

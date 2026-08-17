@@ -1,4 +1,5 @@
 "use client";
+import { Loader } from "@/components/ui/loader";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -157,9 +158,7 @@ function ArchivedContent() {
       <div className="flex flex-col gap-3.5 w-full min-h-[380px] justify-between">
         <div className="flex flex-col gap-3.5 w-full">
           {isLoading ? (
-            <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-[#919191] text-sm">
-              Loading...
-            </div>
+            <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-[#919191] text-sm"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>
           ) : items.length === 0 ? (
             <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-[#919191] text-sm">
               No archived {activeTab} found.
@@ -256,7 +255,7 @@ function ArchivedContent() {
 
 export default function ArchivedPage() {
   return (
-    <Suspense fallback={<div className="text-white p-6">Loading archived items...</div>}>
+    <Suspense fallback={<div className="text-white p-6"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>}>
       <ArchivedContent />
     </Suspense>
   );

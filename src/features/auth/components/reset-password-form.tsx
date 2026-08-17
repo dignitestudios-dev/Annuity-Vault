@@ -7,19 +7,32 @@ import { Eye, EyeOff, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const resetPasswordSchema = z.object({
+  password: z.string().min(6, "Password must be at least 6 characters").max(50, "Password must be less than 50 characters"),
+  confirmPassword: z.string().min(6, "Password must be at least 6 characters").max(50, "Password must be less than 50 characters"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPasswordForm() {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const { register, handleSubmit, formState: { errors } } = useForm<ResetPasswordData>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: "", confirmPassword: "" }
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password && confirmPassword) {
-      setIsSubmitted(true);
-    }
+  const onSubmit = (data: ResetPasswordData) => {
+    console.log("Reset password data:", data);
+    setIsSubmitted(true);
   };
 
   return (
@@ -48,7 +61,7 @@ export default function ResetPasswordForm() {
 
             {/* Form */}
             <form
-              onSubmit={handleSubmit}
+              onSubmit={handleSubmit(onSubmit)}
               className="w-full flex flex-col gap-5"
             >
               {/* Password Field */}
@@ -56,18 +69,14 @@ export default function ResetPasswordForm() {
                 <Label
                   htmlFor="password"
                   className="text-xs font-medium text-white capitalize leading-[15px]"
-                >
-                  Password
-                </Label>
+                >Password <span className="text-destructive">*</span></Label>
                 <div className="relative w-full">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    required
                     placeholder="Enter password here"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E]"
+                    {...register("password")}
+                    className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.password ? "ring-1 ring-[#FF3E46]" : ""}`}
                   />
                   <button
                     type="button"
@@ -84,6 +93,11 @@ export default function ResetPasswordForm() {
                     )}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="text-[11px] font-medium text-[#FF3E46]">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
 
               {/* Confirm Password Field */}
@@ -91,18 +105,14 @@ export default function ResetPasswordForm() {
                 <Label
                   htmlFor="confirmPassword"
                   className="text-xs font-medium text-white capitalize leading-[15px]"
-                >
-                  Confirm Password
-                </Label>
+                >Confirm Password <span className="text-destructive">*</span></Label>
                 <div className="relative w-full">
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    required
                     placeholder="Re-enter password here"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E]"
+                    {...register("confirmPassword")}
+                    className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.confirmPassword ? "ring-1 ring-[#FF3E46]" : ""}`}
                   />
                   <button
                     type="button"
@@ -119,6 +129,11 @@ export default function ResetPasswordForm() {
                     )}
                   </button>
                 </div>
+                {errors.confirmPassword && (
+                  <p className="text-[11px] font-medium text-[#FF3E46]">
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
               </div>
 
               {/* Submit Button */}

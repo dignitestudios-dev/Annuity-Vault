@@ -93,7 +93,7 @@ export default function Sidebar() {
                   {user?.name || "User"}
                 </h4>
                 <span className="text-xs font-normal text-[#818181] truncate font-sans">
-                  {user?.role || "Advisor"}
+                  {typeof user?.role === 'object' ? (user?.role as any)?.name || "Advisor" : user?.role || "Advisor"}
                 </span>
               </div>
             </div>

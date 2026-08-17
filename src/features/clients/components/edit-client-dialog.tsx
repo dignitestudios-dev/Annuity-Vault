@@ -28,6 +28,26 @@ import {
 } from "@/components/ui/select";
 import { Client } from "@/features/clients/types/clients.types";
 import { useUpdateClient } from "@/features/clients/api/clients.service";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import toast from "react-hot-toast";
+import { useEffect } from "react";
+
+const editClientSchema = z.object({
+  firstName: z.string().min(1, "First Name is required").max(50, "First Name must be less than 50 characters"),
+  lastName: z.string().min(1, "Last Name is required").max(50, "Last Name must be less than 50 characters"),
+  email: z.string().min(1, "Email is required").email("Invalid email address").max(100, "Email must be less than 100 characters"),
+  phone: z.string().regex(/^\+?[\d\s\-\(\)]+$/, "Invalid phone number format").min(10, "Phone number too short").max(20, "Phone number too long").optional().or(z.literal("")),
+  address: z.string().min(1, "Address is required").max(200, "Address must be less than 200 characters"),
+  status: z.enum(["Active", "Archived", "Inactive", "Prospect"], {
+    message: "Please select a valid status",
+  }),
+  dateOfBirth: z.date().optional(),
+  notes: z.string().max(500, "Notes must be less than 500 characters").optional().or(z.literal("")),
+});
+
+type EditClientFormData = z.infer<typeof editClientSchema>;
 
 interface EditClientDialogProps {
   isOpen: boolean;
@@ -42,39 +62,61 @@ export default function EditClientDialog({
   client,
   onUpdateSuccess,
 }: EditClientDialogProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    client.dateOfBirth ? new Date(client.dateOfBirth) : undefined
-  );
-  const [formData, setFormData] = useState({
-    firstName: client.firstName,
-    lastName: client.lastName,
-    email: client.email,
-    phone: client.phone || "",
-    address: client.address || "",
-    status: client.status || "Active",
-    notes: client.notes || "",
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<EditClientFormData>({
+    resolver: zodResolver(editClientSchema),
+    defaultValues: {
+      firstName: client.firstName,
+      lastName: client.lastName,
+      email: client.email,
+      phone: client.phone || "",
+      address: client.address || "",
+      status: (client.status as any) || "Active",
+      dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth) : undefined,
+      notes: client.notes || "",
+    },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        firstName: client.firstName,
+        lastName: client.lastName,
+        email: client.email,
+        phone: client.phone || "",
+        address: client.address || "",
+        status: (client.status as any) || "Active",
+        dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth) : undefined,
+        notes: client.notes || "",
+      });
+    }
+  }, [client, isOpen, reset]);
 
   const updateClientMutation = useUpdateClient();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = (data: EditClientFormData) => {
     updateClientMutation.mutate(
       {
         id: client.id,
         data: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          status: formData.status,
-          dateOfBirth: selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined,
-          notes: formData.notes,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          status: data.status,
+          dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
+          notes: data.notes,
         }
       },
       {
         onSuccess: () => {
+          toast.success("Client updated successfully!");
           onClose();
           if (onUpdateSuccess) onUpdateSuccess();
         },
@@ -91,75 +133,65 @@ export default function EditClientDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 font-sans py-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 font-sans py-2" noValidate>
           {/* Row 1: First Name & Last Name */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">First Name</Label>
+              <Label className="text-xs font-medium text-white">First Name <span className="text-destructive">*</span></Label>
               <Input
                 type="text"
-                value={formData.firstName}
-                onChange={(e) =>
-                  setFormData({ ...formData, firstName: e.target.value })
-                }
+                {...register("firstName")}
                 placeholder="Enter First Name"
-                className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.firstName ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
+              {errors.firstName && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.firstName.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Last Name</Label>
+              <Label className="text-xs font-medium text-white">Last Name <span className="text-destructive">*</span></Label>
               <Input
                 type="text"
-                value={formData.lastName}
-                onChange={(e) =>
-                  setFormData({ ...formData, lastName: e.target.value })
-                }
+                {...register("lastName")}
                 placeholder="Enter Last Name"
-                className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.lastName ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
+              {errors.lastName && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.lastName.message}</p>}
             </div>
           </div>
 
           {/* Row 2: Email & Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Email</Label>
+              <Label className="text-xs font-medium text-white">Email <span className="text-destructive">*</span></Label>
               <Input
                 type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                {...register("email")}
                 placeholder="Enter Email"
-                className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.email ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
+              {errors.email && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.email.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-white">Phone</Label>
               <Input
                 type="tel"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                {...register("phone")}
                 placeholder="Enter Phone No."
-                className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.phone ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
+              {errors.phone && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.phone.message}</p>}
             </div>
           </div>
 
           {/* Row 3: Address */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-white">Address</Label>
+            <Label className="text-xs font-medium text-white">Address <span className="text-destructive">*</span></Label>
             <Input
               type="text"
-              value={formData.address}
-              onChange={(e) =>
-                setFormData({ ...formData, address: e.target.value })
-              }
+              {...register("address")}
               placeholder="Enter your address"
-              className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+              className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.address ? "ring-1 ring-[#FF3E46]" : ""}`}
             />
+            {errors.address && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.address.message}</p>}
           </div>
 
           {/* Row 4: Date & Status */}
@@ -167,60 +199,68 @@ export default function EditClientDialog({
             {/* Date Select using Shadcn Calendar + Popover */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-white">Date</Label>
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <button
-                      type="button"
-                      className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
-                    >
-                      <span className={selectedDate ? "text-white" : "text-[#919191]"}>
-                        {selectedDate ? format(selectedDate, "MM/dd/yyyy") : "mm/dd/yyyy"}
-                      </span>
-                      <CalendarIcon className="w-4 h-4 text-[#919191]" />
-                    </button>
-                  }
-                />
-                <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                  />
-                </PopoverContent>
-              </Popover>
+              <Controller
+                name="dateOfBirth"
+                control={control}
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger
+                      render={
+                        <button
+                          type="button"
+                          className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
+                        >
+                          <span className={field.value ? "text-white" : "text-[#919191]"}>
+                            {field.value ? format(field.value, "MM/dd/yyyy") : "mm/dd/yyyy"}
+                          </span>
+                          <CalendarIcon className="w-4 h-4 text-[#919191]" />
+                        </button>
+                      }
+                    />
+                    <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
             </div>
 
             {/* Status Select */}
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(val: string | null) =>
-                  setFormData({
-                    ...formData,
-                    status: val || "Active",
-                  })
-                }
-              >
-                <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none">
-                  <SelectValue placeholder="Active" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                  <SelectItem value="Active" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Active
-                  </SelectItem>
-                  <SelectItem value="Archived" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Archived
-                  </SelectItem>
-                  <SelectItem value="Inactive" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Inactive
-                  </SelectItem>
-                  <SelectItem value="Prospect" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Prospect
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-medium text-white">Status <span className="text-destructive">*</span></Label>
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger className={`h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none focus:ring-1 focus:ring-[#6887A0] ${errors.status ? "ring-1 ring-[#FF3E46]" : ""}`}>
+                      <SelectValue placeholder="Active" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
+                      <SelectItem value="Active" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Active
+                      </SelectItem>
+                      <SelectItem value="Archived" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Archived
+                      </SelectItem>
+                      <SelectItem value="Inactive" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Inactive
+                      </SelectItem>
+                      <SelectItem value="Prospect" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Prospect
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.status && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.status.message}</p>}
             </div>
           </div>
 
@@ -228,14 +268,12 @@ export default function EditClientDialog({
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-white">Notes</Label>
             <textarea
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
+              {...register("notes")}
               placeholder="Type any notes here"
               rows={3}
-              className="w-full bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] p-3 outline-none resize-none"
+              className={`w-full bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] p-3 outline-none resize-none focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.notes ? "ring-1 ring-[#FF3E46]" : ""}`}
             />
+            {errors.notes && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.notes.message}</p>}
           </div>
 
           {/* Dialog Footer Actions */}

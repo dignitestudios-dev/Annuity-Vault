@@ -1,4 +1,5 @@
 "use client";
+import { Loader } from "@/components/ui/loader";
 
 import { useState } from "react";
 import { Search, FileText, Download, CalendarDays } from "lucide-react";
@@ -241,9 +242,7 @@ export default function AnniversariesPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center text-xs text-[#919191]">
-                    Loading...
-                  </TableCell>
+                  <TableCell colSpan={5} className="py-12 text-center text-xs text-[#919191]"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></TableCell>
                 </TableRow>
               ) : rows.length > 0 ? (
                 rows.map((row) => (

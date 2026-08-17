@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -31,6 +31,26 @@ import SearchableSelect from "@/components/ui/searchable-select";
 import { useUpdateContract } from "@/features/contracts/api/contracts.service";
 import { useClients } from "@/features/clients/api/clients.service";
 import { Contract } from "@/features/contracts/types/contracts.types";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import toast from "react-hot-toast";
+
+const editContractSchema = z.object({
+  client: z.string().min(1, "Client is required"),
+  policyNumber: z.string().min(1, "Policy Number is required").max(50, "Policy Number must be less than 50 characters"),
+  insuranceCompany: z.string().min(1, "Insurance Company is required").max(100, "Insurance Company must be less than 100 characters"),
+  contractType: z.string().min(1, "Contract Type is required").max(50, "Contract Type must be less than 50 characters"),
+  status: z.string().min(1, "Status is required").max(50, "Status must be less than 50 characters"),
+  startDate: z.date({ required_error: "Start Date is required" }),
+  anniversaryDate: z.date({ required_error: "Anniversary Date is required" }),
+  premiumAmount: z.string().min(1, "Premium Amount is required").max(20, "Premium Amount must be less than 20 characters"),
+  contractValue: z.string().min(1, "Contract Value is required").max(20, "Contract Value must be less than 20 characters"),
+  beneficiaryInfo: z.string().max(200, "Beneficiary Info must be less than 200 characters").optional().or(z.literal("")),
+  notes: z.string().max(500, "Notes must be less than 500 characters").optional().or(z.literal("")),
+});
+
+type EditContractFormData = z.infer<typeof editContractSchema>;
 
 interface EditContractDialogProps {
   isOpen: boolean;
@@ -53,50 +73,76 @@ export default function EditContractDialog({
 
   const updateContract = useUpdateContract(contract?.id || "");
 
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    contract?.startDate ? new Date(contract.startDate) : undefined
-  );
-  const [anniversaryDate, setAnniversaryDate] = useState<Date | undefined>(
-    contract?.anniversaryDate ? new Date(contract.anniversaryDate) : undefined
-  );
-
-  const [formData, setFormData] = useState({
-    client: contract?.client?._id || "",
-    policyNumber: contract?.policyNumber || "",
-    insuranceCompany: contract?.provider || "Equitable",
-    contractType: contract?.contractType || "Immediate",
-    status: contract?.status || "Surrendered",
-    premiumAmount: contract?.premiumAmount?.toString() || "",
-    contractValue: contract?.contractValue?.toString() || "",
-    beneficiaryInfo: contract?.beneficiaryInformation || "",
-    notes: contract?.notes || "",
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<EditContractFormData>({
+    resolver: zodResolver(editContractSchema),
+    defaultValues: {
+      client: contract?.client?._id || "",
+      policyNumber: contract?.policyNumber || "",
+      insuranceCompany: contract?.provider || "Equitable",
+      contractType: contract?.contractType || "Immediate",
+      status: contract?.status || "Surrendered",
+      premiumAmount: contract?.premiumAmount?.toString() || "",
+      contractValue: contract?.contractValue?.toString() || "",
+      beneficiaryInfo: contract?.beneficiaryInformation || "",
+      notes: contract?.notes || "",
+      startDate: contract?.startDate ? new Date(contract.startDate) : undefined,
+      anniversaryDate: contract?.anniversaryDate ? new Date(contract.anniversaryDate) : undefined,
+    },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (contract) {
+      reset({
+        client: contract.client?._id || "",
+        policyNumber: contract.policyNumber || "",
+        insuranceCompany: contract.provider || "Equitable",
+        contractType: contract.contractType || "Immediate",
+        status: contract.status || "Surrendered",
+        premiumAmount: contract.premiumAmount?.toString() || "",
+        contractValue: contract.contractValue?.toString() || "",
+        beneficiaryInfo: contract.beneficiaryInformation || "",
+        notes: contract.notes || "",
+        startDate: contract.startDate ? new Date(contract.startDate) : undefined,
+        anniversaryDate: contract.anniversaryDate ? new Date(contract.anniversaryDate) : undefined,
+      });
+    }
+  }, [contract, reset]);
+
+  const onSubmit = (data: EditContractFormData) => {
     if (!contract?.id) return;
     updateContract.mutate({
-      client: formData.client,
-      policyNumber: formData.policyNumber,
-      provider: formData.insuranceCompany,
-      contractType: formData.contractType,
-      status: formData.status,
-      premiumAmount: Number(formData.premiumAmount) || 0,
-      contractValue: Number(formData.contractValue) || 0,
-      beneficiaryInformation: formData.beneficiaryInfo,
-      notes: formData.notes,
-      startDate: startDate ? startDate.toISOString() : undefined,
-      anniversaryDate: anniversaryDate ? anniversaryDate.toISOString() : undefined,
+      client: data.client,
+      policyNumber: data.policyNumber,
+      provider: data.insuranceCompany,
+      contractType: data.contractType,
+      status: data.status,
+      premiumAmount: Number(data.premiumAmount) || 0,
+      contractValue: Number(data.contractValue) || 0,
+      beneficiaryInformation: data.beneficiaryInfo,
+      notes: data.notes,
+      startDate: data.startDate ? data.startDate.toISOString() : undefined,
+      anniversaryDate: data.anniversaryDate ? data.anniversaryDate.toISOString() : undefined,
     }, {
       onSuccess: () => {
+        toast.success("Contract updated successfully!");
         onClose();
         onSubmitSuccess();
       }
     });
   };
 
+  const handleClose = () => {
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-[525px] border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white tracking-tight">
@@ -104,204 +150,239 @@ export default function EditContractDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 font-sans py-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 font-sans py-2" noValidate>
           {/* Row 1: Searchable Client Select */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-white">Client</Label>
-            <SearchableSelect
-              options={clientOptions}
-              value={formData.client}
-              onChange={(val) => setFormData({ ...formData, client: val })}
-              placeholder="Select Client"
-              searchPlaceholder="Search client..."
+            <Label className="text-xs font-medium text-white">Client <span className="text-destructive">*</span></Label>
+            <Controller
+              name="client"
+              control={control}
+              render={({ field }) => (
+                <div className={errors.client ? "rounded-xl ring-1 ring-[#FF3E46]" : ""}>
+                  <SearchableSelect
+                    options={clientOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Select Client"
+                    searchPlaceholder="Search client..."
+                  />
+                </div>
+              )}
             />
+            {errors.client && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.client.message}</p>}
           </div>
 
           {/* Row 2: Policy Number & Insurance Company */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Policy Number</Label>
+              <Label className="text-xs font-medium text-white">Policy Number <span className="text-destructive">*</span></Label>
               <Input
                 type="text"
-                value={formData.policyNumber}
-                onChange={(e) =>
-                  setFormData({ ...formData, policyNumber: e.target.value })
-                }
+                {...register("policyNumber")}
                 placeholder="Policy Number"
-                className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
-                required
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.policyNumber ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
+              {errors.policyNumber && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.policyNumber.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Insurance Company</Label>
-              <Select
-                value={formData.insuranceCompany}
-                onValueChange={(val: string | null) =>
-                  setFormData({ ...formData, insuranceCompany: val || "Equitable" })
-                }
-              >
-                <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none">
-                  <SelectValue placeholder="Equitable" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                  <SelectItem value="Equitable" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Equitable
-                  </SelectItem>
-                  <SelectItem value="Nationwide" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Nationwide
-                  </SelectItem>
-                  <SelectItem value="Jackson National" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Jackson National
-                  </SelectItem>
-                  <SelectItem value="Symetra" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Symetra
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-medium text-white">Insurance Company <span className="text-destructive">*</span></Label>
+              <Controller
+                name="insuranceCompany"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger className={`h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none focus:ring-1 focus:ring-[#6887A0] ${errors.insuranceCompany ? "ring-1 ring-[#FF3E46]" : ""}`}>
+                      <SelectValue placeholder="Equitable" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
+                      <SelectItem value="Equitable" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Equitable
+                      </SelectItem>
+                      <SelectItem value="Nationwide" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Nationwide
+                      </SelectItem>
+                      <SelectItem value="Jackson National" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Jackson National
+                      </SelectItem>
+                      <SelectItem value="Symetra" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Symetra
+                      </SelectItem>
+                      <SelectItem value="Athene" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Athene
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.insuranceCompany && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.insuranceCompany.message}</p>}
             </div>
           </div>
 
           {/* Row 3: Contract Type & Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Contract Type</Label>
-              <Select
-                value={formData.contractType}
-                onValueChange={(val: string | null) =>
-                  setFormData({ ...formData, contractType: val || "Immediate" })
-                }
-              >
-                <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none">
-                  <SelectValue placeholder="Immediate" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                  <SelectItem value="Immediate" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Immediate
-                  </SelectItem>
-                  <SelectItem value="Fixed" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Fixed
-                  </SelectItem>
-                  <SelectItem value="Deferred" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Deferred
-                  </SelectItem>
-                  <SelectItem value="Variable" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Variable
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-medium text-white">Contract Type <span className="text-destructive">*</span></Label>
+              <Controller
+                name="contractType"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger className={`h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none focus:ring-1 focus:ring-[#6887A0] ${errors.contractType ? "ring-1 ring-[#FF3E46]" : ""}`}>
+                      <SelectValue placeholder="Immediate" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
+                      <SelectItem value="Immediate" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Immediate
+                      </SelectItem>
+                      <SelectItem value="Fixed" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Fixed
+                      </SelectItem>
+                      <SelectItem value="Deferred" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Deferred
+                      </SelectItem>
+                      <SelectItem value="Variable" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Variable
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.contractType && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.contractType.message}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(val: string | null) =>
-                  setFormData({ ...formData, status: val || "Surrendered" })
-                }
-              >
-                <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none">
-                  <SelectValue placeholder="Surrendered" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                  <SelectItem value="Surrendered" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Surrendered
-                  </SelectItem>
-                  <SelectItem value="Active" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Active
-                  </SelectItem>
-                  <SelectItem value="Pending" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Pending
-                  </SelectItem>
-                  <SelectItem value="Matured" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                    Matured
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs font-medium text-white">Status <span className="text-destructive">*</span></Label>
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger className={`h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none focus:ring-1 focus:ring-[#6887A0] ${errors.status ? "ring-1 ring-[#FF3E46]" : ""}`}>
+                      <SelectValue placeholder="Surrendered" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
+                      <SelectItem value="Surrendered" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Surrendered
+                      </SelectItem>
+                      <SelectItem value="Active" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Active
+                      </SelectItem>
+                      <SelectItem value="Pending" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Pending
+                      </SelectItem>
+                      <SelectItem value="Matured" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Matured
+                      </SelectItem>
+                      <SelectItem value="Inactive" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Inactive
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.status && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.status.message}</p>}
             </div>
           </div>
 
           {/* Row 4: Start Date & Anniversary Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Start Date</Label>
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <button
-                      type="button"
-                      className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
-                    >
-                      <span className={startDate ? "text-white" : "text-[#919191]"}>
-                        {startDate ? format(startDate, "MM/dd/yyyy") : "mm/dd/yyyy"}
-                      </span>
-                      <CalendarIcon className="w-4 h-4 text-[#919191]" />
-                    </button>
-                  }
-                />
-                <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label className="text-xs font-medium text-white">Start Date <span className="text-destructive">*</span></Label>
+              <Controller
+                name="startDate"
+                control={control}
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger
+                      render={
+                        <button
+                          type="button"
+                          className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
+                        >
+                          <span className={field.value ? "text-white" : "text-[#919191]"}>
+                            {field.value ? format(field.value, "MM/dd/yyyy") : "mm/dd/yyyy"}
+                          </span>
+                          <CalendarIcon className="w-4 h-4 text-[#919191]" />
+                        </button>
+                      }
+                    />
+                    <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
+              {errors.startDate && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.startDate.message}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Anniversary Date</Label>
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <button
-                      type="button"
-                      className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
-                    >
-                      <span className={anniversaryDate ? "text-white" : "text-[#919191]"}>
-                        {anniversaryDate ? format(anniversaryDate, "MM/dd/yyyy") : "mm/dd/yyyy"}
-                      </span>
-                      <CalendarIcon className="w-4 h-4 text-[#919191]" />
-                    </button>
-                  }
-                />
-                <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                  <Calendar
-                    mode="single"
-                    selected={anniversaryDate}
-                    onSelect={setAnniversaryDate}
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label className="text-xs font-medium text-white">Anniversary Date <span className="text-destructive">*</span></Label>
+              <Controller
+                name="anniversaryDate"
+                control={control}
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger
+                      render={
+                        <button
+                          type="button"
+                          className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
+                        >
+                          <span className={field.value ? "text-white" : "text-[#919191]"}>
+                            {field.value ? format(field.value, "MM/dd/yyyy") : "mm/dd/yyyy"}
+                          </span>
+                          <CalendarIcon className="w-4 h-4 text-[#919191]" />
+                        </button>
+                      }
+                    />
+                    <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
+              {errors.anniversaryDate && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.anniversaryDate.message}</p>}
             </div>
           </div>
 
           {/* Row 5: Premium Amount & Contract Value */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Premium Amount</Label>
+              <Label className="text-xs font-medium text-white">Premium Amount <span className="text-destructive">*</span></Label>
               <Input
                 type="number"
-                value={formData.premiumAmount}
-                onChange={(e) =>
-                  setFormData({ ...formData, premiumAmount: e.target.value })
-                }
+                {...register("premiumAmount")}
                 placeholder="100000"
-                className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
-                required
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.premiumAmount ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
+              {errors.premiumAmount && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.premiumAmount.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Contract Value</Label>
+              <Label className="text-xs font-medium text-white">Contract Value <span className="text-destructive">*</span></Label>
               <Input
                 type="number"
-                value={formData.contractValue}
-                onChange={(e) =>
-                  setFormData({ ...formData, contractValue: e.target.value })
-                }
+                {...register("contractValue")}
                 placeholder="100000"
-                className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
-                required
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.contractValue ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
+              {errors.contractValue && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.contractValue.message}</p>}
             </div>
           </div>
 
@@ -310,27 +391,23 @@ export default function EditContractDialog({
             <Label className="text-xs font-medium text-white">Beneficiary Information</Label>
             <Input
               type="text"
-              value={formData.beneficiaryInfo}
-              onChange={(e) =>
-                setFormData({ ...formData, beneficiaryInfo: e.target.value })
-              }
+              {...register("beneficiaryInfo")}
               placeholder="Enter beneficiary details"
-              className="h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px]"
+              className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.beneficiaryInfo ? "ring-1 ring-[#FF3E46]" : ""}`}
             />
+            {errors.beneficiaryInfo && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.beneficiaryInfo.message}</p>}
           </div>
 
           {/* Row 7: Notes */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-white">Notes</Label>
             <textarea
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
+              {...register("notes")}
               placeholder="Type any notes here"
               rows={3}
-              className="w-full bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] p-3 outline-none resize-none"
+              className={`w-full bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] p-3 outline-none resize-none focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.notes ? "ring-1 ring-[#FF3E46]" : ""}`}
             />
+            {errors.notes && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.notes.message}</p>}
           </div>
 
           {/* Dialog Footer Actions */}
@@ -338,7 +415,7 @@ export default function EditContractDialog({
             <Button
               type="button"
               variant="secondary"
-              onClick={onClose}
+              onClick={handleClose}
               className="w-[140px] h-10 bg-[#2B343D] text-white hover:bg-[#394551] rounded-[12px] text-sm font-medium border-0"
             >
               Cancel
@@ -356,3 +433,4 @@ export default function EditContractDialog({
     </Dialog>
   );
 }
+

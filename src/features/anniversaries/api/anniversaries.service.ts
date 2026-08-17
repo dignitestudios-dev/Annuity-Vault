@@ -62,34 +62,54 @@ export const useAnniversaries = (filters: AnniversariesParams) => {
 };
 
 export const exportAnniversaries = async (format: "pdf" | "csv", search?: string, timeWindow?: number) => {
-  const response = await axiosInstance.get("/anniversaries/export", {
-    params: { format, search, window: timeWindow },
-    responseType: "blob",
+  const response = await axiosInstance.get<AnniversariesResponse>("/anniversaries", {
+    params: { search, window: timeWindow, limit: 1000 },
   });
   
-  // Create a blob from the response data
-  const blob = new Blob([response.data], {
-    type: format === "pdf" ? "application/pdf" : "text/csv",
-  });
+  const anniversaries = response.data.data.rows;
   
-  // Create a link element, use it to download the file and remove it
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  
-  // Extract filename from header if available, else default
-  const disposition = response.headers['content-disposition'];
-  let filename = `anniversaries.${format}`;
-  if (disposition && disposition.indexOf('attachment') !== -1) {
-    const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
-    if (matches != null && matches[1]) { 
-      filename = matches[1].replace(/['"]/g, '');
-    }
+  if (format === "csv") {
+    const headers = ["Client Name", "Contract Number", "Provider", "Anniversary Date", "Days Until"];
+    const csvContent = [
+      headers.join(","),
+      ...anniversaries.map(a => [
+        a.client ? `${a.client.firstName} ${a.client.lastName}` : "N/A",
+        a.contractNumber || "N/A",
+        a.provider || "N/A",
+        a.anniversaryDate ? new Date(a.anniversaryDate).toLocaleDateString() : "N/A",
+        a.daysUntil
+      ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Anniversaries_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } else if (format === "pdf") {
+    const jsPDF = (await import("jspdf")).default;
+    const autoTable = (await import("jspdf-autotable")).default;
+    
+    const doc = new jsPDF();
+    doc.text("Anniversaries Export", 14, 15);
+    
+    const tableData = anniversaries.map(a => [
+      a.client ? `${a.client.firstName} ${a.client.lastName}` : "N/A",
+      a.contractNumber || "N/A",
+      a.provider || "N/A",
+      a.anniversaryDate ? new Date(a.anniversaryDate).toLocaleDateString() : "N/A",
+      a.daysUntil.toString()
+    ]);
+
+    autoTable(doc, {
+      head: [["Client Name", "Contract No.", "Provider", "Anniversary Date", "Days Until"]],
+      body: tableData,
+      startY: 20,
+    });
+    
+    doc.save(`Anniversaries_Export_${new Date().toISOString().split('T')[0]}.pdf`);
   }
-  
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  link.parentNode?.removeChild(link);
-  window.URL.revokeObjectURL(url);
 };

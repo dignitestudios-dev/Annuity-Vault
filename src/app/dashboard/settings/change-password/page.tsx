@@ -5,18 +5,19 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import SuccessModal from "@/components/shared/success-modal";
+import toast from "react-hot-toast";
 import { useUpdatePassword } from "@/features/settings/api/settings.service";
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(6, "Current password must be at least 6 characters"),
+    currentPassword: z.string().min(6, "Current password must be at least 6 characters").max(50, "Password must be less than 50 characters"),
     newPassword: z
       .string()
       .min(8, "New password must be at least 8 characters")
+      .max(50, "Password must be less than 50 characters")
       .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
       .regex(/[0-9]/, "Password must contain at least one number"),
-    confirmPassword: z.string().min(1, "Please confirm your new password"),
+    confirmPassword: z.string().min(1, "Please confirm your new password").max(50, "Password must be less than 50 characters"),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords do not match",
@@ -29,8 +30,6 @@ export default function SettingsChangePasswordPage() {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
 
   const updatePasswordMutation = useUpdatePassword();
 
@@ -49,17 +48,16 @@ export default function SettingsChangePasswordPage() {
   });
 
   const onSubmit = async (data: ChangePasswordValues) => {
-    setErrorMessage("");
     try {
       await updatePasswordMutation.mutateAsync({
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
         confirmPassword: data.confirmPassword,
       });
-      setIsSuccessOpen(true);
+      toast.success("Password updated successfully!");
       reset();
     } catch (error: any) {
-      setErrorMessage(error?.response?.data?.message || "Failed to update password.");
+      toast.error(error?.response?.data?.message || "Failed to update password.");
     }
   };
 
@@ -77,14 +75,14 @@ export default function SettingsChangePasswordPage() {
           {/* Left Column: Current Password */}
           <div className="flex flex-col gap-2 w-full max-w-[350px]">
             <label className="text-sm font-medium text-white capitalize">
-              Current Password
+              Current Password <span className="text-destructive">*</span>
             </label>
             <div className="relative w-full">
               <input
                 type={showCurrent ? "text" : "password"}
                 {...register("currentPassword")}
                 placeholder="Enter password here"
-                className="h-10 w-full bg-[#141C24] text-white pl-3.5 pr-10 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans placeholder:text-[#919191] transition-all"
+                className={`h-10 w-full bg-[#141C24] text-white pl-3.5 pr-10 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans placeholder:text-[#919191] transition-all focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.currentPassword ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
               <button
                 type="button"
@@ -95,9 +93,9 @@ export default function SettingsChangePasswordPage() {
               </button>
             </div>
             {errors.currentPassword && (
-              <span className="text-[#FF3E46] text-xs font-normal">
+              <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
                 {errors.currentPassword.message}
-              </span>
+              </p>
             )}
           </div>
 
@@ -106,14 +104,14 @@ export default function SettingsChangePasswordPage() {
             {/* New Password Field */}
             <div className="flex flex-col gap-2 w-full">
               <label className="text-sm font-medium text-white capitalize">
-                New Password
+                New Password <span className="text-destructive">*</span>
               </label>
               <div className="relative w-full">
                 <input
                   type={showNew ? "text" : "password"}
                   {...register("newPassword")}
                   placeholder="Enter new password here"
-                  className="h-10 w-full bg-[#141C24] text-white pl-3.5 pr-10 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans placeholder:text-[#919191] transition-all"
+                  className={`h-10 w-full bg-[#141C24] text-white pl-3.5 pr-10 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans placeholder:text-[#919191] transition-all focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.newPassword ? "ring-1 ring-[#FF3E46]" : ""}`}
                 />
                 <button
                   type="button"
@@ -124,23 +122,23 @@ export default function SettingsChangePasswordPage() {
                 </button>
               </div>
               {errors.newPassword && (
-                <span className="text-[#FF3E46] text-xs font-normal">
+                <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
                   {errors.newPassword.message}
-                </span>
+                </p>
               )}
             </div>
 
             {/* Confirm Password Field */}
             <div className="flex flex-col gap-2 w-full">
               <label className="text-sm font-medium text-white capitalize">
-                Confirm Password
+                Confirm Password <span className="text-destructive">*</span>
               </label>
               <div className="relative w-full">
                 <input
                   type={showConfirm ? "text" : "password"}
                   {...register("confirmPassword")}
                   placeholder="Re enter password here"
-                  className="h-10 w-full bg-[#141C24] text-white pl-3.5 pr-10 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans placeholder:text-[#919191] transition-all"
+                  className={`h-10 w-full bg-[#141C24] text-white pl-3.5 pr-10 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans placeholder:text-[#919191] transition-all focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.confirmPassword ? "ring-1 ring-[#FF3E46]" : ""}`}
                 />
                 <button
                   type="button"
@@ -151,17 +149,14 @@ export default function SettingsChangePasswordPage() {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <span className="text-[#FF3E46] text-xs font-normal">
+                <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
                   {errors.confirmPassword.message}
-                </span>
+                </p>
               )}
             </div>
           </div>
         </div>
 
-        {errorMessage && (
-          <div className="text-[#FF3E46] text-sm max-w-[760px]">{errorMessage}</div>
-        )}
 
         {/* Action Button: Update */}
         <div className="flex justify-end max-w-[760px] mt-4">
@@ -178,13 +173,6 @@ export default function SettingsChangePasswordPage() {
         </div>
       </form>
 
-      {/* Success Modal Feedback */}
-      <SuccessModal
-        isOpen={isSuccessOpen}
-        onClose={() => setIsSuccessOpen(false)}
-        title="Password Updated!"
-        description="Your password has been changed successfully."
-      />
     </div>
   );
 }

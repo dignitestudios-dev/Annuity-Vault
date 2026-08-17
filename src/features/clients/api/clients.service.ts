@@ -73,3 +73,56 @@ export function useDeleteClient() {
     },
   });
 }
+
+export const exportClients = async (format: "pdf" | "csv", search?: string, status?: string) => {
+  const response = await clientsService.getClients({ search, status, limit: 1000 });
+  const clients = response.data;
+  
+  if (format === "csv") {
+    const headers = ["Client Name", "Email", "Phone", "Status", "Date Added", "Contracts Count"];
+    const csvContent = [
+      headers.join(","),
+      ...clients.map(c => [
+        `${c.firstName} ${c.lastName}`,
+        c.email || "N/A",
+        c.phone || "N/A",
+        c.status || "N/A",
+        new Date(c.createdAt).toLocaleDateString(),
+        c.contractsCount || 0
+      ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Clients_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } else if (format === "pdf") {
+    const jsPDF = (await import("jspdf")).default;
+    const autoTable = (await import("jspdf-autotable")).default;
+    
+    const doc = new jsPDF();
+    doc.text("Clients Export", 14, 15);
+    
+    const tableData = clients.map(c => [
+      `${c.firstName} ${c.lastName}`,
+      c.email || "N/A",
+      c.phone || "N/A",
+      c.status || "N/A",
+      new Date(c.createdAt).toLocaleDateString(),
+      (c.contractsCount || 0).toString()
+    ]);
+
+    autoTable(doc, {
+      head: [["Client Name", "Email", "Phone", "Status", "Date Added", "Contracts"]],
+      body: tableData,
+      startY: 20,
+    });
+    
+    doc.save(`Clients_Export_${new Date().toISOString().split('T')[0]}.pdf`);
+  }
+};
+

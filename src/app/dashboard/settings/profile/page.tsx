@@ -5,16 +5,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { User as UserIcon, Camera, Loader2 } from "lucide-react";
-import SuccessModal from "@/components/shared/success-modal";
+import toast from "react-hot-toast";
 import { useAppSelector, useAppDispatch } from "@/store";
 import { updateUser } from "@/store/slices/auth.slice";
 import { useUpdateProfile } from "@/features/settings/api/settings.service";
 
 const profileSchema = z.object({
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  jobTitle: z.string().optional(),
-  firm: z.string().optional(),
+  fullName: z.string().min(2, "Full name must be at least 2 characters").max(50, "Full name must be less than 50 characters"),
+  email: z.string().email("Please enter a valid email address").max(100, "Email must be less than 100 characters"),
+  jobTitle: z.string().max(100, "Role must be less than 100 characters").optional().or(z.literal("")),
+  firm: z.string().max(100, "Firm must be less than 100 characters").optional().or(z.literal("")),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -23,9 +23,7 @@ export default function SettingsProfilePage() {
   const user = useAppSelector((state) => state.auth.user);
   const dispatch = useAppDispatch();
   const updateProfileMutation = useUpdateProfile();
-  
-  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const updateProfileMutation = useUpdateProfile();
 
   const {
     register,
@@ -54,7 +52,6 @@ export default function SettingsProfilePage() {
   }, [user, reset]);
 
   const onSubmit = async (data: ProfileFormValues) => {
-    setErrorMessage("");
     try {
       // Note: email is not editable per requirements, so we only send name, jobTitle, firm
       const payload = {
@@ -75,9 +72,9 @@ export default function SettingsProfilePage() {
       dispatch(updateUser(updatedUser));
       localStorage.setItem("auth-user", JSON.stringify(updatedUser));
       
-      setIsSuccessOpen(true);
+      toast.success("Profile updated successfully!");
     } catch (error: any) {
-      setErrorMessage(error?.response?.data?.message || "Failed to update profile.");
+      toast.error(error?.response?.data?.message || "Failed to update profile.");
     }
   };
 
@@ -117,37 +114,37 @@ export default function SettingsProfilePage() {
           {/* Full Name Field */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-white capitalize">
-              Full Name
+              Full Name <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
               {...register("fullName")}
               placeholder="Full Name"
-              className="h-10 w-full bg-[#141C24] text-white px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all"
+              className={`h-10 w-full bg-[#141C24] text-white px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.fullName ? "ring-1 ring-[#FF3E46]" : ""}`}
             />
             {errors.fullName && (
-              <span className="text-[#FF3E46] text-xs font-normal">
+              <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
                 {errors.fullName.message}
-              </span>
+              </p>
             )}
           </div>
 
           {/* Email Address Field */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-white capitalize">
-              Email Address
+              Email Address <span className="text-destructive">*</span>
             </label>
               <input
                 type="email"
                 {...register("email")}
                 disabled
                 placeholder="Email Address"
-                className="h-10 w-full bg-[#141C24] text-[#727272] px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all disabled:opacity-50 cursor-not-allowed"
+                className={`h-10 w-full bg-[#141C24] text-[#727272] px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all disabled:opacity-50 cursor-not-allowed focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.email ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
             {errors.email && (
-              <span className="text-[#FF3E46] text-xs font-normal">
+              <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
                 {errors.email.message}
-              </span>
+              </p>
             )}
           </div>
 
@@ -159,12 +156,12 @@ export default function SettingsProfilePage() {
               type="text"
               {...register("jobTitle")}
               placeholder="Role"
-              className="h-10 w-full bg-[#141C24] text-white px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all"
+              className={`h-10 w-full bg-[#141C24] text-white px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.jobTitle ? "ring-1 ring-[#FF3E46]" : ""}`}
             />
             {errors.jobTitle && (
-              <span className="text-[#FF3E46] text-xs font-normal">
+              <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
                 {errors.jobTitle.message}
-              </span>
+              </p>
             )}
           </div>
 
@@ -177,19 +174,16 @@ export default function SettingsProfilePage() {
               type="text"
               {...register("firm")}
               placeholder="Firm"
-              className="h-10 w-full bg-[#141C24] text-white px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all"
+              className={`h-10 w-full bg-[#141C24] text-white px-3.5 rounded-xl border border-white/5 focus:border-[#6887A0] outline-none text-sm font-sans transition-all focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.firm ? "ring-1 ring-[#FF3E46]" : ""}`}
             />
             {errors.firm && (
-              <span className="text-[#FF3E46] text-xs font-normal">
+              <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
                 {errors.firm.message}
-              </span>
+              </p>
             )}
           </div>
         </div>
 
-        {errorMessage && (
-          <div className="text-[#FF3E46] text-sm mt-2">{errorMessage}</div>
-        )}
 
         {/* Save Changes CTA Button */}
         <div className="flex justify-end mt-4 sm:mt-6">
@@ -205,14 +199,6 @@ export default function SettingsProfilePage() {
           </button>
         </div>
       </form>
-
-      {/* Success Modal Confirmation */}
-      <SuccessModal
-        isOpen={isSuccessOpen}
-        onClose={() => setIsSuccessOpen(false)}
-        title="Profile Updated!"
-        description="Your profile information has been saved successfully!"
-      />
     </div>
   );
 }

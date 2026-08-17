@@ -57,31 +57,56 @@ export const useAuditLogs = (filters: AuditLogsParams) => {
 };
 
 export const exportAuditLogs = async (format: "pdf" | "csv", search?: string, action?: string, module?: string) => {
-  const response = await axiosInstance.get("/audit-logs/export", {
-    params: { format, search, action, module },
-    responseType: "blob",
+  const response = await axiosInstance.get<AuditLogsResponse>("/audit-logs", {
+    params: { search, action, module, limit: 1000 },
   });
   
-  const blob = new Blob([response.data], {
-    type: format === "pdf" ? "application/pdf" : "text/csv",
-  });
+  const logs = response.data.data;
   
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  
-  const disposition = response.headers['content-disposition'];
-  let filename = `audit-logs.${format}`;
-  if (disposition && disposition.indexOf('attachment') !== -1) {
-    const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
-    if (matches != null && matches[1]) { 
-      filename = matches[1].replace(/['"]/g, '');
-    }
+  if (format === "csv") {
+    const headers = ["Date", "User", "Action", "Module", "Record", "Details"];
+    const csvContent = [
+      headers.join(","),
+      ...logs.map(log => [
+        new Date(log.createdAt).toLocaleString(),
+        log.performedBy ? `${log.performedBy.firstName} ${log.performedBy.lastName}` : "System",
+        log.action,
+        log.module,
+        log.recordLabel || "N/A",
+        log.change || "N/A"
+      ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `AuditLogs_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } else if (format === "pdf") {
+    const jsPDF = (await import("jspdf")).default;
+    const autoTable = (await import("jspdf-autotable")).default;
+    
+    const doc = new jsPDF();
+    doc.text("Audit Logs Export", 14, 15);
+    
+    const tableData = logs.map(log => [
+      new Date(log.createdAt).toLocaleString(),
+      log.performedBy ? `${log.performedBy.firstName} ${log.performedBy.lastName}` : "System",
+      log.action,
+      log.module,
+      log.recordLabel || "N/A",
+      log.change || "N/A"
+    ]);
+
+    autoTable(doc, {
+      head: [["Date", "User", "Action", "Module", "Record", "Details"]],
+      body: tableData,
+      startY: 20,
+    });
+    
+    doc.save(`AuditLogs_Export_${new Date().toISOString().split('T')[0]}.pdf`);
   }
-  
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  link.parentNode?.removeChild(link);
-  window.URL.revokeObjectURL(url);
 };

@@ -1,4 +1,5 @@
 "use client";
+import { Loader } from "@/components/ui/loader";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -157,9 +158,7 @@ export default function ActivityAuditPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center text-xs text-[#919191]">
-                    Loading...
-                  </TableCell>
+                  <TableCell colSpan={6} className="py-12 text-center text-xs text-[#919191]"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></TableCell>
                 </TableRow>
               ) : logs.length > 0 ? (
                 logs.map((log) => (

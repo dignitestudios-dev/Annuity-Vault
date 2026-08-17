@@ -38,7 +38,7 @@ const editTaskSchema = z.object({
     .string()
     .min(1, "Title is required")
     .max(100, "Title must be less than 100 characters"),
-  desc: z.string().optional(),
+  desc: z.string().max(500, "Description must be less than 500 characters").optional().or(z.literal("")),
   priority: z.enum(["Urgent", "High", "Medium", "Low"], {
     message: "Please select a priority",
   }),
@@ -126,7 +126,7 @@ export default function EditTaskDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5 pt-1" noValidate>
           {/* 1. Title Field */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-white">Title</Label>
+            <Label className="text-sm font-medium text-white">Title <span className="text-destructive">*</span></Label>
             <Input
               {...register("title")}
               placeholder="Enter title here"
@@ -155,7 +155,7 @@ export default function EditTaskDialog({
           <div className="grid grid-cols-2 gap-3">
             {/* Priority */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-white">Priority</Label>
+              <Label className="text-sm font-medium text-white">Priority <span className="text-destructive">*</span></Label>
               <Controller
                 name="priority"
                 control={control}
@@ -185,7 +185,7 @@ export default function EditTaskDialog({
 
             {/* Status */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-white">Status</Label>
+              <Label className="text-sm font-medium text-white">Status <span className="text-destructive">*</span></Label>
               <Controller
                 name="status"
                 control={control}
@@ -215,7 +215,7 @@ export default function EditTaskDialog({
           <div className="grid grid-cols-2 gap-3">
             {/* Due Date */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-white">Due Date</Label>
+              <Label className="text-sm font-medium text-white">Due Date <span className="text-destructive">*</span></Label>
               <Input
                 type="date"
                 {...register("due")}

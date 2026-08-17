@@ -1,4 +1,5 @@
 "use client";
+import { Loader } from "@/components/ui/loader";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -219,7 +220,7 @@ function ClientDetailsContent() {
   };
 
   if (isLoading) {
-    return <div className="text-white p-6 font-sans">Loading client details...</div>;
+    return <div className="text-white p-6 font-sans"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>;
   }
 
   if (!client) {
@@ -314,7 +315,7 @@ function ClientDetailsContent() {
 
 export default function ClientDetailsPage() {
   return (
-    <Suspense fallback={<div className="text-white p-6">Loading client details...</div>}>
+    <Suspense fallback={<div className="text-white p-6"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>}>
       <ClientDetailsContent />
     </Suspense>
   );

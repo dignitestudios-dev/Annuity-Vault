@@ -92,3 +92,58 @@ export const useDeleteTask = () => {
     },
   });
 };
+
+export const exportTasks = async (format: "pdf" | "csv", search?: string, status?: string, priority?: string) => {
+  const response = await axiosInstance.get<TasksResponse>("/tasks", {
+    params: { search, status, priority, limit: 1000 },
+  });
+  
+  const tasks = response.data.data;
+  
+  if (format === "csv") {
+    const headers = ["Title", "Client", "Due Date", "Priority", "Status", "Description"];
+    const csvContent = [
+      headers.join(","),
+      ...tasks.map(t => [
+        t.title || "N/A",
+        t.client ? t.client.name : "N/A",
+        t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "N/A",
+        t.priority || "N/A",
+        t.status || "N/A",
+        t.description || "N/A"
+      ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Tasks_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } else if (format === "pdf") {
+    const jsPDF = (await import("jspdf")).default;
+    const autoTable = (await import("jspdf-autotable")).default;
+    
+    const doc = new jsPDF();
+    doc.text("Tasks Export", 14, 15);
+    
+    const tableData = tasks.map(t => [
+      t.title || "N/A",
+      t.client ? t.client.name : "N/A",
+      t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "N/A",
+      t.priority || "N/A",
+      t.status || "N/A",
+      t.description || "N/A"
+    ]);
+
+    autoTable(doc, {
+      head: [["Title", "Client", "Due Date", "Priority", "Status", "Description"]],
+      body: tableData,
+      startY: 20,
+    });
+    
+    doc.save(`Tasks_Export_${new Date().toISOString().split('T')[0]}.pdf`);
+  }
+};

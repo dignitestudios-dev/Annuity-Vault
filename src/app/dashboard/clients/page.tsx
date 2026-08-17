@@ -5,6 +5,7 @@ import { Download, Plus } from "lucide-react";
 import ClientsFolderTable from "@/features/clients/components/clients-folder-table";
 import NewClientDialog from "@/features/clients/components/new-client-dialog";
 import SuccessModal from "@/components/shared/success-modal";
+import { exportClients } from "@/features/clients/api/clients.service";
 
 export default function ClientsFolderPage() {
   const [isNewClientOpen, setIsNewClientOpen] = useState(false);
@@ -20,11 +21,17 @@ export default function ClientsFolderPage() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
-          <button className="h-10 px-5 bg-[#141C24] text-white border border-white/5 font-medium hover:bg-white/5 rounded-[12px] text-sm transition-colors font-sans flex items-center gap-2">
+          <button 
+            onClick={() => exportClients("pdf")}
+            className="h-10 px-5 bg-[#141C24] text-white border border-white/5 font-medium hover:bg-white/5 rounded-[12px] text-sm transition-colors font-sans flex items-center gap-2"
+          >
             <Download className="w-4 h-4 text-[#8C8C8C]" />
             <span>Export PDF</span>
           </button>
-          <button className="h-10 px-5 bg-[#141C24] text-white border border-white/5 font-medium hover:bg-white/5 rounded-[12px] text-sm transition-colors font-sans flex items-center gap-2">
+          <button 
+            onClick={() => exportClients("csv")}
+            className="h-10 px-5 bg-[#141C24] text-white border border-white/5 font-medium hover:bg-white/5 rounded-[12px] text-sm transition-colors font-sans flex items-center gap-2"
+          >
             <Download className="w-4 h-4 text-[#8C8C8C]" />
             <span>Export CSV</span>
           </button>

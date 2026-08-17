@@ -156,31 +156,60 @@ export const useDeleteContractNote = (contractId: string) => {
 };
 
 export const exportContracts = async (format: "pdf" | "csv", search?: string, contractType?: string, status?: string) => {
-  const response = await axiosInstance.get("/contracts/export", {
-    params: { format, search, contractType, status },
-    responseType: "blob",
+  const response = await axiosInstance.get<GetContractsResponse>("/contracts", {
+    params: { search, contractType, status, limit: 1000 },
   });
   
-  const blob = new Blob([response.data], {
-    type: format === "pdf" ? "application/pdf" : "text/csv",
-  });
+  const contracts = response.data.data;
   
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  
-  const disposition = response.headers['content-disposition'];
-  let filename = `contracts.${format}`;
-  if (disposition && disposition.indexOf('attachment') !== -1) {
-    const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
-    if (matches != null && matches[1]) { 
-      filename = matches[1].replace(/['"]/g, '');
-    }
+  if (format === "csv") {
+    const headers = ["Contract Number", "Policy Number", "Client Name", "Provider", "Type", "Status", "Premium Amount", "Contract Value", "Start Date"];
+    const csvContent = [
+      headers.join(","),
+      ...contracts.map(c => [
+        c.contractNumber || "N/A",
+        c.policyNumber || "N/A",
+        c.client ? `${c.client.firstName} ${c.client.lastName}` : "N/A",
+        c.provider || "N/A",
+        c.contractType || "N/A",
+        c.status || "N/A",
+        c.premiumAmount || 0,
+        c.contractValue || 0,
+        c.startDate ? new Date(c.startDate).toLocaleDateString() : "N/A"
+      ].map(field => `"${field}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Contracts_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } else if (format === "pdf") {
+    const jsPDF = (await import("jspdf")).default;
+    const autoTable = (await import("jspdf-autotable")).default;
+    
+    const doc = new jsPDF();
+    doc.text("Contracts Export", 14, 15);
+    
+    const tableData = contracts.map(c => [
+      c.contractNumber || "N/A",
+      c.client ? `${c.client.firstName} ${c.client.lastName}` : "N/A",
+      c.provider || "N/A",
+      c.contractType || "N/A",
+      c.status || "N/A",
+      `$${(c.contractValue || 0).toLocaleString()}`,
+      c.startDate ? new Date(c.startDate).toLocaleDateString() : "N/A"
+    ]);
+
+    autoTable(doc, {
+      head: [["Contract No.", "Client", "Provider", "Type", "Status", "Value", "Start Date"]],
+      body: tableData,
+      startY: 20,
+    });
+    
+    doc.save(`Contracts_Export_${new Date().toISOString().split('T')[0]}.pdf`);
   }
-  
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  link.parentNode?.removeChild(link);
-  window.URL.revokeObjectURL(url);
 };

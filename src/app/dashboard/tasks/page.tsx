@@ -1,4 +1,5 @@
 "use client";
+import { Loader } from "@/components/ui/loader";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import NewTaskDialog from "@/features/tasks/components/new-task-dialog";
 import { Task } from "@/features/tasks/types/tasks.types";
-import { useTasks, useUpdateTask, useDeleteTask } from "@/features/tasks/api/tasks.service";
+import { useTasks, useUpdateTask, useDeleteTask, exportTasks } from "@/features/tasks/api/tasks.service";
 import { format, parseISO } from "date-fns";
 import EditTaskDialog from "@/features/tasks/components/edit-task-dialog";
 import TaskDetailsDialog from "@/features/tasks/components/task-details-dialog";
@@ -220,13 +221,19 @@ function TasksContent() {
 
         <div className="flex items-center gap-3 flex-wrap">
           <button
-            onClick={() =>
+            onClick={async () => {
+              await exportTasks(
+                "pdf",
+                searchTerm || undefined,
+                statusFilter !== "all" ? statusFilter : undefined,
+                priorityFilter !== "all" ? priorityFilter : undefined
+              );
               setFeedbackModal({
                 isOpen: true,
                 title: "PDF Export Complete",
                 desc: "Your task management overview has been downloaded as a PDF report.",
-              })
-            }
+              });
+            }}
             className="h-10 px-4 bg-[#141C24] hover:bg-white/10 text-white rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-white/5 shadow-sm cursor-pointer"
           >
             <FileText className="w-4 h-4 text-[#919191]" />
@@ -234,13 +241,19 @@ function TasksContent() {
           </button>
 
           <button
-            onClick={() =>
+            onClick={async () => {
+              await exportTasks(
+                "csv",
+                searchTerm || undefined,
+                statusFilter !== "all" ? statusFilter : undefined,
+                priorityFilter !== "all" ? priorityFilter : undefined
+              );
               setFeedbackModal({
                 isOpen: true,
                 title: "CSV Export Complete",
                 desc: "Your task records have been exported to CSV format successfully.",
-              })
-            }
+              });
+            }}
             className="h-10 px-4 bg-[#141C24] hover:bg-white/10 text-white rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-white/5 shadow-sm cursor-pointer"
           >
             <Download className="w-4 h-4 text-[#919191]" />
@@ -959,7 +972,7 @@ function TasksContent() {
 
 export default function TasksPage() {
   return (
-    <Suspense fallback={<div className="text-white p-6">Loading task management...</div>}>
+    <Suspense fallback={<div className="text-white p-6"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>}>
       <TasksContent />
     </Suspense>
   );
