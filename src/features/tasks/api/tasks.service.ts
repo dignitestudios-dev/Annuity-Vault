@@ -104,14 +104,17 @@ export const exportTasks = async (format: "pdf" | "csv", search?: string, status
     const headers = ["Title", "Client", "Due Date", "Priority", "Status", "Description"];
     const csvContent = [
       headers.join(","),
-      ...tasks.map(t => [
-        t.title || "N/A",
-        t.client ? t.client.name : "N/A",
-        t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "N/A",
-        t.priority || "N/A",
-        t.status || "N/A",
-        t.description || "N/A"
-      ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(","))
+      ...tasks.map(t => {
+        const clientName = t.client ? `${t.client.firstName || ""} ${t.client.lastName || ""}`.trim() : "N/A";
+        return [
+          t.title || "N/A",
+          clientName || "N/A",
+          t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "N/A",
+          t.priority || "N/A",
+          t.status || "N/A",
+          t.description || "N/A"
+        ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(",")
+      })
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -129,14 +132,17 @@ export const exportTasks = async (format: "pdf" | "csv", search?: string, status
     const doc = new jsPDF();
     doc.text("Tasks Export", 14, 15);
     
-    const tableData = tasks.map(t => [
-      t.title || "N/A",
-      t.client ? t.client.name : "N/A",
-      t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "N/A",
-      t.priority || "N/A",
-      t.status || "N/A",
-      t.description || "N/A"
-    ]);
+    const tableData = tasks.map(t => {
+      const clientName = t.client ? `${t.client.firstName || ""} ${t.client.lastName || ""}`.trim() : "N/A";
+      return [
+        t.title || "N/A",
+        clientName || "N/A",
+        t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "N/A",
+        t.priority || "N/A",
+        t.status || "N/A",
+        t.description || "N/A"
+      ];
+    });
 
     autoTable(doc, {
       head: [["Title", "Client", "Due Date", "Priority", "Status", "Description"]],

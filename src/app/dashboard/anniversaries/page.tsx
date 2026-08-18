@@ -23,7 +23,7 @@ export default function AnniversariesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDaysFilter, setSelectedDaysFilter] = useState<30 | 60 | 90 | 120 | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const itemsPerPage = 20;
 
   const { data, isLoading } = useAnniversaries({
     page: currentPage,

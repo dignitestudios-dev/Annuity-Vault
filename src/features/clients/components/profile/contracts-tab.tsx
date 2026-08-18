@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/shared/empty-state";
 import {
   Table,
   TableHeader,
@@ -18,6 +19,7 @@ import TablePagination from "@/components/shared/table-pagination";
 import { cn } from "@/lib/utils";
 
 interface ContractItem {
+  id: string;
   contractNo: string;
   provider: string;
   type: string;
@@ -36,7 +38,7 @@ export default function ContractsTab({ contracts }: ContractsTabProps) {
   const [isNewContractOpen, setIsNewContractOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
 
   const totalPages = Math.ceil(contracts.length / itemsPerPage);
   const paginatedContracts = contracts.slice(
@@ -86,39 +88,51 @@ export default function ContractsTab({ contracts }: ContractsTabProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedContracts.map((contract) => (
-              <TableRow
-                key={contract.contractNo}
-                onClick={() => router.push(`/dashboard/contracts/${contract.contractNo}`)}
-                className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14 cursor-pointer"
-              >
-                <TableCell className="px-6 py-3.5 text-sm font-medium text-white font-sans">
-                  {contract.contractNo}
-                </TableCell>
-                <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
-                  {contract.provider}
-                </TableCell>
-                <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
-                  {contract.type}
-                </TableCell>
-                <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
-                  {contract.value}
-                </TableCell>
-                <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
-                  {contract.anniversary}
-                </TableCell>
-                <TableCell className="px-6 py-3.5">
-                  <Badge
-                    className={cn(
-                      "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize font-sans",
-                      contract.statusStyle
-                    )}
-                  >
-                    {contract.status}
-                  </Badge>
+            {paginatedContracts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-12">
+                  <EmptyState 
+                    icon={FileText}
+                    title="No contracts found"
+                    className="py-6 border-0 bg-transparent min-h-0"
+                  />
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              paginatedContracts.map((contract) => (
+                <TableRow
+                  key={contract.id}
+                  onClick={() => router.push(`/dashboard/contracts/${contract.id}`)}
+                  className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14 cursor-pointer"
+                >
+                  <TableCell className="px-6 py-3.5 text-sm font-medium text-white font-sans">
+                    {contract.contractNo}
+                  </TableCell>
+                  <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
+                    {contract.provider}
+                  </TableCell>
+                  <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
+                    {contract.type}
+                  </TableCell>
+                  <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
+                    {contract.value}
+                  </TableCell>
+                  <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
+                    {contract.anniversary}
+                  </TableCell>
+                  <TableCell className="px-6 py-3.5">
+                    <Badge
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize font-sans",
+                        contract.statusStyle
+                      )}
+                    >
+                      {contract.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

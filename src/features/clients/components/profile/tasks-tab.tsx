@@ -1,7 +1,8 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/shared/empty-state";
 import {
   Table,
   TableHeader,
@@ -60,39 +61,51 @@ export default function TasksTab({ tasks }: TasksTabProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tasks.map((task) => (
-              <TableRow
-                key={task.id}
-                className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14"
-              >
-                <TableCell className="px-6 py-3.5 text-sm font-medium text-white">
-                  {task.title}
-                </TableCell>
-                <TableCell className="px-6 py-3.5 text-sm text-white">
-                  {task.due}
-                </TableCell>
-                <TableCell className="px-6 py-3.5">
-                  <Badge
-                    className={cn(
-                      "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize",
-                      task.priorityStyle
-                    )}
-                  >
-                    {task.priority}
-                  </Badge>
-                </TableCell>
-                <TableCell className="px-6 py-3.5">
-                  <Badge
-                    className={cn(
-                      "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize",
-                      task.statusStyle
-                    )}
-                  >
-                    {task.status}
-                  </Badge>
+            {tasks.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="py-12">
+                  <EmptyState 
+                    icon={CheckSquare}
+                    title="No tasks found"
+                    className="py-6 border-0 bg-transparent min-h-0"
+                  />
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              tasks.map((task) => (
+                <TableRow
+                  key={task.id}
+                  className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14"
+                >
+                  <TableCell className="px-6 py-3.5 text-sm font-medium text-white">
+                    {task.title}
+                  </TableCell>
+                  <TableCell className="px-6 py-3.5 text-sm text-white">
+                    {task.due}
+                  </TableCell>
+                  <TableCell className="px-6 py-3.5">
+                    <Badge
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize",
+                        task.priorityStyle
+                      )}
+                    >
+                      {task.priority}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-6 py-3.5">
+                    <Badge
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize",
+                        task.statusStyle
+                      )}
+                    >
+                      {task.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

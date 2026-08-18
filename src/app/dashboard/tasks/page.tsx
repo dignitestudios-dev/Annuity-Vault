@@ -3,7 +3,7 @@ import { Loader } from "@/components/ui/loader";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Plus, Search, FileText, Download, Calendar as CalendarIcon, List as ListIcon, LayoutGrid, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, FileText, Download, Calendar as CalendarIcon, List as ListIcon, LayoutGrid, Pencil, Trash2, ChevronLeft, ChevronRight, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -31,6 +31,7 @@ import SuccessModal from "@/components/shared/success-modal";
 import DeleteModal from "@/components/shared/delete-modal";
 import TablePagination from "@/components/shared/table-pagination";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/shared/empty-state";
 
 // Seed initial task items matching the Figma design screenshot accurately
 
@@ -75,7 +76,7 @@ function TasksContent() {
 
   // Month Navigation State (Default to June 2026)
   const [listCurrentPage, setListCurrentPage] = useState(1);
-  const listItemsPerPage = 7;
+  const listItemsPerPage = 20;
   const [currentYear, setCurrentYear] = useState(2026);
   const [currentMonthIndex, setCurrentMonthIndex] = useState(5); // 0-indexed: 5 = June
 
@@ -142,6 +143,7 @@ function TasksContent() {
     });
   };
 
+
   // Confirm Delete Task Handler
   const confirmDeleteTask = () => {
     if (deletingTaskId) {
@@ -156,10 +158,11 @@ function TasksContent() {
 
   // Filter tasks based on search, status, priority
   const filteredTasks = tasksList.filter((task) => {
+    const clientMatch = task.client && `${task.client.firstName || ""} ${task.client.lastName || ""}`.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSearch =
       task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (task.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (task.client && task.client.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      clientMatch;
     const matchesPriority =
       priorityFilter === "all" || task.priority === priorityFilter;
     const matchesStatus =
@@ -484,9 +487,11 @@ function TasksContent() {
               ))}
 
               {todoTasks.length === 0 && (
-                <div className="py-8 text-center text-xs text-[#919191]">
-                  No tasks in To do.
-                </div>
+                <EmptyState 
+                  icon={CheckSquare}
+                  title="No tasks in To do"
+                  className="py-12 border-0 bg-transparent min-h-0"
+                />
               )}
             </div>
           </div>
@@ -566,9 +571,11 @@ function TasksContent() {
               ))}
 
               {inProgressTasks.length === 0 && (
-                <div className="py-8 text-center text-xs text-[#919191]">
-                  No tasks in progress.
-                </div>
+                <EmptyState 
+                  icon={CheckSquare}
+                  title="No tasks in progress"
+                  className="py-12 border-0 bg-transparent min-h-0"
+                />
               )}
             </div>
           </div>
@@ -648,9 +655,11 @@ function TasksContent() {
               ))}
 
               {doneTasks.length === 0 && (
-                <div className="py-8 text-center text-xs text-[#919191]">
-                  No completed tasks yet.
-                </div>
+                <EmptyState 
+                  icon={CheckSquare}
+                  title="No completed tasks yet"
+                  className="py-12 border-0 bg-transparent min-h-0"
+                />
               )}
             </div>
           </div>
@@ -752,8 +761,12 @@ function TasksContent() {
 
                 {filteredTasks.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-12 text-center text-xs text-[#919191]">
-                      No tasks found matching your filter criteria.
+                    <TableCell colSpan={5} className="py-12">
+                      <EmptyState 
+                        icon={CheckSquare}
+                        title="No tasks found matching your filter criteria"
+                        className="py-6 border-0 bg-transparent min-h-0"
+                      />
                     </TableCell>
                   </TableRow>
                 )}

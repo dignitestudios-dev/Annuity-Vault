@@ -3,9 +3,10 @@ import axiosInstance from "@/lib/axios";
 
 export interface AuditLogUser {
   _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
 }
 
 export interface AuditLogItem {
@@ -67,14 +68,18 @@ export const exportAuditLogs = async (format: "pdf" | "csv", search?: string, ac
     const headers = ["Date", "User", "Action", "Module", "Record", "Details"];
     const csvContent = [
       headers.join(","),
-      ...logs.map(log => [
-        new Date(log.createdAt).toLocaleString(),
-        log.performedBy ? `${log.performedBy.firstName} ${log.performedBy.lastName}` : "System",
-        log.action,
-        log.module,
-        log.recordLabel || "N/A",
-        log.change || "N/A"
-      ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(","))
+      ...logs.map(log => {
+        const user = log.performedBy;
+        const userName = user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()) : "System";
+        return [
+          new Date(log.createdAt).toLocaleString(),
+          userName,
+          log.action,
+          log.module,
+          log.recordLabel || "N/A",
+          log.change || "N/A"
+        ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(",")
+      })
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -92,14 +97,18 @@ export const exportAuditLogs = async (format: "pdf" | "csv", search?: string, ac
     const doc = new jsPDF();
     doc.text("Audit Logs Export", 14, 15);
     
-    const tableData = logs.map(log => [
-      new Date(log.createdAt).toLocaleString(),
-      log.performedBy ? `${log.performedBy.firstName} ${log.performedBy.lastName}` : "System",
-      log.action,
-      log.module,
-      log.recordLabel || "N/A",
-      log.change || "N/A"
-    ]);
+    const tableData = logs.map(log => {
+      const user = log.performedBy;
+      const userName = user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()) : "System";
+      return [
+        new Date(log.createdAt).toLocaleString(),
+        userName,
+        log.action,
+        log.module,
+        log.recordLabel || "N/A",
+        log.change || "N/A"
+      ];
+    });
 
     autoTable(doc, {
       head: [["Date", "User", "Action", "Module", "Record", "Details"]],

@@ -23,7 +23,6 @@ export default function SettingsProfilePage() {
   const user = useAppSelector((state) => state.auth.user);
   const dispatch = useAppDispatch();
   const updateProfileMutation = useUpdateProfile();
-  const updateProfileMutation = useUpdateProfile();
 
   const {
     register,

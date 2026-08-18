@@ -22,6 +22,7 @@ import {
 import NewContractDialog from "@/features/contracts/components/new-contract-dialog";
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
+import { EmptyState } from "@/components/shared/empty-state";
 import { cn } from "@/lib/utils";
 import { useContracts, exportContracts } from "@/features/contracts/api/contracts.service";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -79,7 +80,7 @@ export default function ContractsPage() {
   const [isNewContractOpen, setIsNewContractOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const itemsPerPage = 20;
 
   const { data, isLoading } = useContracts({
     search: searchQuery || undefined,
@@ -269,7 +270,7 @@ export default function ContractsPage() {
                       {contract.contractNumber}
                     </TableCell>
                     <TableCell className="px-6 py-3.5 text-sm text-white">
-                      {contract.client?.name || 'Unknown Client'}
+                      {contract.client ? `${contract.client.firstName} ${contract.client.lastName}` : 'Unknown Client'}
                     </TableCell>
                     <TableCell className="px-6 py-3.5 text-sm text-white">
                       {contract.provider}
@@ -297,11 +298,12 @@ export default function ContractsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="h-32 text-center text-sm text-[#919191] font-sans"
-                  >
-                    No contracts found matching your search.
+                  <TableCell colSpan={7} className="h-48 text-center">
+                    <EmptyState
+                      icon={FileText}
+                      title="No Contracts Found"
+                      description="No contracts found matching your search."
+                    />
                   </TableCell>
                 </TableRow>
               )}

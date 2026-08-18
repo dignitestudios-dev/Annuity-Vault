@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 
 import { useDashboardSummary } from "@/features/dashboard/api/dashboard.service";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Activity } from "lucide-react";
 
 export default function RecentActivityCard() {
   const { data, isLoading } = useDashboardSummary();
@@ -26,9 +28,11 @@ export default function RecentActivityCard() {
       {/* Card List Items */}
       <div className="flex flex-col divide-y divide-white/10">
         {activities.length === 0 ? (
-          <div className="p-5 text-sm text-[#8C8C8C] text-center font-sans">
-            No recent activity.
-          </div>
+          <EmptyState 
+            icon={Activity}
+            title="No recent activity"
+            className="py-12 border-0 bg-transparent min-h-0"
+          />
         ) : (
           activities.slice(0, 5).map((activity) => (
             <div

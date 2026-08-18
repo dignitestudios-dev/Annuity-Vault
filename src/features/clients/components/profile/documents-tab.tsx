@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, ExternalLink, Trash2 } from "lucide-react";
+import { Download, ExternalLink, Trash2, FileText } from "lucide-react";
 import DeleteModal from "@/components/shared/delete-modal";
+import { EmptyState } from "@/components/shared/empty-state";
 import ArchiveModal from "@/components/shared/archive-modal";
 
 interface DocumentItem {
@@ -49,41 +50,49 @@ export default function DocumentsTab({ documents }: DocumentsTabProps) {
 
       {/* Documents List */}
       <div className="w-full flex flex-col">
-        {docList.map((doc) => (
-          <div
-            key={doc.id}
-            className="w-full border-b border-white/10 px-6 py-4 flex items-center justify-between gap-4"
-          >
-            {/* File Icon & Info */}
-            <div className="flex items-center gap-3.5 flex-1">
-              <div className="w-[34px] h-[34px] bg-white/10 rounded-[8px] flex items-center justify-center text-white font-bold text-xs">
-                PDF
+        {docList.length === 0 ? (
+          <EmptyState 
+            icon={FileText}
+            title="No documents uploaded"
+            className="py-12 border-0 bg-transparent min-h-0"
+          />
+        ) : (
+          docList.map((doc) => (
+            <div
+              key={doc.id}
+              className="w-full border-b border-white/10 px-6 py-4 flex items-center justify-between gap-4"
+            >
+              {/* File Icon & Info */}
+              <div className="flex items-center gap-3.5 flex-1">
+                <div className="w-[34px] h-[34px] bg-white/10 rounded-[8px] flex items-center justify-center text-white font-bold text-xs">
+                  PDF
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-white">
+                    {doc.name}
+                  </span>
+                  <span className="text-xs text-[#919191]">{doc.meta}</span>
+                </div>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium text-white">
-                  {doc.name}
-                </span>
-                <span className="text-xs text-[#919191]">{doc.meta}</span>
-              </div>
-            </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button className="w-6 h-6 bg-[#42CD7F] rounded-[4px] flex items-center justify-center text-white hover:bg-emerald-600 transition-colors">
-                <Download className="w-3.5 h-3.5 text-white" />
-              </button>
-              <button className="w-6 h-6 bg-[#829CB0] rounded-[4px] flex items-center justify-center text-white hover:bg-slate-600 transition-colors">
-                <ExternalLink className="w-3.5 h-3.5 text-white" />
-              </button>
-              <button
-                onClick={() => setDeletingDocId(doc.id)}
-                className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-white" />
-              </button>
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <button className="w-6 h-6 bg-[#42CD7F] rounded-[4px] flex items-center justify-center text-white hover:bg-emerald-600 transition-colors">
+                  <Download className="w-3.5 h-3.5 text-white" />
+                </button>
+                <button className="w-6 h-6 bg-[#829CB0] rounded-[4px] flex items-center justify-center text-white hover:bg-slate-600 transition-colors">
+                  <ExternalLink className="w-3.5 h-3.5 text-white" />
+                </button>
+                <button
+                  onClick={() => setDeletingDocId(doc.id)}
+                  className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Delete Document Confirmation Modal */}

@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 
 import { useDashboardSummary } from "@/features/dashboard/api/dashboard.service";
 import { Skeleton } from "@/components/ui/skeleton";
-
+import { EmptyState } from "@/components/shared/empty-state";
+import { CheckSquare } from "lucide-react";
 export default function PendingTasksCard() {
   const { data, isLoading } = useDashboardSummary();
 
@@ -35,9 +36,11 @@ export default function PendingTasksCard() {
       {/* Card List Items */}
       <div className="p-4 flex flex-col gap-3">
         {tasks.length === 0 ? (
-          <div className="p-5 text-sm text-[#8C8C8C] text-center font-sans">
-            No pending tasks.
-          </div>
+          <EmptyState 
+            icon={CheckSquare}
+            title="No pending tasks"
+            className="py-12 border-0 bg-transparent min-h-0"
+          />
         ) : (
           tasks.slice(0, 5).map((task) => (
             <div

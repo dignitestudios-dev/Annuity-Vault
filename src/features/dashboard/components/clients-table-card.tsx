@@ -25,6 +25,8 @@ const STATUS_STYLES: Record<StatusType, string> = {
 
 import { useDashboardSummary } from "@/features/dashboard/api/dashboard.service";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Users } from "lucide-react";
 
 function getInitials(name: string) {
   if (!name) return "U";
@@ -84,8 +86,12 @@ export default function ClientsTableCard() {
           <TableBody>
             {clients.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-6 text-[#8C8C8C] font-sans">
-                  No clients available.
+                <TableCell colSpan={6} className="text-center py-0">
+                  <EmptyState 
+                    icon={Users}
+                    title="No clients found"
+                    className="py-12 border-0 bg-transparent min-h-0"
+                  />
                 </TableCell>
               </TableRow>
             ) : (

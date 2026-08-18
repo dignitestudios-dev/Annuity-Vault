@@ -58,7 +58,7 @@ export default function LoginForm() {
                 htmlFor="email" 
                 className="text-xs font-medium text-white capitalize leading-[15px]"
               >
-                Email Address
+                Email Address <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="email"

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pin, Trash2 } from "lucide-react";
 import DeleteModal from "@/components/shared/delete-modal";
 import ArchiveModal from "@/components/shared/archive-modal";
+import { EmptyState } from "@/components/shared/empty-state";
 
 interface NoteItem {
   id: string;
@@ -69,29 +70,37 @@ export default function NotesTab({ initialNotes }: NotesTabProps) {
 
       {/* Notes List */}
       <div className="w-full flex flex-col">
-        {notesList.map((note) => (
-          <div
-            key={note.id}
-            className="w-full border-b border-white/10 py-4 flex items-center justify-between gap-4"
-          >
-            <div className="flex items-start gap-3 flex-1">
-              <Pin className="w-4 h-4 text-[#576574] flex-shrink-0 mt-0.5" />
-              <div className="flex flex-col gap-1">
-                <p className="text-sm text-white font-normal leading-snug">
-                  {note.text}
-                </p>
-                <span className="text-xs text-[#919191]">{note.date}</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setDeletingNoteId(note.id)}
-              className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors flex-shrink-0"
+        {notesList.length === 0 ? (
+          <EmptyState 
+            icon={Pin}
+            title="No notes added"
+            className="py-12 border-0 bg-transparent min-h-0"
+          />
+        ) : (
+          notesList.map((note) => (
+            <div
+              key={note.id}
+              className="w-full border-b border-white/10 py-4 flex items-center justify-between gap-4"
             >
-              <Trash2 className="w-3.5 h-3.5 text-white" />
-            </button>
-          </div>
-        ))}
+              <div className="flex items-start gap-3 flex-1">
+                <Pin className="w-4 h-4 text-[#576574] flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm text-white font-normal leading-snug">
+                    {note.text}
+                  </p>
+                  <span className="text-xs text-[#919191]">{note.date}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setDeletingNoteId(note.id)}
+                className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors flex-shrink-0"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-white" />
+              </button>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Delete Note Confirmation Modal */}

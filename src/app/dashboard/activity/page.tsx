@@ -23,7 +23,7 @@ export default function ActivityAuditPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const itemsPerPage = 20;
 
   const [feedbackModal, setFeedbackModal] = useState<{
     isOpen: boolean;
@@ -72,15 +72,31 @@ export default function ActivityAuditPage() {
   };
 
   const handleRowClick = (log: AuditLogItem) => {
+    if (!log.recordId) return;
     const mod = log.module.toLowerCase();
-    if (mod === "notes") {
-      router.push("/dashboard/clients/1?tab=notes");
-    } else if (mod === "documents") {
-      router.push("/dashboard/clients/1?tab=documents");
-    } else if (mod === "contracts") {
-      router.push("/dashboard/clients/1?tab=contracts");
-    } else {
-      router.push("/dashboard/clients/1?tab=activity");
+    
+    switch (mod) {
+      case "clients":
+        router.push(`/dashboard/clients/${log.recordId}`);
+        break;
+      case "contracts":
+        router.push(`/dashboard/contracts/${log.recordId}`);
+        break;
+      case "tasks":
+        router.push(`/dashboard/tasks`);
+        break;
+      case "settings":
+        router.push(`/dashboard/settings`);
+        break;
+      case "notes":
+        router.push(`/dashboard/clients/${log.recordId}?tab=notes`);
+        break;
+      case "documents":
+        router.push(`/dashboard/clients/${log.recordId}?tab=documents`);
+        break;
+      default:
+        router.push(`/dashboard/clients/${log.recordId}?tab=${mod}`);
+        break;
     }
   };
 
@@ -171,7 +187,7 @@ export default function ActivityAuditPage() {
                       {new Date(log.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
                     </TableCell>
                     <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
-                      {log.performedBy ? `${log.performedBy.firstName} ${log.performedBy.lastName}` : "System"}
+                      {log.performedBy ? (log.performedBy.name || `${log.performedBy.firstName || ''} ${log.performedBy.lastName || ''}`.trim()) : "System"}
                     </TableCell>
                     <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
                       {log.action}

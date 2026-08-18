@@ -3,11 +3,12 @@ import { Loader } from "@/components/ui/loader";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Search, RotateCcw, Trash2, User, FileText, FileCode, Folder } from "lucide-react";
+import { Search, RotateCcw, Trash2, User, FileText, FileCode, Folder, Archive } from "lucide-react";
 import DeleteModal from "@/components/shared/delete-modal";
 import RestoreModal from "@/components/shared/restore-modal";
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
+import { EmptyState } from "@/components/shared/empty-state";
 import { cn } from "@/lib/utils";
 
 import { 
@@ -40,7 +41,7 @@ function ArchivedContent() {
   const [restoringItem, setRestoringItem] = useState<ArchivedItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<ArchivedItem | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
 
   const [feedbackModal, setFeedbackModal] = useState<{
     isOpen: boolean;
@@ -160,9 +161,12 @@ function ArchivedContent() {
           {isLoading ? (
             <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-[#919191] text-sm"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>
           ) : items.length === 0 ? (
-            <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-[#919191] text-sm">
-              No archived {activeTab} found.
-            </div>
+            <EmptyState 
+              icon={Archive}
+              title={`No archived ${activeTab} found`}
+              description={`There are currently no deleted ${activeTab} in the archive.`}
+              className="py-12"
+            />
           ) : (
             items.map((item) => (
               <div

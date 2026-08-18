@@ -3,8 +3,9 @@ import { Loader } from "@/components/ui/loader";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Calendar, CheckSquare, Info, Check } from "lucide-react";
+import { Calendar, CheckSquare, Info, Check, Bell } from "lucide-react";
 import SuccessModal from "@/components/shared/success-modal";
+import { EmptyState } from "@/components/shared/empty-state";
 import { cn } from "@/lib/utils";
 
 import { 
@@ -146,9 +147,12 @@ function NotificationsContent() {
         {isLoading ? (
           <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-xs sm:text-sm text-[#919191]"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>
         ) : notifications.length === 0 ? (
-          <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-xs sm:text-sm text-[#919191]">
-            No notifications in this category.
-          </div>
+          <EmptyState 
+            icon={Bell}
+            title="No notifications"
+            description="You don't have any notifications in this category yet."
+            className="py-12"
+          />
         ) : (
           notifications.map((item) => (
             <div

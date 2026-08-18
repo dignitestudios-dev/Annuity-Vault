@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -48,7 +49,7 @@ export default function ClientsFolderTable() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("All statuses");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const itemsPerPage = 20;
 
   const { data, isLoading } = useClients({
     search: searchQuery || undefined,
@@ -164,7 +165,7 @@ export default function ClientsFolderTable() {
                               {fullName}
                             </span>
                             <span className="text-xs font-normal text-[#8C8C8C] font-sans">
-                              {client.dateOfBirth ? `DOB ${new Date(client.dateOfBirth).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}` : "No DOB"}
+                              {client.dateOfBirth ? `DOB ${new Date(client.dateOfBirth).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}` : "--"}
                             </span>
                           </div>
                         </div>
@@ -211,11 +212,12 @@ export default function ClientsFolderTable() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="h-32 text-center text-sm text-[#919191] font-sans"
-                  >
-                    No clients found matching your search.
+                  <TableCell colSpan={7} className="py-12">
+                    <EmptyState 
+                      icon={Users}
+                      title="No clients found matching your search"
+                      className="py-6 border-0 bg-transparent min-h-0"
+                    />
                   </TableCell>
                 </TableRow>
               )}

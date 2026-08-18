@@ -10,8 +10,10 @@ import {
   Download,
   ExternalLink,
   Plus,
+  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/shared/empty-state";
 import EditContractDialog from "@/features/contracts/components/edit-contract-dialog";
 import SuccessModal from "@/components/shared/success-modal";
 import DeleteModal from "@/components/shared/delete-modal";
@@ -185,7 +187,7 @@ export default function ContractDetailsPage() {
                 Client
               </span>
               <span className="text-white font-normal">
-                {contract.client?.name || "N/A"}
+                {contract.client ? `${contract.client.firstName} ${contract.client.lastName}` : "N/A"}
               </span>
             </div>
 
@@ -287,7 +289,7 @@ export default function ContractDetailsPage() {
           </div>
 
           <div className="flex flex-col divide-y divide-white/10">
-            {(contract.documents || []).map((doc) => (
+            {(contract.documents || []).length > 0 ? (contract.documents || []).map((doc) => (
               <div
                 key={doc._id}
                 className="p-3.5 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
@@ -317,7 +319,14 @@ export default function ContractDetailsPage() {
                   </button>
                 </div>
               </div>
-            ))}
+            )) : (
+              <EmptyState
+                icon={FileText}
+                title="No Documents"
+                description="No documents found for this contract."
+                className="py-12"
+              />
+            )}
           </div>
         </div>
       </div>
@@ -350,7 +359,7 @@ export default function ContractDetailsPage() {
 
           {/* Notes List */}
           <div className="w-full flex flex-col">
-            {(contract.contractNotes || []).map((note) => (
+            {(contract.contractNotes || []).length > 0 ? (contract.contractNotes || []).map((note) => (
               <div
                 key={note._id}
                 className="w-full bg-[#0C1116] rounded-[8px] p-3.5 flex items-center justify-between gap-4 border border-white/5"
@@ -370,7 +379,14 @@ export default function ContractDetailsPage() {
                   <Trash2 className="w-3.5 h-3.5 text-white" />
                 </button>
               </div>
-            ))}
+            )) : (
+              <EmptyState
+                icon={FileText}
+                title="No Notes"
+                description="No notes have been added to this contract yet."
+                className="py-12"
+              />
+            )}
           </div>
         </div>
       </div>
