@@ -2,7 +2,12 @@
 import { Loader } from "@/components/ui/loader";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams, usePathname, useParams } from "next/navigation";
+import {
+  useRouter,
+  useSearchParams,
+  usePathname,
+  useParams,
+} from "next/navigation";
 import {
   FileText,
   FileCode,
@@ -21,7 +26,10 @@ import DocumentsTab from "@/features/clients/components/profile/documents-tab";
 import TasksTab from "@/features/clients/components/profile/tasks-tab";
 import ActivityTab from "@/features/clients/components/profile/activity-tab";
 import { cn } from "@/lib/utils";
-import { useClient, useDeleteClient } from "@/features/clients/api/clients.service";
+import {
+  useClient,
+  useDeleteClient,
+} from "@/features/clients/api/clients.service";
 import { useContracts } from "@/features/contracts/api/contracts.service";
 import { useTasks } from "@/features/tasks/api/tasks.service";
 
@@ -139,8 +147,14 @@ function ClientDetailsContent() {
 
   const { data: client, isLoading } = useClient(clientId);
   const deleteClientMutation = useDeleteClient();
-  const { data: contractsData, isLoading: isLoadingContracts } = useContracts({ client: clientId, limit: 100 });
-  const { data: tasksData, isLoading: isLoadingTasks } = useTasks({ client: clientId, limit: 100 });
+  const { data: contractsData, isLoading: isLoadingContracts } = useContracts({
+    client: clientId,
+    limit: 100,
+  });
+  const { data: tasksData, isLoading: isLoadingTasks } = useTasks({
+    client: clientId,
+    limit: 100,
+  });
 
   // Synchronize state when URL query parameter changes
   useEffect(() => {
@@ -161,7 +175,7 @@ function ClientDetailsContent() {
       onSuccess: () => {
         setIsDeleteClientOpen(false);
         setIsArchiveOpen(true);
-      }
+      },
     });
   };
 
@@ -171,26 +185,40 @@ function ClientDetailsContent() {
   };
 
   if (isLoading) {
-    return <div className="text-white p-6 font-sans"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>;
+    return (
+      <div className="text-white p-6 font-sans">
+        <div className="flex items-center justify-center p-6">
+          <Loader className="text-white" />
+        </div>
+      </div>
+    );
   }
 
   if (!client) {
     return <div className="text-white p-6 font-sans">Client not found.</div>;
   }
 
-  const fullName = `${client.firstName} ${client.lastName}`;
+  const fullName = `${client.firstName} ${client.lastName}`.trim();
 
   // Map backend contracts data
   const mappedContracts = (contractsData?.data || []).map((c: any) => {
     let statusStyle = "bg-[#FFE600] text-black border-0 font-semibold";
     if (c.status === "Active") statusStyle = "bg-[#42CD7F] text-white border-0";
-    if (c.status === "Surrendered") statusStyle = "bg-[#FF3E46] text-white border-0";
-    if (c.status === "Matured") statusStyle = "bg-[#39BDF6] text-white border-0";
-    
+    if (c.status === "Surrendered")
+      statusStyle = "bg-[#FF3E46] text-white border-0";
+    if (c.status === "Matured")
+      statusStyle = "bg-[#39BDF6] text-white border-0";
+
     const date = new Date(c.anniversaryDate);
-    const dateStr = date.toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' });
-    const diff = Math.ceil((date.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
-    const anniversaryStr = `${dateStr} (${diff > 0 ? diff + 'd' : 'past'})`;
+    const dateStr = date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const diff = Math.ceil(
+      (date.getTime() - new Date().getTime()) / (1000 * 3600 * 24),
+    );
+    const anniversaryStr = `${dateStr} (${diff > 0 ? diff + "d" : "past"})`;
 
     return {
       id: c._id || c.id,
@@ -207,15 +235,25 @@ function ClientDetailsContent() {
   // Map backend tasks data
   const mappedTasks = (tasksData?.data || []).map((t: any) => {
     let priorityStyle = "bg-[#33BBFF] text-white border-0"; // Medium
-    if (t.priority === "Urgent") priorityStyle = "bg-[#FF3E46] text-white border-0";
-    if (t.priority === "High") priorityStyle = "bg-[#FF9D00] text-black border-0 font-semibold";
-    if (t.priority === "Low") priorityStyle = "bg-[#42CD7F] text-white border-0";
+    if (t.priority === "Urgent")
+      priorityStyle = "bg-[#FF3E46] text-white border-0";
+    if (t.priority === "High")
+      priorityStyle = "bg-[#FF9D00] text-black border-0 font-semibold";
+    if (t.priority === "Low")
+      priorityStyle = "bg-[#42CD7F] text-white border-0";
 
     let statusStyle = "bg-[#FFE600] text-black border-0 font-semibold"; // To Do
-    if (t.status === "In Progress") statusStyle = "bg-[#FF9D00] text-black border-0 font-semibold";
+    if (t.status === "In Progress")
+      statusStyle = "bg-[#FF9D00] text-black border-0 font-semibold";
     if (t.status === "Done") statusStyle = "bg-[#42CD7F] text-white border-0";
 
-    const dateStr = t.dueDate ? new Date(t.dueDate).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' }) : "No Date";
+    const dateStr = t.dueDate
+      ? new Date(t.dueDate).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        })
+      : "No Date";
 
     return {
       id: t._id,
@@ -229,8 +267,13 @@ function ClientDetailsContent() {
   });
 
   const TABS = TABS_CONFIG.map((t) => {
-    if (t.id === "contracts") return { ...t, label: `Contracts (${contractsData?.total || 0})` };
-    if (t.id === "tasks") return { ...t, label: `Tasks (${tasksData?.pagination?.totalItems || 0})` };
+    if (t.id === "contracts")
+      return { ...t, label: `Contracts (${contractsData?.total || 0})` };
+    if (t.id === "tasks")
+      return {
+        ...t,
+        label: `Tasks (${tasksData?.pagination?.totalItems || 0})`,
+      };
     return t;
   });
 
@@ -245,13 +288,33 @@ function ClientDetailsContent() {
 
       {/* Client Information Card */}
       <ClientInfoCard
-        name={fullName}
-        clientSince={new Date(client.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
-        created={new Date(client.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+        name={fullName || "Unknown Client"}
+        clientSince={
+          client.createdAt
+            ? new Date(client.createdAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+              })
+            : "--"
+        }
+        created={
+          client.createdAt
+            ? new Date(client.createdAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+              })
+            : "--"
+        }
         email={client.email || "--"}
         phone={client.phone || "--"}
         address={client.address || "--"}
-        dob={client.dateOfBirth ? `DOB ${new Date(client.dateOfBirth).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}` : "--"}
+        dob={
+          client.dateOfBirth
+            ? `DOB ${new Date(client.dateOfBirth).toLocaleDateString("en-US", { year: "numeric", month: "2-digit", day: "2-digit" })}`
+            : "--"
+        }
       />
 
       {/* Tab Navigation Header Bar */}
@@ -267,10 +330,15 @@ function ClientDetailsContent() {
                 "h-8 px-4 rounded-[10px] text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all font-sans cursor-pointer",
                 isActive
                   ? "bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white shadow-sm"
-                  : "text-[#919191] hover:text-white hover:bg-white/5"
+                  : "text-[#919191] hover:text-white hover:bg-white/5",
               )}
             >
-              <Icon className={cn("w-4 h-4", isActive ? "text-white" : "text-[#919191]")} />
+              <Icon
+                className={cn(
+                  "w-4 h-4",
+                  isActive ? "text-white" : "text-[#919191]",
+                )}
+              />
               <span>{tab.label}</span>
             </button>
           );
@@ -278,22 +346,24 @@ function ClientDetailsContent() {
       </div>
 
       {/* Dynamic Tab Panels */}
-      {activeTab === "contracts" && (
-        isLoadingContracts ? (
-          <div className="flex items-center justify-center p-12 bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px]"><Loader className="text-white" /></div>
+      {activeTab === "contracts" &&
+        (isLoadingContracts ? (
+          <div className="flex items-center justify-center p-12 bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px]">
+            <Loader className="text-white" />
+          </div>
         ) : (
           <ContractsTab contracts={mappedContracts} />
-        )
-      )}
+        ))}
       {activeTab === "notes" && <NotesTab initialNotes={INITIAL_NOTES} />}
       {activeTab === "documents" && <DocumentsTab documents={DOCUMENTS} />}
-      {activeTab === "tasks" && (
-        isLoadingTasks ? (
-           <div className="flex items-center justify-center p-12 bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px]"><Loader className="text-white" /></div>
+      {activeTab === "tasks" &&
+        (isLoadingTasks ? (
+          <div className="flex items-center justify-center p-12 bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px]">
+            <Loader className="text-white" />
+          </div>
         ) : (
           <TasksTab tasks={mappedTasks} />
-        )
-      )}
+        ))}
       {activeTab === "activity" && <ActivityTab activities={ACTIVITIES} />}
 
       {/* Edit Client Modal */}
@@ -322,17 +392,22 @@ function ClientDetailsContent() {
       />
 
       {/* File Moved to Archive Confirmation Modal */}
-      <ArchiveModal
-        isOpen={isArchiveOpen}
-        onClose={handleArchiveClose}
-      />
+      <ArchiveModal isOpen={isArchiveOpen} onClose={handleArchiveClose} />
     </div>
   );
 }
 
 export default function ClientDetailsPage() {
   return (
-    <Suspense fallback={<div className="text-white p-6 font-sans"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>}>
+    <Suspense
+      fallback={
+        <div className="text-white p-6 font-sans">
+          <div className="flex items-center justify-center p-6">
+            <Loader className="text-white" />
+          </div>
+        </div>
+      }
+    >
       <ClientDetailsContent />
     </Suspense>
   );

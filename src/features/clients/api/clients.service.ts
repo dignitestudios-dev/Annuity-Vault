@@ -10,17 +10,17 @@ export const clientsService = {
 
   getClient: async (id: string): Promise<Client> => {
     const response = await axiosInstance.get(`/clients/${id}`);
-    return response.data;
+    return response.data.data || response.data;
   },
 
   createClient: async (data: CreateClientDTO): Promise<Client> => {
     const response = await axiosInstance.post("/clients", data);
-    return response.data;
+    return response.data.data || response.data;
   },
 
   updateClient: async ({ id, data }: { id: string; data: UpdateClientDTO }): Promise<Client> => {
     const response = await axiosInstance.patch(`/clients/${id}`, data);
-    return response.data;
+    return response.data.data || response.data;
   },
 
   deleteClient: async (id: string): Promise<void> => {
