@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -62,12 +62,12 @@ export default function NewContractDialog({
   isOpen,
   onClose,
   onSubmitSuccess,
-  defaultClient = "Jacob Thompson",
+  defaultClient,
 }: NewContractDialogProps) {
   const { data: clientsData } = useClients({ limit: 100 });
   const clientOptions = clientsData?.data?.map(client => ({
     label: `${client.firstName} ${client.lastName}`,
-    value: client.id
+    value: client._id || client.id
   })) || [];
 
   const createContract = useCreateContract();
@@ -94,6 +94,24 @@ export default function NewContractDialog({
       anniversaryDate: new Date(),
     },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        client: defaultClient || "",
+        policyNumber: "",
+        insuranceCompany: "Nationwide",
+        contractType: "Fixed",
+        status: "Active",
+        premiumAmount: "",
+        contractValue: "",
+        beneficiaryInfo: "",
+        notes: "",
+        startDate: new Date(),
+        anniversaryDate: new Date(),
+      });
+    }
+  }, [isOpen, defaultClient, reset]);
 
   const onSubmit = (data: NewContractFormData) => {
     createContract.mutate({

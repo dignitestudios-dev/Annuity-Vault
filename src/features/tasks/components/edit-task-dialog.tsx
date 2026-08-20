@@ -114,6 +114,18 @@ export default function EditTaskDialog({
 
   if (!task) return null;
 
+  const getAdvisorDisplayName = (advisorId?: string) => {
+    if (!advisorId) return "Select advisor";
+    const found = advisors.find((a) => a._id === advisorId);
+    return found ? found.name : "Select advisor";
+  };
+
+  const getClientDisplayName = (clientId?: string) => {
+    if (!clientId || clientId === "none") return "None";
+    const found = clients.find((c) => (c._id || c.id) === clientId);
+    return found ? `${found.firstName} ${found.lastName}` : (task?.client ? `${task.client.firstName || ''} ${task.client.lastName || ''}`.trim() : "Select client");
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="bg-[#0C1116] border border-white/10 text-white sm:max-w-[525px] p-7 rounded-[12px] shadow-2xl">
@@ -149,6 +161,11 @@ export default function EditTaskDialog({
               placeholder=""
               className="h-[91px] min-h-[91px] bg-[#141C24] border-0 text-white placeholder:text-[#727272] focus:ring-1 focus:ring-[#6887A0] rounded-[12px] text-xs sm:text-sm p-3.5 resize-none"
             />
+            {errors.desc && (
+              <p className="text-[11px] font-medium text-[#FF3E46] mt-1">
+                {errors.desc.message}
+              </p>
+            )}
           </div>
 
           {/* 3. Priority & Status (2 Columns) */}
@@ -232,7 +249,9 @@ export default function EditTaskDialog({
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={(val: string | null) => val && field.onChange(val)}>
                     <SelectTrigger className="h-10 bg-[#141C24] border-0 text-white rounded-[12px] text-xs sm:text-sm justify-between px-3.5 shadow-none focus:ring-1 focus:ring-[#6887A0]">
-                      <SelectValue />
+                      <span className={field.value ? "text-white truncate" : "text-[#727272]"}>
+                        {getAdvisorDisplayName(field.value)}
+                      </span>
                     </SelectTrigger>
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
                       {advisors.map((advisor) => (
@@ -256,17 +275,22 @@ export default function EditTaskDialog({
               render={({ field }) => (
                 <Select value={field.value} onValueChange={(val: string | null) => val && field.onChange(val)}>
                   <SelectTrigger className="h-10 bg-[#141C24] border-0 text-white rounded-[12px] text-xs sm:text-sm justify-between px-3.5 shadow-none focus:ring-1 focus:ring-[#6887A0]">
-                    <SelectValue />
+                    <span className={field.value && field.value !== "none" ? "text-white truncate" : "text-[#727272]"}>
+                      {getClientDisplayName(field.value)}
+                    </span>
                   </SelectTrigger>
                   <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
                     <SelectItem value="none" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer text-gray-400">
                       None
                     </SelectItem>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                        {client.firstName} {client.lastName}
-                      </SelectItem>
-                    ))}
+                    {clients.map((client) => {
+                      const clientId = client._id || client.id;
+                      return (
+                        <SelectItem key={clientId} value={clientId} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                          {client.firstName} {client.lastName}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               )}

@@ -35,10 +35,6 @@ export interface SecuritySettings {
   encryptionAtRest: boolean;
 }
 
-export interface LegalContent {
-  content: string;
-}
-
 export interface GoogleCalendarStatus {
   connected: boolean;
 }
@@ -52,8 +48,6 @@ export const settingsKeys = {
   profile: () => [...settingsKeys.all, "profile"] as const, // This would normally merge with auth/me
   notificationPreferences: () => [...settingsKeys.all, "notification-preferences"] as const,
   security: () => [...settingsKeys.all, "security"] as const,
-  terms: () => [...settingsKeys.all, "terms"] as const,
-  privacy: () => [...settingsKeys.all, "privacy"] as const,
   googleCalendar: () => [...settingsKeys.all, "google-calendar"] as const,
 };
 
@@ -117,16 +111,6 @@ export const useSecuritySettings = () => {
     queryKey: settingsKeys.security(),
     queryFn: async () => {
       const { data } = await axiosInstance.get<{ data: SecuritySettings }>("/settings/security");
-      return data.data;
-    },
-  });
-};
-
-export const useLegalContent = (type: "terms" | "privacy") => {
-  return useQuery({
-    queryKey: type === "terms" ? settingsKeys.terms() : settingsKeys.privacy(),
-    queryFn: async () => {
-      const { data } = await axiosInstance.get<{ data: LegalContent }>(`/settings/${type}`);
       return data.data;
     },
   });

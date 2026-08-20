@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -14,10 +14,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Loader } from "@/components/ui/loader";
 import EditContractDialog from "@/features/contracts/components/edit-contract-dialog";
 import SuccessModal from "@/components/shared/success-modal";
 import DeleteModal from "@/components/shared/delete-modal";
 import ArchiveModal from "@/components/shared/archive-modal";
+import toast from "react-hot-toast";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, differenceInDays } from "date-fns";
@@ -27,7 +29,8 @@ import {
   useDeleteContract,
   useAddContractNote,
   useDeleteContractNote,
-  // we will add useAddContractDocument / useDeleteContractDocument soon
+  useAddContractDocument,
+  useDeleteContractDocument,
 } from "@/features/contracts/api/contracts.service";
 
 const getStatusStyle = (status: string) => {
@@ -76,6 +79,7 @@ const formatAnniversary = (dateString?: string) => {
 
 export default function ContractDetailsPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -89,15 +93,52 @@ export default function ContractDetailsPage() {
   const deleteContract = useDeleteContract();
   const addNote = useAddContractNote(contractId);
   const deleteNote = useDeleteContractNote(contractId);
+  const addDocument = useAddContractDocument(contractId);
+  const deleteDocument = useDeleteContractDocument(contractId);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("File size exceeds 20MB limit.");
+      e.target.value = "";
+      return;
+    }
+
+    addDocument.mutate(file, {
+      onSuccess: () => {
+        toast.success("Document uploaded successfully!");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Failed to upload document");
+      }
+    });
+  };
 
   const handleConfirmDelete = async () => {
     if (deletingItem?.type === "document" && deletingItem.id) {
-      // TODO: Delete Document API
+      try {
+        await deleteDocument.mutateAsync(deletingItem.id);
+        toast.success("Document deleted successfully!");
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to delete document");
+      }
     } else if (deletingItem?.type === "note" && deletingItem.id) {
-      await deleteNote.mutateAsync(deletingItem.id);
+      try {
+        await deleteNote.mutateAsync(deletingItem.id);
+        toast.success("Note deleted successfully!");
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to delete note");
+      }
     } else if (deletingItem?.type === "contract") {
-      await deleteContract.mutateAsync(contractId);
-      setIsArchiveOpen(true);
+      try {
+        await deleteContract.mutateAsync(contractId);
+        setIsArchiveOpen(true);
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to delete contract");
+      }
     }
     setDeletingItem(null);
   };
@@ -110,8 +151,13 @@ export default function ContractDetailsPage() {
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim()) return;
-    await addNote.mutateAsync(newNote.trim());
-    setNewNote("");
+    try {
+      await addNote.mutateAsync(newNote.trim());
+      setNewNote("");
+      toast.success("Note added successfully!");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to add note");
+    }
   };
 
   if (isLoading) {
@@ -282,44 +328,90 @@ export default function ContractDetailsPage() {
             <h3 className="text-base font-semibold text-white tracking-tight">
               Documents
             </h3>
-            <button className="h-7 px-3 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-medium hover:opacity-90 rounded-[12px] text-xs transition-all flex items-center gap-1 shadow-sm">
-              <Plus className="w-3 h-3 text-white" />
-              <span>Upload Document</span>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={addDocument.isPending}
+              className="h-7 px-3 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-medium hover:opacity-90 rounded-[12px] text-xs transition-all flex items-center gap-1 shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              {addDocument.isPending ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader className="w-3 h-3 text-white" />
+                  <span>Uploading...</span>
+                </div>
+              ) : (
+                <>
+                  <Plus className="w-3 h-3 text-white" />
+                  <span>Upload Document</span>
+                </>
+              )}
             </button>
           </div>
 
           <div className="flex flex-col divide-y divide-white/10">
-            {(contract.documents || []).length > 0 ? (contract.documents || []).map((doc) => (
-              <div
-                key={doc._id}
-                className="p-3.5 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-8 h-8 bg-white/10 rounded-[8px] flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">
-                    {doc.fileType?.split("/").pop()?.toUpperCase().substring(0, 4) || "DOC"}
+            {(contract.documents || []).length > 0 ? (
+              (contract.documents || []).map((doc) => (
+                <div
+                  key={doc._id}
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 bg-white/10 rounded-[8px] flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">
+                      {doc.fileType?.split("/").pop()?.toUpperCase().substring(0, 4) || "DOC"}
+                    </div>
+                    <div className="flex flex-col gap-0.5 truncate">
+                      <a
+                        href={doc.location}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-medium text-white truncate hover:underline"
+                      >
+                        {doc.fileName}
+                      </a>
+                      <span className="text-[11px] text-[#919191] truncate">
+                        {(doc.fileSize ? (doc.fileSize / 1024 / 1024).toFixed(2) : "0")} MB · Uploaded by {doc.uploadedBy || 'User'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-0.5 truncate">
-                    <a href={doc.location} target="_blank" rel="noreferrer" className="text-xs font-medium text-white truncate hover:underline">
-                      {doc.fileName}
-                    </a>
-                    <span className="text-[11px] text-[#919191] truncate">
-                      {(doc.fileSize / 1024 / 1024).toFixed(2)} MB · Uploaded by {doc.uploadedBy || 'User'}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors">
-                    <Trash2
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {doc.location && (
+                      <>
+                        <a
+                          href={doc.location}
+                          download
+                          className="w-6 h-6 bg-[#42CD7F] rounded-[4px] flex items-center justify-center text-white hover:bg-emerald-600 transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5 text-white" />
+                        </a>
+                        <a
+                          href={doc.location}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-6 h-6 bg-[#829CB0] rounded-[4px] flex items-center justify-center text-white hover:bg-slate-600 transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-white" />
+                        </a>
+                      </>
+                    )}
+                    <button
                       onClick={() =>
                         setDeletingItem({ type: "document", id: doc._id })
                       }
-                      className="w-3.5 h-3.5 text-white"
-                    />
-                  </button>
+                      className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-white" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )) : (
+              ))
+            ) : (
               <EmptyState
                 icon={FileText}
                 title="No Documents"
@@ -393,6 +485,7 @@ export default function ContractDetailsPage() {
 
       {/* Edit Contract Dialog */}
       <EditContractDialog
+        contract={contract}
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         onSubmitSuccess={() => setIsSuccessOpen(true)}

@@ -65,7 +65,8 @@ export const useCreateTask = () => {
   return useMutation({
     mutationFn: createTask,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tasksKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: tasksKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 };

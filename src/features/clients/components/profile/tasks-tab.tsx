@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Plus, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -11,6 +12,8 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import NewTaskDialog from "@/features/tasks/components/new-task-dialog";
+import SuccessModal from "@/components/shared/success-modal";
 import { cn } from "@/lib/utils";
 
 interface TaskItem {
@@ -24,10 +27,17 @@ interface TaskItem {
 }
 
 interface TasksTabProps {
+  clientId?: string;
+  clientName?: string;
   tasks: TaskItem[];
 }
 
-export default function TasksTab({ tasks }: TasksTabProps) {
+export default function TasksTab({ clientId, clientName, tasks = [] }: TasksTabProps) {
+  const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+
   return (
     <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] overflow-hidden shadow-sm">
       {/* Header Row (#394A58) */}
@@ -35,7 +45,10 @@ export default function TasksTab({ tasks }: TasksTabProps) {
         <h3 className="text-lg lg:text-xl font-semibold text-white tracking-tight">
           Tasks
         </h3>
-        <button className="h-8 px-3.5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-medium hover:opacity-90 rounded-[12px] text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm">
+        <button
+          onClick={() => setIsNewTaskOpen(true)}
+          className="h-8 px-3.5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-medium hover:opacity-90 rounded-[12px] text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+        >
           <Plus className="w-3.5 h-3.5 text-white" />
           <span>New Task</span>
         </button>
@@ -61,7 +74,7 @@ export default function TasksTab({ tasks }: TasksTabProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tasks.length === 0 ? (
+            {safeTasks.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="py-12">
                   <EmptyState 
@@ -72,7 +85,7 @@ export default function TasksTab({ tasks }: TasksTabProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              tasks.map((task) => (
+              safeTasks.map((task) => (
                 <TableRow
                   key={task.id}
                   className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14"
@@ -109,6 +122,22 @@ export default function TasksTab({ tasks }: TasksTabProps) {
           </TableBody>
         </Table>
       </div>
+
+      {/* New Task Dialog (pre-selected for this client) */}
+      <NewTaskDialog
+        isOpen={isNewTaskOpen}
+        onClose={() => setIsNewTaskOpen(false)}
+        defaultClient={clientId ? { id: clientId, name: clientName || "" } : undefined}
+        onSuccess={() => setIsSuccessOpen(true)}
+      />
+
+      {/* Reusable Success Popup Modal */}
+      <SuccessModal
+        isOpen={isSuccessOpen}
+        onClose={() => setIsSuccessOpen(false)}
+        title="Task Created!"
+        description="Your new task has been created successfully!"
+      />
     </div>
   );
 }

@@ -122,69 +122,87 @@ export default function DocumentsTab({ clientId, documents }: DocumentsTabProps)
 
       {/* Documents List */}
       <div className="w-full flex flex-col">
-        {documents.length === 0 ? (
+        {!documents || documents.length === 0 ? (
           <EmptyState 
             icon={FileText}
             title="No documents uploaded"
             className="py-12 border-0 bg-transparent min-h-0"
           />
         ) : (
-          documents.filter(doc => !doc.isDeleted).map((doc) => {
-            const isPdf = doc.title.toLowerCase().endsWith('.pdf');
-            const isImage = doc.url.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null;
-            
-            return (
-            <div
-              key={doc._id}
-              className="w-full border-b border-white/10 px-6 py-4 flex items-center justify-between gap-4"
-            >
-              {/* File Icon & Info */}
-              <div className="flex items-center gap-3.5 flex-1">
-                <div className="w-[34px] h-[34px] bg-white/10 rounded-[8px] flex items-center justify-center text-white font-bold text-xs">
-                  {isPdf ? "PDF" : isImage ? "IMG" : "DOC"}
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium text-white">
-                    {doc.title}
-                  </span>
-                  <span className="text-xs text-[#919191]">
-                    {new Date(doc.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
+          documents
+            .filter((doc) => !doc?.isDeleted)
+            .map((doc, index) => {
+              const docTitle = doc?.title || (doc as any)?.fileName || (doc as any)?.name || `Document ${index + 1}`;
+              const docUrl = doc?.url || (doc as any)?.location || (doc as any)?.fileUrl || "";
+              const docType = doc?.type || (doc as any)?.fileType || "";
+              const isPdf = 
+                (typeof docTitle === "string" && docTitle.toLowerCase().endsWith(".pdf")) ||
+                (typeof docUrl === "string" && docUrl.toLowerCase().endsWith(".pdf")) ||
+                (typeof docType === "string" && docType.toLowerCase().includes("pdf"));
+              const isImage = 
+                (typeof docUrl === "string" && docUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null) ||
+                (typeof docType === "string" && docType.toLowerCase().includes("image"));
+              const docId = doc?._id || (doc as any)?.id || `doc-${index}`;
+              const formattedDate = doc?.createdAt
+                ? new Date(doc.createdAt).toLocaleDateString()
+                : "N/A";
 
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                <a 
-                  href={doc.url} 
-                  download 
-                  className="w-6 h-6 bg-[#42CD7F] rounded-[4px] flex items-center justify-center text-white hover:bg-emerald-600 transition-colors"
+              return (
+                <div
+                  key={docId}
+                  className="w-full border-b border-white/10 px-6 py-4 flex items-center justify-between gap-4"
                 >
-                  <Download className="w-3.5 h-3.5 text-white" />
-                </a>
-                <a 
-                  href={doc.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="w-6 h-6 bg-[#829CB0] rounded-[4px] flex items-center justify-center text-white hover:bg-slate-600 transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-white" />
-                </a>
-                <button
-                  onClick={() => setDeletingDocId(doc._id)}
-                  disabled={archiveDocMutation.isPending && deletingDocId === doc._id}
-                  className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors disabled:opacity-50"
-                >
-                  {archiveDocMutation.isPending && deletingDocId === doc._id ? (
-                    <Loader className="w-3.5 h-3.5 text-white" />
-                  ) : (
-                    <Trash2 className="w-3.5 h-3.5 text-white" />
-                  )}
-                </button>
-              </div>
-            </div>
-            );
-          })
+                  {/* File Icon & Info */}
+                  <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                    <div className="w-[34px] h-[34px] bg-white/10 rounded-[8px] flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                      {isPdf ? "PDF" : isImage ? "IMG" : "DOC"}
+                    </div>
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className="text-sm font-medium text-white truncate">
+                        {docTitle}
+                      </span>
+                      <span className="text-xs text-[#919191]">
+                        {formattedDate}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {docUrl && (
+                      <>
+                        <a 
+                          href={docUrl} 
+                          download 
+                          className="w-6 h-6 bg-[#42CD7F] rounded-[4px] flex items-center justify-center text-white hover:bg-emerald-600 transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5 text-white" />
+                        </a>
+                        <a 
+                          href={docUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="w-6 h-6 bg-[#829CB0] rounded-[4px] flex items-center justify-center text-white hover:bg-slate-600 transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-white" />
+                        </a>
+                      </>
+                    )}
+                    <button
+                      onClick={() => setDeletingDocId(docId)}
+                      disabled={archiveDocMutation.isPending && deletingDocId === docId}
+                      className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                    >
+                      {archiveDocMutation.isPending && deletingDocId === docId ? (
+                        <Loader className="w-3.5 h-3.5 text-white" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5 text-white" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })
         )}
       </div>
 

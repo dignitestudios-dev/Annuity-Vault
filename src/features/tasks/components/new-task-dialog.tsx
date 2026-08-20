@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,6 +24,7 @@ import {
 import { useCreateTask } from "../api/tasks.service";
 import { useUsers } from "@/features/users/api/users.service";
 import { useClients } from "@/features/clients/api/clients.service";
+import toast from "react-hot-toast";
 
 export interface TaskItem {
   id: string;
@@ -39,9 +41,9 @@ export interface NewTaskDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  defaultClient?: { id: string; name: string } | string;
+  defaultDate?: string;
 }
-
-
 
 // Zod Validation Schema
 const newTaskSchema = z.object({
@@ -67,7 +69,12 @@ export default function NewTaskDialog({
   isOpen,
   onClose,
   onSuccess,
+  defaultClient,
+  defaultDate,
 }: NewTaskDialogProps) {
+  const selectedClientId = typeof defaultClient === "object" ? defaultClient?.id : defaultClient;
+  const selectedClientName = typeof defaultClient === "object" ? defaultClient?.name : undefined;
+
   const {
     register,
     handleSubmit,
@@ -81,11 +88,25 @@ export default function NewTaskDialog({
       desc: "",
       priority: "Medium",
       status: "To do",
-      due: new Date().toISOString().split('T')[0],
+      due: defaultDate || new Date().toISOString().split('T')[0],
       assignedTo: "",
-      client: "none",
+      client: selectedClientId || "none",
     },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        title: "",
+        desc: "",
+        priority: "Medium",
+        status: "To do",
+        due: defaultDate || new Date().toISOString().split('T')[0],
+        assignedTo: "",
+        client: selectedClientId || "none",
+      });
+    }
+  }, [isOpen, selectedClientId, defaultDate, reset]);
 
   const { data: usersData } = useUsers({ limit: 100, status: "Active" });
   // Currently the API returns all users (advisors) when queried by Admin
@@ -93,6 +114,23 @@ export default function NewTaskDialog({
 
   const { data: clientsData } = useClients({ limit: 100 });
   const clients = clientsData?.data || [];
+
+  const getAdvisorDisplayName = (advisorId?: string) => {
+    if (!advisorId) return "Select advisor";
+    const found = advisors.find((a) => a._id === advisorId);
+    return found ? found.name : "Select advisor";
+  };
+
+  const getClientDisplayName = (clientId?: string) => {
+    if (!clientId || clientId === "none") return "None";
+    if (selectedClientId && clientId === selectedClientId && selectedClientName) {
+      return selectedClientName;
+    }
+    const found = clients.find((c) => (c._id || c.id) === clientId);
+    if (found) return `${found.firstName} ${found.lastName}`;
+    if (selectedClientName) return selectedClientName;
+    return "Select client";
+  };
 
   const createTask = useCreateTask();
 
@@ -104,12 +142,16 @@ export default function NewTaskDialog({
       priority: data.priority,
       status: data.status,
       assignedTo: data.assignedTo,
-      client: data.client !== "none" ? data.client : undefined,
+      client: data.client && data.client !== "none" ? data.client : undefined,
     }, {
       onSuccess: () => {
+        toast.success("Task created successfully!");
         reset();
         onClose();
         onSuccess?.();
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Failed to create task");
       }
     });
   };
@@ -211,7 +253,7 @@ export default function NewTaskDialog({
                     </SelectTrigger>
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
                       <SelectItem value="To do" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                        Todo
+                        To do
                       </SelectItem>
                       <SelectItem value="In progress" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
                         In progress
@@ -259,7 +301,9 @@ export default function NewTaskDialog({
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={(val: string | null) => val && field.onChange(val)}>
                     <SelectTrigger className="h-10 bg-[#141C24] border-0 text-white rounded-[12px] text-xs sm:text-sm justify-between px-3.5 shadow-none focus:ring-1 focus:ring-[#6887A0]">
-                      <SelectValue />
+                      <span className={field.value ? "text-white truncate" : "text-[#727272]"}>
+                        {getAdvisorDisplayName(field.value)}
+                      </span>
                     </SelectTrigger>
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
                       {advisors.map((advisor) => (
@@ -288,17 +332,33 @@ export default function NewTaskDialog({
               render={({ field }) => (
                 <Select value={field.value} onValueChange={(val: string | null) => val && field.onChange(val)}>
                   <SelectTrigger className="h-10 bg-[#141C24] border-0 text-white rounded-[12px] text-xs sm:text-sm justify-between px-3.5 shadow-none focus:ring-1 focus:ring-[#6887A0]">
-                    <SelectValue />
+                    <span className={field.value && field.value !== "none" ? "text-white truncate" : "text-[#727272]"}>
+                      {getClientDisplayName(field.value)}
+                    </span>
                   </SelectTrigger>
                   <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                    <SelectItem value="none" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer text-gray-400">
-                      None
-                    </SelectItem>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                        {client.firstName} {client.lastName}
+                    {selectedClientId ? (
+                      <SelectItem
+                        value={selectedClientId}
+                        className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer"
+                      >
+                        {selectedClientName || getClientDisplayName(selectedClientId)}
                       </SelectItem>
-                    ))}
+                    ) : (
+                      <>
+                        <SelectItem value="none" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer text-gray-400">
+                          None
+                        </SelectItem>
+                        {clients.map((client) => {
+                          const clientId = client._id || client.id;
+                          return (
+                            <SelectItem key={clientId} value={clientId} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                              {client.firstName} {client.lastName}
+                            </SelectItem>
+                          );
+                        })}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               )}

@@ -15,11 +15,13 @@ import {
   NotificationItem 
 } from "@/features/notifications/api/notifications.service";
 
-const TABS = [
+type NotificationTab = "all" | "Anniversary" | "Task" | "System";
+
+const TABS: { id: NotificationTab; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "anniversaries", label: "Anniversaries" },
-  { id: "tasks", label: "Tasks" },
-  { id: "system", label: "System" },
+  { id: "Anniversary", label: "Anniversaries" },
+  { id: "Task", label: "Tasks" },
+  { id: "System", label: "System" },
 ];
 
 function NotificationsContent() {
@@ -27,8 +29,8 @@ function NotificationsContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  const tabParam = searchParams.get("tab") as "all" | "Anniversary" | "Task" | "System" | null;
-  const [activeTab, setActiveTab] = useState<"all" | "Anniversary" | "Task" | "System">(
+  const tabParam = searchParams.get("tab") as NotificationTab | null;
+  const [activeTab, setActiveTab] = useState<NotificationTab>(
     tabParam && ["all", "Anniversary", "Task", "System"].includes(tabParam) ? tabParam : "all"
   );
   const [feedbackModal, setFeedbackModal] = useState<{ isOpen: boolean; title: string; desc: string }>({
@@ -43,10 +45,14 @@ function NotificationsContent() {
     }
   }, [tabParam]);
 
-  const handleTabChange = (newTab: "all" | "Anniversary" | "Task" | "System") => {
+  const handleTabChange = (newTab: NotificationTab) => {
     setActiveTab(newTab);
     const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", newTab);
+    if (newTab === "all") {
+      params.delete("tab");
+    } else {
+      params.set("tab", newTab);
+    }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -128,7 +134,7 @@ function NotificationsContent() {
           return (
             <button
               key={tab.id}
-              onClick={() => handleTabChange(tab.id as any)}
+              onClick={() => handleTabChange(tab.id)}
               className={cn(
                 "h-8 px-4 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap",
                 isActive

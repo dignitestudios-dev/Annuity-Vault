@@ -352,17 +352,21 @@ function ClientDetailsContent() {
             <Loader className="text-white" />
           </div>
         ) : (
-          <ContractsTab contracts={mappedContracts} />
+          <ContractsTab clientId={clientId || client?.id || client?._id} contracts={mappedContracts} />
         ))}
-      {activeTab === "notes" && <NotesTab clientId={client.id} notes={client.clientNotes || []} />}
-      {activeTab === "documents" && <DocumentsTab clientId={client.id} documents={client.documents || []} />}
+      {activeTab === "notes" && <NotesTab clientId={clientId || client?.id || client?._id || ""} notes={client?.clientNotes || []} />}
+      {activeTab === "documents" && <DocumentsTab clientId={clientId || client?.id || client?._id || ""} documents={client?.documents || []} />}
       {activeTab === "tasks" &&
         (isLoadingTasks ? (
           <div className="flex items-center justify-center p-12 bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px]">
             <Loader className="text-white" />
           </div>
         ) : (
-          <TasksTab tasks={mappedTasks} />
+          <TasksTab
+            clientId={clientId || client?.id || client?._id}
+            clientName={client ? `${client.firstName} ${client.lastName}` : ""}
+            tasks={mappedTasks}
+          />
         ))}
       {activeTab === "activity" && <ActivityTab activities={ACTIVITIES} />}
 

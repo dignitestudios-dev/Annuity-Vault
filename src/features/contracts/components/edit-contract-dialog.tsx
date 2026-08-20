@@ -68,10 +68,17 @@ export default function EditContractDialog({
   const { data: clientsData } = useClients({ limit: 100 });
   const clientOptions = clientsData?.data?.map(client => ({
     label: `${client.firstName} ${client.lastName}`,
-    value: client.id
+    value: client._id || client.id
   })) || [];
 
-  const updateContract = useUpdateContract(contract?.id || "");
+  const contractId = contract?.id || (contract as any)?._id || "";
+  const updateContract = useUpdateContract(contractId);
+
+  const getClientId = () => {
+    if (!contract) return "";
+    if (typeof contract.client === "string") return contract.client;
+    return (contract.client as any)?._id || (contract.client as any)?.id || "";
+  };
 
   const {
     register,
@@ -82,40 +89,44 @@ export default function EditContractDialog({
   } = useForm<EditContractFormData>({
     resolver: zodResolver(editContractSchema),
     defaultValues: {
-      client: contract?.client?._id || "",
+      client: getClientId(),
       policyNumber: contract?.policyNumber || "",
       insuranceCompany: contract?.provider || "Equitable",
       contractType: contract?.contractType || "Immediate",
       status: contract?.status || "Surrendered",
-      premiumAmount: contract?.premiumAmount?.toString() || "",
-      contractValue: contract?.contractValue?.toString() || "",
+      premiumAmount: contract?.premiumAmount !== undefined ? String(contract.premiumAmount) : "",
+      contractValue: contract?.contractValue !== undefined ? String(contract.contractValue) : "",
       beneficiaryInfo: contract?.beneficiaryInformation || "",
       notes: contract?.notes || "",
-      startDate: contract?.startDate ? new Date(contract.startDate) : undefined,
-      anniversaryDate: contract?.anniversaryDate ? new Date(contract.anniversaryDate) : undefined,
+      startDate: contract?.startDate ? new Date(contract.startDate) : new Date(),
+      anniversaryDate: contract?.anniversaryDate ? new Date(contract.anniversaryDate) : new Date(),
     },
   });
 
   useEffect(() => {
-    if (contract) {
+    if (contract && isOpen) {
       reset({
-        client: contract.client?._id || "",
+        client: getClientId(),
         policyNumber: contract.policyNumber || "",
         insuranceCompany: contract.provider || "Equitable",
         contractType: contract.contractType || "Immediate",
         status: contract.status || "Surrendered",
-        premiumAmount: contract.premiumAmount?.toString() || "",
-        contractValue: contract.contractValue?.toString() || "",
+        premiumAmount: contract.premiumAmount !== undefined ? String(contract.premiumAmount) : "",
+        contractValue: contract.contractValue !== undefined ? String(contract.contractValue) : "",
         beneficiaryInfo: contract.beneficiaryInformation || "",
         notes: contract.notes || "",
-        startDate: contract.startDate ? new Date(contract.startDate) : undefined,
-        anniversaryDate: contract.anniversaryDate ? new Date(contract.anniversaryDate) : undefined,
+        startDate: contract.startDate ? new Date(contract.startDate) : new Date(),
+        anniversaryDate: contract.anniversaryDate ? new Date(contract.anniversaryDate) : new Date(),
       });
     }
-  }, [contract, reset]);
+  }, [contract, isOpen, reset]);
 
   const onSubmit = (data: EditContractFormData) => {
-    if (!contract?.id) return;
+    const targetId = contract?.id || (contract as any)?._id;
+    if (!targetId) {
+      toast.error("Contract ID not found");
+      return;
+    }
     updateContract.mutate({
       client: data.client,
       policyNumber: data.policyNumber,
@@ -150,7 +161,7 @@ export default function EditContractDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 font-sans py-2" noValidate>
+        <form onSubmit={handleSubmit(onSubmit, (err) => console.error("Validation errors:", err))} className="flex flex-col gap-4 font-sans py-2" noValidate>
           {/* Row 1: Searchable Client Select */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-white">Client <span className="text-destructive">*</span></Label>

@@ -30,18 +30,20 @@ interface ContractItem {
 }
 
 interface ContractsTabProps {
+  clientId?: string;
   contracts: ContractItem[];
 }
 
-export default function ContractsTab({ contracts }: ContractsTabProps) {
+export default function ContractsTab({ clientId, contracts = [] }: ContractsTabProps) {
   const router = useRouter();
   const [isNewContractOpen, setIsNewContractOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  const totalPages = Math.ceil(contracts.length / itemsPerPage);
-  const paginatedContracts = contracts.slice(
+  const safeContracts = Array.isArray(contracts) ? contracts : [];
+  const totalPages = Math.ceil(safeContracts.length / itemsPerPage);
+  const paginatedContracts = safeContracts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -153,6 +155,7 @@ export default function ContractsTab({ contracts }: ContractsTabProps) {
         isOpen={isNewContractOpen}
         onClose={() => setIsNewContractOpen(false)}
         onSubmitSuccess={() => setIsSuccessOpen(true)}
+        defaultClient={clientId}
       />
 
       {/* Contract Created Success Popup */}
