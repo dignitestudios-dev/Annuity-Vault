@@ -354,8 +354,8 @@ function ClientDetailsContent() {
         ) : (
           <ContractsTab contracts={mappedContracts} />
         ))}
-      {activeTab === "notes" && <NotesTab initialNotes={INITIAL_NOTES} />}
-      {activeTab === "documents" && <DocumentsTab documents={DOCUMENTS} />}
+      {activeTab === "notes" && <NotesTab clientId={client.id} notes={client.clientNotes || []} />}
+      {activeTab === "documents" && <DocumentsTab clientId={client.id} documents={client.documents || []} />}
       {activeTab === "tasks" &&
         (isLoadingTasks ? (
           <div className="flex items-center justify-center p-12 bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px]">

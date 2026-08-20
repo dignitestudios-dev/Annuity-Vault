@@ -1,4 +1,5 @@
 export interface Client {
+  _id?: string;
   id: string;
   firstName: string;
   lastName: string;
@@ -15,7 +16,28 @@ export interface Client {
   createdAt: string;
   updatedAt: string;
   contractsCount?: number;
-  notes?: string;
+  clientNotes?: ClientNote[];
+  documents?: ClientDocument[];
+}
+
+export interface ClientNote {
+  _id: string;
+  body: string;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: any; // Add specific type if known
+}
+
+export interface ClientDocument {
+  _id: string;
+  url: string;
+  title: string;
+  type?: string;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: any;
 }
 
 export type CreateClientDTO = {

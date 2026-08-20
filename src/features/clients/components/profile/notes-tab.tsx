@@ -6,41 +6,48 @@ import { Pin, Trash2 } from "lucide-react";
 import DeleteModal from "@/components/shared/delete-modal";
 import ArchiveModal from "@/components/shared/archive-modal";
 import { EmptyState } from "@/components/shared/empty-state";
-
-interface NoteItem {
-  id: string;
-  text: string;
-  date: string;
-}
+import { useAddClientNote, useArchiveClientNote } from "../../api/clients.service";
+import { ClientNote } from "../../types/clients.types";
+import { Loader } from "@/components/ui/loader";
 
 interface NotesTabProps {
-  initialNotes: NoteItem[];
+  clientId: string;
+  notes: ClientNote[];
 }
 
-export default function NotesTab({ initialNotes }: NotesTabProps) {
+export default function NotesTab({ clientId, notes }: NotesTabProps) {
   const router = useRouter();
   const [newNote, setNewNote] = useState("");
-  const [notesList, setNotesList] = useState(initialNotes);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+
+  const addNoteMutation = useAddClientNote();
+  const archiveNoteMutation = useArchiveClientNote();
 
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim()) return;
-    const addedNote = {
-      id: Date.now().toString(),
-      text: newNote.trim(),
-      date: new Date().toISOString().split("T")[0],
-    };
-    setNotesList([addedNote, ...notesList]);
-    setNewNote("");
+    addNoteMutation.mutate(
+      { clientId, body: newNote.trim() },
+      {
+        onSuccess: () => {
+          setNewNote("");
+        },
+      }
+    );
   };
 
   const confirmDeleteNote = () => {
     if (deletingNoteId) {
-      setNotesList(notesList.filter((note) => note.id !== deletingNoteId));
-      setDeletingNoteId(null);
-      setIsArchiveOpen(true);
+      archiveNoteMutation.mutate(
+        { clientId, noteId: deletingNoteId },
+        {
+          onSuccess: () => {
+            setDeletingNoteId(null);
+            setIsArchiveOpen(true);
+          },
+        }
+      );
     }
   };
 
@@ -62,41 +69,49 @@ export default function NotesTab({ initialNotes }: NotesTabProps) {
         />
         <button
           type="submit"
-          className="h-9 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-sm font-medium transition-all shadow-sm"
+          disabled={addNoteMutation.isPending || !newNote.trim()}
+          className="h-9 px-5 flex items-center justify-center bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-sm font-medium transition-all shadow-sm disabled:opacity-50"
         >
-          Add
+          {addNoteMutation.isPending ? <Loader className="w-5 h-5 text-white" /> : "Add"}
         </button>
       </form>
 
       {/* Notes List */}
       <div className="w-full flex flex-col">
-        {notesList.length === 0 ? (
+        {notes.length === 0 ? (
           <EmptyState 
             icon={Pin}
             title="No notes added"
             className="py-12 border-0 bg-transparent min-h-0"
           />
         ) : (
-          notesList.map((note) => (
+          notes.filter(note => !note.isDeleted).map((note) => (
             <div
-              key={note.id}
+              key={note._id}
               className="w-full border-b border-white/10 py-4 flex items-center justify-between gap-4"
             >
               <div className="flex items-start gap-3 flex-1">
                 <Pin className="w-4 h-4 text-[#576574] flex-shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-1">
                   <p className="text-sm text-white font-normal leading-snug">
-                    {note.text}
+                    {note.body}
                   </p>
-                  <span className="text-xs text-[#919191]">{note.date}</span>
+                  <span className="text-xs text-[#919191]">
+                    {new Date(note.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
 
               <button
-                onClick={() => setDeletingNoteId(note.id)}
-                className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors flex-shrink-0"
+                onClick={() => setDeletingNoteId(note._id)}
+                disabled={archiveNoteMutation.isPending && deletingNoteId === note._id}
+                className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors flex-shrink-0 disabled:opacity-50"
               >
-                <Trash2 className="w-3.5 h-3.5 text-white" />
+                {archiveNoteMutation.isPending && deletingNoteId === note._id ? (
+                  <Loader className="w-3.5 h-3.5 text-white" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5 text-white" />
+                )}
               </button>
             </div>
           ))

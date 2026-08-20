@@ -150,8 +150,8 @@ export default function ClientsFolderTable() {
                   const fullName = `${client.firstName} ${client.lastName}`;
                   return (
                     <TableRow
-                      key={client.id}
-                      onClick={() => router.push(`/dashboard/clients/${client.id}`)}
+                      key={client._id || client.id}
+                      onClick={() => router.push(`/dashboard/clients/${client._id || client.id}`)}
                       className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-16 cursor-pointer"
                     >
                       {/* Name Column with Avatar & DOB */}

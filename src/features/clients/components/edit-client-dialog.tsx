@@ -78,7 +78,7 @@ export default function EditClientDialog({
       address: client.address || "",
       status: (client.status as any) || "Active",
       dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth) : undefined,
-      notes: client.notes || "",
+      notes: "",
     },
   });
 
@@ -92,7 +92,7 @@ export default function EditClientDialog({
         address: client.address || "",
         status: (client.status as any) || "Active",
         dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth) : undefined,
-        notes: client.notes || "",
+        notes: "",
       });
     }
   }, [client, isOpen, reset]);

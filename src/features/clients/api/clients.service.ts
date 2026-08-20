@@ -5,12 +5,27 @@ import { Client, ClientsResponse, CreateClientDTO, UpdateClientDTO } from "../ty
 export const clientsService = {
   getClients: async (params?: { search?: string; status?: string; page?: number; limit?: number }): Promise<ClientsResponse> => {
     const response = await axiosInstance.get("/clients", { params });
+    if (response.data && Array.isArray(response.data.data)) {
+      response.data.data = response.data.data.map((client: any) => ({
+        ...client,
+        id: client.id || client._id
+      }));
+    } else if (Array.isArray(response.data)) {
+      response.data = response.data.map((client: any) => ({
+        ...client,
+        id: client.id || client._id
+      }));
+    }
     return response.data;
   },
 
   getClient: async (id: string): Promise<Client> => {
     const response = await axiosInstance.get(`/clients/${id}`);
-    return response.data.data || response.data;
+    const data = response.data.data || response.data;
+    if (data) {
+      data.id = data.id || data._id;
+    }
+    return data;
   },
 
   createClient: async (data: CreateClientDTO): Promise<Client> => {
@@ -25,6 +40,34 @@ export const clientsService = {
 
   deleteClient: async (id: string): Promise<void> => {
     await axiosInstance.delete(`/clients/${id}`);
+  },
+
+  // Notes
+  addClientNote: async ({ clientId, body }: { clientId: string; body: string }): Promise<any> => {
+    const response = await axiosInstance.post(`/clients/${clientId}/notes`, { body });
+    return response.data.data || response.data;
+  },
+
+  archiveClientNote: async ({ clientId, noteId }: { clientId: string; noteId: string }): Promise<any> => {
+    const response = await axiosInstance.patch(`/clients/${clientId}/notes/${noteId}`);
+    return response.data.data || response.data;
+  },
+
+  // Documents
+  uploadClientDocument: async ({ clientId, file }: { clientId: string; file: File }): Promise<any> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await axiosInstance.post(`/clients/${clientId}/documents`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data.data || response.data;
+  },
+
+  archiveClientDocument: async ({ clientId, docId }: { clientId: string; docId: string }): Promise<any> => {
+    const response = await axiosInstance.patch(`/clients/${clientId}/documents/${docId}`);
+    return response.data.data || response.data;
   },
 };
 
@@ -70,6 +113,48 @@ export function useDeleteClient() {
     mutationFn: clientsService.deleteClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
+    },
+  });
+}
+
+// Notes Hooks
+export function useAddClientNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: clientsService.addClientNote,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["clients", variables.clientId] });
+    },
+  });
+}
+
+export function useArchiveClientNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: clientsService.archiveClientNote,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["clients", variables.clientId] });
+    },
+  });
+}
+
+// Documents Hooks
+export function useUploadClientDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: clientsService.uploadClientDocument,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["clients", variables.clientId] });
+    },
+  });
+}
+
+export function useArchiveClientDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: clientsService.archiveClientDocument,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["clients", variables.clientId] });
     },
   });
 }

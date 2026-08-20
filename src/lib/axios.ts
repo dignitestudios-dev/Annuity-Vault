@@ -20,6 +20,16 @@ axiosInstance.interceptors.request.use((config) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("auth-token");
+        localStorage.removeItem("auth-user");
+        if (!window.location.pathname.startsWith("/auth/login")) {
+          window.location.href = "/auth/login";
+        }
+      }
+    }
+
     const data = error.response?.data;
     let message = data?.message ?? error.message;
 
