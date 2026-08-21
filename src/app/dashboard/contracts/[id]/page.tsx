@@ -439,13 +439,15 @@ export default function ContractDetailsPage() {
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
               placeholder="Add a note to this contract…"
-              className="flex-1 bg-[#0C1116] border-0 text-white placeholder-[#919191] text-xs sm:text-sm rounded-[12px] px-4 h-10 outline-none focus:ring-1 focus:ring-[#6887A0]"
+              disabled={addNote.isPending}
+              className="flex-1 bg-[#0C1116] border-0 text-white placeholder-[#919191] text-xs sm:text-sm rounded-[12px] px-4 h-10 outline-none focus:ring-1 focus:ring-[#6887A0] disabled:opacity-60"
             />
             <button
               type="submit"
-              className="h-9 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-xs sm:text-sm font-medium transition-all shadow-sm"
+              disabled={addNote.isPending || !newNote.trim()}
+              className="h-9 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-xs sm:text-sm font-medium transition-all shadow-sm flex items-center justify-center min-w-[70px] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              Add
+              {addNote.isPending ? <Loader className="w-4 h-4 text-white" /> : "Add"}
             </button>
           </form>
 

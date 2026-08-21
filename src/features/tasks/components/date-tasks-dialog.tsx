@@ -115,8 +115,8 @@ export default function DateTasksDialog({
                     <span
                       className={cn(
                         "px-2 py-0.5 rounded-[6px] text-[10px] font-semibold uppercase tracking-wider",
-                        task.status === "To do" && "bg-[#FF3E46]/10 text-[#FF3E46] border border-[#FF3E46]/30",
-                        task.status === "In progress" && "bg-[#FF9D00]/10 text-[#FF9D00] border border-[#FF9D00]/30",
+                        task.status === "To Do" && "bg-[#FF3E46]/10 text-[#FF3E46] border border-[#FF3E46]/30",
+                        task.status === "In Progress" && "bg-[#FF9D00]/10 text-[#FF9D00] border border-[#FF9D00]/30",
                         task.status === "Done" && "bg-[#42CD7F]/10 text-[#42CD7F] border border-[#42CD7F]/30"
                       )}
                     >

@@ -22,7 +22,6 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { useCreateTask } from "../api/tasks.service";
-import { useUsers } from "@/features/users/api/users.service";
 import { useClients } from "@/features/clients/api/clients.service";
 import toast from "react-hot-toast";
 
@@ -32,9 +31,8 @@ export interface TaskItem {
   priority: "Urgent" | "High" | "Medium" | "Low";
   desc: string;
   due: string;
-  status: "To do" | "In progress" | "Done";
+  status: "To Do" | "In Progress" | "Done";
   client?: string;
-  assignedTo?: string;
 }
 
 export interface NewTaskDialogProps {
@@ -55,11 +53,10 @@ const newTaskSchema = z.object({
   priority: z.enum(["Urgent", "High", "Medium", "Low"], {
     message: "Please select a priority",
   }),
-  status: z.enum(["To do", "In progress", "Done"], {
+  status: z.enum(["To Do", "In Progress", "Done"], {
     message: "Please select a status",
   }),
   due: z.string().min(1, "Due date is required"),
-  assignedTo: z.string().min(1, "Assigned advisor is required"),
   client: z.string().optional(),
 });
 
@@ -87,9 +84,8 @@ export default function NewTaskDialog({
       title: "",
       desc: "",
       priority: "Medium",
-      status: "To do",
+      status: "To Do",
       due: defaultDate || new Date().toISOString().split('T')[0],
-      assignedTo: "",
       client: selectedClientId || "none",
     },
   });
@@ -100,26 +96,15 @@ export default function NewTaskDialog({
         title: "",
         desc: "",
         priority: "Medium",
-        status: "To do",
+        status: "To Do",
         due: defaultDate || new Date().toISOString().split('T')[0],
-        assignedTo: "",
         client: selectedClientId || "none",
       });
     }
   }, [isOpen, selectedClientId, defaultDate, reset]);
 
-  const { data: usersData } = useUsers({ limit: 100, status: "Active" });
-  // Currently the API returns all users (advisors) when queried by Admin
-  const advisors = usersData?.data?.filter(u => u.role === "Advisor" || u.role === "Admin") || [];
-
   const { data: clientsData } = useClients({ limit: 100 });
   const clients = clientsData?.data || [];
-
-  const getAdvisorDisplayName = (advisorId?: string) => {
-    if (!advisorId) return "Select advisor";
-    const found = advisors.find((a) => a._id === advisorId);
-    return found ? found.name : "Select advisor";
-  };
 
   const getClientDisplayName = (clientId?: string) => {
     if (!clientId || clientId === "none") return "None";
@@ -141,7 +126,6 @@ export default function NewTaskDialog({
       dueDate: data.due,
       priority: data.priority,
       status: data.status,
-      assignedTo: data.assignedTo,
       client: data.client && data.client !== "none" ? data.client : undefined,
     }, {
       onSuccess: () => {
@@ -252,11 +236,11 @@ export default function NewTaskDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      <SelectItem value="To do" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                        To do
+                      <SelectItem value="To Do" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                        To Do
                       </SelectItem>
-                      <SelectItem value="In progress" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                        In progress
+                      <SelectItem value="In Progress" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                        In Progress
                       </SelectItem>
                       <SelectItem value="Done" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
                         Done
@@ -273,7 +257,7 @@ export default function NewTaskDialog({
             </div>
           </div>
 
-          {/* 4. Due Date & Assigned To (2 Columns) */}
+          {/* 4. Due Date & Client (2 Columns) */}
           <div className="grid grid-cols-2 gap-3">
             {/* Due Date */}
             <div className="space-y-1.5">
@@ -292,80 +276,50 @@ export default function NewTaskDialog({
               )}
             </div>
 
-            {/* Assigned To */}
+            {/* Client (Optional) */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-white">Assigned To</Label>
+              <Label className="text-sm font-medium text-white">Client (Optional)</Label>
               <Controller
-                name="assignedTo"
+                name="client"
                 control={control}
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={(val: string | null) => val && field.onChange(val)}>
                     <SelectTrigger className="h-10 bg-[#141C24] border-0 text-white rounded-[12px] text-xs sm:text-sm justify-between px-3.5 shadow-none focus:ring-1 focus:ring-[#6887A0]">
-                      <span className={field.value ? "text-white truncate" : "text-[#727272]"}>
-                        {getAdvisorDisplayName(field.value)}
+                      <span className={field.value && field.value !== "none" ? "text-white truncate" : "text-[#727272]"}>
+                        {getClientDisplayName(field.value)}
                       </span>
                     </SelectTrigger>
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      {advisors.map((advisor) => (
-                        <SelectItem key={advisor._id} value={advisor._id} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                          {advisor.name}
+                      {selectedClientId ? (
+                        <SelectItem
+                          value={selectedClientId}
+                          className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer"
+                        >
+                          {selectedClientName || getClientDisplayName(selectedClientId)}
                         </SelectItem>
-                      ))}
+                      ) : (
+                        <>
+                          <SelectItem value="none" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer text-gray-400">
+                            None
+                          </SelectItem>
+                          {clients.map((client) => {
+                            const clientId = client._id || client.id;
+                            return (
+                              <SelectItem key={clientId} value={clientId} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                                {client.firstName} {client.lastName}
+                              </SelectItem>
+                            );
+                          })}
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {errors.assignedTo && (
-                <p className="text-[11px] font-medium text-[#FF3E46] mt-1">
-                  {errors.assignedTo.message}
-                </p>
-              )}
             </div>
           </div>
 
-          {/* 5. Client (Optional) */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-white">Client (Optional)</Label>
-            <Controller
-              name="client"
-              control={control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={(val: string | null) => val && field.onChange(val)}>
-                  <SelectTrigger className="h-10 bg-[#141C24] border-0 text-white rounded-[12px] text-xs sm:text-sm justify-between px-3.5 shadow-none focus:ring-1 focus:ring-[#6887A0]">
-                    <span className={field.value && field.value !== "none" ? "text-white truncate" : "text-[#727272]"}>
-                      {getClientDisplayName(field.value)}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                    {selectedClientId ? (
-                      <SelectItem
-                        value={selectedClientId}
-                        className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer"
-                      >
-                        {selectedClientName || getClientDisplayName(selectedClientId)}
-                      </SelectItem>
-                    ) : (
-                      <>
-                        <SelectItem value="none" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer text-gray-400">
-                          None
-                        </SelectItem>
-                        {clients.map((client) => {
-                          const clientId = client._id || client.id;
-                          return (
-                            <SelectItem key={clientId} value={clientId} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                              {client.firstName} {client.lastName}
-                            </SelectItem>
-                          );
-                        })}
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
-
-          {/* 6. Footer Buttons */}
+          {/* 5. Footer Buttons */}
           <div className="pt-3 flex items-center justify-center gap-3">
             <Button
               type="button"

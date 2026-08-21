@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar as CalendarIcon, User, UserCheck, Pencil, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, User, Pencil, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -65,8 +65,8 @@ export default function TaskDetailsDialog({
       <span
         className={cn(
           "px-3 py-1 rounded-[8px] text-xs font-medium inline-block",
-          status === "To do" && "bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46]",
-          status === "In progress" && "bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00]",
+          status === "To Do" && "bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46]",
+          status === "In Progress" && "bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00]",
           status === "Done" && "bg-[#42CD7F]/10 border border-[#42CD7F] text-[#42CD7F]"
         )}
       >
@@ -90,7 +90,7 @@ export default function TaskDetailsDialog({
 
         <div className="space-y-4 py-2">
           {/* Details Metadata Grid */}
-          <div className="grid grid-cols-2 gap-3 bg-[#141C24] p-3.5 rounded-[12px] border border-white/5">
+          <div className={cn("grid gap-3 bg-[#141C24] p-3.5 rounded-[12px] border border-white/5", task.client ? "grid-cols-2" : "grid-cols-1")}>
             <div className="flex items-center gap-2.5">
               <CalendarIcon className="w-4 h-4 text-[#6887A0]" />
               <div>
@@ -101,20 +101,12 @@ export default function TaskDetailsDialog({
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
-              <UserCheck className="w-4 h-4 text-[#6887A0]" />
-              <div>
-                <p className="text-[11px] text-[#919191]">Assigned To</p>
-                <p className="text-xs sm:text-sm font-medium text-white">{task.assignedTo?.name || "N/A"}</p>
-              </div>
-            </div>
-
             {task.client && (
-              <div className="flex items-center gap-2.5 col-span-2 pt-2 border-t border-white/5">
+              <div className="flex items-center gap-2.5">
                 <User className="w-4 h-4 text-[#6887A0]" />
                 <div>
                   <p className="text-[11px] text-[#919191]">Client</p>
-                  <p className="text-xs sm:text-sm font-medium text-white">{task.client.name}</p>
+                  <p className="text-xs sm:text-sm font-medium text-white">{task.client.name || `${task.client.firstName || ''} ${task.client.lastName || ''}`.trim()}</p>
                 </div>
               </div>
             )}

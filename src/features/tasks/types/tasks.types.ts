@@ -1,5 +1,5 @@
 export type TaskPriority = "Low" | "Medium" | "High" | "Urgent";
-export type TaskStatus = "To do" | "In progress" | "Done";
+export type TaskStatus = "To Do" | "In Progress" | "Done";
 
 export interface Task {
   _id: string;
@@ -8,7 +8,7 @@ export interface Task {
   priority: TaskPriority;
   status: TaskStatus;
   dueDate: string;
-  assignedTo: {
+  assignedTo?: {
     _id: string;
     name: string;
     email: string;
@@ -52,7 +52,7 @@ export interface CreateTaskDTO {
   priority: TaskPriority;
   status: TaskStatus;
   dueDate: string;
-  assignedTo: string;
+  assignedTo?: string;
   client?: string;
 }
 

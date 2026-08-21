@@ -113,7 +113,7 @@ function TasksContent() {
   };
 
   // Task Status Transition Handler
-  const handleMoveStatus = (id: string, newStatus: "To do" | "In progress" | "Done") => {
+  const handleMoveStatus = (id: string, newStatus: "To Do" | "In Progress" | "Done") => {
     updateTaskMutation.mutate(
       { id, data: { status: newStatus } },
       {
@@ -171,8 +171,8 @@ function TasksContent() {
   });
 
   // Column arrays for Kanban
-  const todoTasks = filteredTasks.filter((t) => t.status === "To do");
-  const inProgressTasks = filteredTasks.filter((t) => t.status === "In progress");
+  const todoTasks = filteredTasks.filter((t) => t.status === "To Do");
+  const inProgressTasks = filteredTasks.filter((t) => t.status === "In Progress");
   const doneTasks = filteredTasks.filter((t) => t.status === "Done");
 
   // Helper for priority badge rendering
@@ -301,11 +301,11 @@ function TasksContent() {
               <SelectItem value="all" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
                 All Statuses
               </SelectItem>
-              <SelectItem value="To do" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
-                To do
+              <SelectItem value="To Do" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
+                To Do
               </SelectItem>
-              <SelectItem value="In progress" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
-                In progress
+              <SelectItem value="In Progress" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
+                In Progress
               </SelectItem>
               <SelectItem value="Done" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
                 Done
@@ -471,10 +471,10 @@ function TasksContent() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      onClick={() => handleMoveStatus(task._id!, "In progress")}
+                      onClick={() => handleMoveStatus(task._id!, "In Progress")}
                       className="bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF9D00]/20 transition-all cursor-pointer"
                     >
-                      In progress
+                      In Progress
                     </button>
                     <button
                       onClick={() => handleMoveStatus(task._id!, "Done")}
@@ -489,7 +489,7 @@ function TasksContent() {
               {todoTasks.length === 0 && (
                 <EmptyState 
                   icon={CheckSquare}
-                  title="No tasks in To do"
+                  title="No tasks in To Do"
                   className="py-12 border-0 bg-transparent min-h-0"
                 />
               )}
@@ -555,10 +555,10 @@ function TasksContent() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      onClick={() => handleMoveStatus(task._id!, "To do")}
+                      onClick={() => handleMoveStatus(task._id!, "To Do")}
                       className="bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF3E46]/20 transition-all cursor-pointer"
                     >
-                      ← To do
+                      ← To Do
                     </button>
                     <button
                       onClick={() => handleMoveStatus(task._id!, "Done")}
@@ -639,16 +639,16 @@ function TasksContent() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      onClick={() => handleMoveStatus(task._id!, "To do")}
+                      onClick={() => handleMoveStatus(task._id!, "To Do")}
                       className="bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF3E46]/20 transition-all cursor-pointer"
                     >
-                      ← To do
+                      ← To Do
                     </button>
                     <button
-                      onClick={() => handleMoveStatus(task._id!, "In progress")}
+                      onClick={() => handleMoveStatus(task._id!, "In Progress")}
                       className="bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF9D00]/20 transition-all cursor-pointer"
                     >
-                      In progress
+                      In Progress
                     </button>
                   </div>
                 </div>
@@ -723,12 +723,12 @@ function TasksContent() {
                       <span
                         className={cn(
                           "px-2.5 py-0.5 rounded-[8px] text-[12px] font-medium capitalize inline-block",
-                          task.status === "To do" && "bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46]",
-                          task.status === "In progress" && "bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00]",
+                          task.status === "To Do" && "bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46]",
+                          task.status === "In Progress" && "bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00]",
                           task.status === "Done" && "bg-[#42CD7F]/10 border border-[#42CD7F] text-[#42CD7F]"
                         )}
                       >
-                        {task.status === "To do" ? "Todo" : task.status}
+                        {task.status}
                       </span>
                     </TableCell>
 

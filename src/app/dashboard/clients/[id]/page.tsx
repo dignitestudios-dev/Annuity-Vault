@@ -84,44 +84,6 @@ const DOCUMENTS = [
   },
 ];
 
-const ACTIVITIES = [
-  {
-    id: "a1",
-    title: "Record Edited",
-    timestamp: "2024-08-05 10:45",
-    subtext: "Updated beneficiary information",
-    author: "by A. Smith",
-  },
-  {
-    id: "a2",
-    title: "Contract Created",
-    timestamp: "2023-06-22 11:00",
-    subtext: "Added annuity contract AV-2023-003312",
-    author: "by A. Smith",
-  },
-  {
-    id: "a3",
-    title: "Note Added",
-    timestamp: "2023-04-12 14:15",
-    subtext: "Added note under 'Strategy' category",
-    author: "by A. Smith",
-  },
-  {
-    id: "a4",
-    title: "Contract Created",
-    timestamp: "2022-01-18 09:30",
-    subtext: "Added annuity contract AV-2022-001847",
-    author: "by A. Smith",
-  },
-  {
-    id: "a5",
-    title: "Document Uploaded",
-    timestamp: "2022-01-18 09:24",
-    subtext: "Uploaded 'Pacific Life Policy Contract.pdf'",
-    author: "by A. Smith",
-  },
-];
-
 const TABS_CONFIG = [
   { id: "contracts", label: "Contracts", icon: FileText },
   { id: "notes", label: "Notes (7)", icon: FileCode },
@@ -368,7 +330,12 @@ function ClientDetailsContent() {
             tasks={mappedTasks}
           />
         ))}
-      {activeTab === "activity" && <ActivityTab activities={ACTIVITIES} />}
+      {activeTab === "activity" && (
+        <ActivityTab
+          clientId={clientId || client?.id || client?._id}
+          clientName={client ? `${client.firstName} ${client.lastName}` : ""}
+        />
+      )}
 
       {/* Edit Client Modal */}
       <EditClientDialog
