@@ -1,5 +1,6 @@
 "use client";
 import { Loader } from "@/components/ui/loader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { useState, useEffect, Suspense } from "react";
 import {
@@ -86,8 +87,8 @@ const DOCUMENTS = [
 
 const TABS_CONFIG = [
   { id: "contracts", label: "Contracts", icon: FileText },
-  { id: "notes", label: "Notes (7)", icon: FileCode },
-  { id: "documents", label: "Documents (4)", icon: FileText },
+  { id: "notes", label: "Notes", icon: FileCode },
+  { id: "documents", label: "Documents", icon: FileText },
   { id: "tasks", label: "Tasks", icon: CheckSquare },
   { id: "activity", label: "Activity", icon: ActivityIcon },
 ];
@@ -136,7 +137,7 @@ function ClientDetailsContent() {
     deleteClientMutation.mutate(clientId, {
       onSuccess: () => {
         setIsDeleteClientOpen(false);
-        setIsArchiveOpen(true);
+        router.push("/dashboard/clients");
       },
     });
   };
@@ -148,10 +149,11 @@ function ClientDetailsContent() {
 
   if (isLoading) {
     return (
-      <div className="text-white p-6 font-sans">
-        <div className="flex items-center justify-center p-6">
-          <Loader className="text-white" />
-        </div>
+      <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans mt-6">
+        <Skeleton className="w-full h-[60px] bg-[#141C24] rounded-[12px]" />
+        <Skeleton className="w-full h-[120px] bg-[#141C24] rounded-[12px]" />
+        <Skeleton className="w-full h-[40px] bg-[#141C24] rounded-[12px]" />
+        <Skeleton className="w-full h-[400px] bg-[#141C24] rounded-[12px]" />
       </div>
     );
   }
@@ -232,10 +234,11 @@ function ClientDetailsContent() {
     if (t.id === "contracts")
       return { ...t, label: `Contracts (${contractsData?.total || 0})` };
     if (t.id === "tasks")
-      return {
-        ...t,
-        label: `Tasks (${tasksData?.pagination?.totalItems || 0})`,
-      };
+      return { ...t, label: `Tasks (${tasksData?.pagination?.totalItems || 0})` };
+    if (t.id === "notes")
+      return { ...t, label: `Notes (${client?.clientNotes?.length || 0})` };
+    if (t.id === "documents")
+      return { ...t, label: `Documents (${client?.documents?.length || 0})` };
     return t;
   });
 
@@ -308,28 +311,23 @@ function ClientDetailsContent() {
       </div>
 
       {/* Dynamic Tab Panels */}
-      {activeTab === "contracts" &&
-        (isLoadingContracts ? (
-          <div className="flex items-center justify-center p-12 bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px]">
-            <Loader className="text-white" />
-          </div>
-        ) : (
-          <ContractsTab clientId={clientId || client?.id || client?._id} contracts={mappedContracts} />
-        ))}
+      {activeTab === "contracts" && (
+        <ContractsTab 
+          clientId={clientId || client?.id || client?._id} 
+          contracts={mappedContracts} 
+          isLoading={isLoadingContracts}
+        />
+      )}
       {activeTab === "notes" && <NotesTab clientId={clientId || client?.id || client?._id || ""} notes={client?.clientNotes || []} />}
       {activeTab === "documents" && <DocumentsTab clientId={clientId || client?.id || client?._id || ""} documents={client?.documents || []} />}
-      {activeTab === "tasks" &&
-        (isLoadingTasks ? (
-          <div className="flex items-center justify-center p-12 bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px]">
-            <Loader className="text-white" />
-          </div>
-        ) : (
-          <TasksTab
-            clientId={clientId || client?.id || client?._id}
-            clientName={client ? `${client.firstName} ${client.lastName}` : ""}
-            tasks={mappedTasks}
-          />
-        ))}
+      {activeTab === "tasks" && (
+        <TasksTab
+          clientId={clientId || client?.id || client?._id}
+          clientName={client ? `${client.firstName} ${client.lastName}` : ""}
+          tasks={mappedTasks}
+          isLoading={isLoadingTasks}
+        />
+      )}
       {activeTab === "activity" && (
         <ActivityTab
           clientId={clientId || client?.id || client?._id}
@@ -358,6 +356,7 @@ function ClientDetailsContent() {
         isOpen={isDeleteClientOpen}
         onClose={() => setIsDeleteClientOpen(false)}
         onConfirm={handleDeleteClientConfirm}
+        isPending={deleteClientMutation.isPending}
         title="Delete Client"
         description="Are you sure you want to delete this client?"
       />
@@ -372,10 +371,8 @@ export default function ClientDetailsPage() {
   return (
     <Suspense
       fallback={
-        <div className="text-white p-6 font-sans">
-          <div className="flex items-center justify-center p-6">
-            <Loader className="text-white" />
-          </div>
+        <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-10">
+          <Skeleton className="h-[400px] w-full bg-white/5 rounded-xl" />
         </div>
       }
     >

@@ -106,6 +106,24 @@ export default function ContractDetailsPage() {
       return;
     }
 
+    // Validate type (Images, PDF, Word, Excel)
+    const validTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Invalid file type. Only Images, PDF, Word, and Excel are allowed.");
+      e.target.value = '';
+      return;
+    }
+
     addDocument.mutate(file, {
       onSuccess: () => {
         toast.success("Document uploaded successfully!");

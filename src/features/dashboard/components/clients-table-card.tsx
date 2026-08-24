@@ -95,20 +95,22 @@ export default function ClientsTableCard() {
                 </TableCell>
               </TableRow>
             ) : (
-              clients.map((client) => (
+              clients.map((client: any) => {
+                const name = client.firstName ? `${client.firstName} ${client.lastName}` : client.name || "Unknown";
+                return (
                 <TableRow
-                  key={client.id}
+                  key={client._id || client.id}
                   className="border-b border-white/10 hover:bg-white/[0.02] transition-colors"
                 >
                   {/* Name & Avatar */}
                   <TableCell className="px-6 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className="w-[30px] h-[30px] rounded-full bg-white/10 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0 font-sans">
-                        {getInitials(client.name)}
+                        {getInitials(name)}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-white font-sans leading-tight">
-                          {client.name}
+                          {name}
                         </span>
                         <span className="text-xs font-normal text-[#8C8C8C] font-sans">
                           {client.email}
@@ -129,7 +131,7 @@ export default function ClientsTableCard() {
 
                   {/* Contracts */}
                   <TableCell className="px-6 py-3.5 text-sm text-white font-sans text-center">
-                    {client.contractsCount}
+                    {client.contracts?.length || client.contractsCount || 0}
                   </TableCell>
 
                   {/* Status Badge */}
@@ -146,10 +148,11 @@ export default function ClientsTableCard() {
 
                   {/* Created */}
                   <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
-                    {new Date(client.lastContact).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                    {new Date(client.createdAt || client.lastContact).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>

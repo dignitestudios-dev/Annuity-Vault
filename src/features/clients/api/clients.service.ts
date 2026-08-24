@@ -160,7 +160,7 @@ export function useArchiveClientDocument() {
 }
 
 export const exportClients = async (format: "pdf" | "csv", search?: string, status?: string) => {
-  const response = await clientsService.getClients({ search, status, limit: 1000 });
+  const response = await clientsService.getClients({ search, status, limit: 100 });
   const clients = response.data;
   
   if (format === "csv") {

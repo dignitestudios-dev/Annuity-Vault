@@ -5,7 +5,7 @@ import { DashboardSummaryResponse } from "../types/dashboard.types";
 export const dashboardService = {
   getSummary: async (): Promise<DashboardSummaryResponse> => {
     const response = await axiosInstance.get("/dashboard/summary");
-    return response.data;
+    return response.data.data || response.data;
   },
 };
 

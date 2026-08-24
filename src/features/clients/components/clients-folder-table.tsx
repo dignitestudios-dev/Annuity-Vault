@@ -25,6 +25,7 @@ import TablePagination from "@/components/shared/table-pagination";
 import { cn } from "@/lib/utils";
 import { useClients } from "@/features/clients/api/clients.service";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useDebounce } from "@/hooks/use-debounce";
 
 export type ClientStatus = "Active" | "Archived" | "Inactive" | "Prospect" | string;
 
@@ -51,8 +52,10 @@ export default function ClientsFolderTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
+  const debouncedSearch = useDebounce(searchQuery, 500);
+
   const { data, isLoading } = useClients({
-    search: searchQuery || undefined,
+    search: debouncedSearch || undefined,
     status: selectedStatus !== "All statuses" ? selectedStatus : undefined,
     page: currentPage,
     limit: itemsPerPage,
@@ -100,7 +103,6 @@ export default function ClientsFolderTable() {
             >
               <SelectItem value="All statuses">All statuses</SelectItem>
               <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Archived">Archived</SelectItem>
               <SelectItem value="Inactive">Inactive</SelectItem>
               <SelectItem value="Prospect">Prospect</SelectItem>
             </SelectContent>

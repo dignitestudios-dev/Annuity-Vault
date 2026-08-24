@@ -24,6 +24,7 @@ import {
 import { Task } from "../types/tasks.types";
 import { useUpdateTask } from "../api/tasks.service";
 import { useClients } from "@/features/clients/api/clients.service";
+import SearchableSelect from "@/components/ui/searchable-select";
 
 interface EditTaskDialogProps {
   task: Task | null;
@@ -107,10 +108,21 @@ export default function EditTaskDialog({
 
   if (!task) return null;
 
+  const clientsOptions = clients.map((c) => ({
+    label: `${c.firstName} ${c.lastName}`,
+    value: c._id || c.id,
+  }));
+
+  const clientOptionsWithNone = [
+    { label: "None", value: "none" },
+    ...clientsOptions
+  ];
+
   const getClientDisplayName = (clientId?: string) => {
     if (!clientId || clientId === "none") return "None";
-    const found = clients.find((c) => (c._id || c.id) === clientId);
-    return found ? `${found.firstName} ${found.lastName}` : (task?.client ? `${task.client.firstName || ''} ${task.client.lastName || ''}`.trim() : "Select client");
+    const found = clientsOptions.find((c) => c.value === clientId);
+    if (found) return found.label;
+    return task?.client ? `${task.client.firstName || ''} ${task.client.lastName || ''}`.trim() : "Select client";
   };
 
   return (
@@ -233,28 +245,28 @@ export default function EditTaskDialog({
               <Controller
                 name="client"
                 control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={(val: string | null) => val && field.onChange(val)}>
-                    <SelectTrigger className="h-10 bg-[#141C24] border-0 text-white rounded-[12px] text-xs sm:text-sm justify-between px-3.5 shadow-none focus:ring-1 focus:ring-[#6887A0]">
-                      <span className={field.value && field.value !== "none" ? "text-white truncate" : "text-[#727272]"}>
-                        {getClientDisplayName(field.value)}
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      <SelectItem value="none" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer text-gray-400">
-                        None
-                      </SelectItem>
-                      {clients.map((client) => {
-                        const clientId = client._id || client.id;
-                        return (
-                          <SelectItem key={clientId} value={clientId} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                            {client.firstName} {client.lastName}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                )}
+                render={({ field }) => {
+                  let options = clientOptionsWithNone;
+                  // If the currently selected client is not in the options (e.g., from old data or paginated out), add it
+                  if (field.value && field.value !== "none" && !clientsOptions.find(c => c.value === field.value)) {
+                    options = [
+                      { label: "None", value: "none" },
+                      { label: getClientDisplayName(field.value), value: field.value },
+                      ...clientsOptions
+                    ];
+                  }
+
+                  return (
+                    <SearchableSelect
+                      options={options}
+                      value={field.value || "none"}
+                      onChange={field.onChange}
+                      placeholder="Select Client..."
+                      searchPlaceholder="Search client..."
+                      className={errors.client ? "ring-1 ring-[#FF3E46]" : ""}
+                    />
+                  );
+                }}
               />
             </div>
           </div>

@@ -1,5 +1,6 @@
 "use client";
 import { Loader } from "@/components/ui/loader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -151,7 +152,19 @@ function NotificationsContent() {
       {/* 3. Notifications List */}
       <div className="flex flex-col gap-3.5 w-full">
         {isLoading ? (
-          <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-xs sm:text-sm text-[#919191]"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={`skeleton-${i}`} className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-4 sm:p-5 flex items-start gap-4 h-[106px]">
+              <Skeleton className="w-8 h-8 rounded-lg bg-white/5 flex-shrink-0" />
+              <div className="flex flex-col flex-1 gap-2 w-full mt-0.5">
+                <Skeleton className="h-5 w-[120px] bg-white/5 rounded-md" />
+                <Skeleton className="h-4 w-full bg-white/5 rounded-md" />
+                <div className="flex gap-3 mt-1.5">
+                  <Skeleton className="h-4 w-[80px] bg-white/5 rounded-md" />
+                  <Skeleton className="h-4 w-[60px] bg-white/5 rounded-md" />
+                </div>
+              </div>
+            </div>
+          ))
         ) : notifications.length === 0 ? (
           <EmptyState 
             icon={Bell}
@@ -216,7 +229,7 @@ function NotificationsContent() {
 
 export default function NotificationsPage() {
   return (
-    <Suspense fallback={<div className="text-white p-6"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>}>
+    <Suspense fallback={<div className="text-white p-6"><Skeleton className="h-[400px] w-full bg-white/5 rounded-xl" /></div>}>
       <NotificationsContent />
     </Suspense>
   );

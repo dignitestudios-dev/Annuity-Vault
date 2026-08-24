@@ -32,9 +32,10 @@ interface ContractItem {
 interface ContractsTabProps {
   clientId?: string;
   contracts: ContractItem[];
+  isLoading?: boolean;
 }
 
-export default function ContractsTab({ clientId, contracts = [] }: ContractsTabProps) {
+export default function ContractsTab({ clientId, contracts = [], isLoading = false }: ContractsTabProps) {
   const router = useRouter();
   const [isNewContractOpen, setIsNewContractOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
@@ -47,6 +48,30 @@ export default function ContractsTab({ clientId, contracts = [] }: ContractsTabP
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  if (isLoading) {
+    return (
+      <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] overflow-hidden shadow-sm flex flex-col">
+        <div className="h-[65px] bg-[#394A58] px-6 flex items-center justify-between border-b border-white/10">
+          <div className="w-[180px] h-6 bg-[#4A5D6E] animate-pulse rounded-[6px]"></div>
+          <div className="w-[130px] h-8 bg-[#4A5D6E] animate-pulse rounded-[12px]"></div>
+        </div>
+        <div className="flex flex-col w-full">
+          <div className="h-10 border-b border-white/10 w-full px-6 flex items-center gap-6">
+            <div className="w-24 h-4 bg-[#192430] animate-pulse rounded-[4px]"></div>
+            <div className="w-24 h-4 bg-[#192430] animate-pulse rounded-[4px]"></div>
+            <div className="w-24 h-4 bg-[#192430] animate-pulse rounded-[4px]"></div>
+            <div className="w-24 h-4 bg-[#192430] animate-pulse rounded-[4px]"></div>
+          </div>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-14 border-b border-white/10 w-full px-6 flex items-center gap-6">
+              <div className="w-full h-5 bg-[#192430] animate-pulse rounded-[6px]"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] overflow-hidden shadow-sm flex flex-col justify-between">

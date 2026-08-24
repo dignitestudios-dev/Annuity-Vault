@@ -50,14 +50,14 @@ export default function AnniversariesCard() {
             className="py-12 border-0 bg-transparent min-h-0"
           />
         ) : (
-          anniversaries.slice(0, 5).map((item) => {
+          anniversaries.slice(0, 5).map((item: any) => {
             const diffDays = calculateDaysDifference(item.anniversaryDate);
             const daysDisplay = diffDays > 0 ? `${diffDays}d` : diffDays === 0 ? "Today" : `${Math.abs(diffDays)}d ago`;
             const countdown = diffDays > 0 ? `in ${diffDays} days` : diffDays === 0 ? "Today" : `${Math.abs(diffDays)} days ago`;
 
             return (
               <div
-                key={item.id}
+                key={item.contractId || item.id || Math.random().toString()}
                 className="px-5 py-3.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
               >
                 <div className="flex items-center gap-3.5">
@@ -66,10 +66,10 @@ export default function AnniversariesCard() {
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-white font-sans leading-tight">
-                      {item.clientName}
+                      {item.client?.firstName ? `${item.client.firstName} ${item.client.lastName}` : item.clientName || "Unknown Client"}
                     </span>
                     <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5">
-                      {item.contractType}
+                      {item.provider || item.contractNumber || item.contractType}
                     </span>
                   </div>
                 </div>

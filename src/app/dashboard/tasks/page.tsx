@@ -1,5 +1,6 @@
 "use client";
 import { Loader } from "@/components/ui/loader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -416,7 +417,7 @@ function TasksContent() {
           <div className="bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-3.5 flex flex-col gap-3 h-[640px]">
             <div className="flex items-center justify-between pb-1 flex-shrink-0">
               <h2 className="text-sm sm:text-base font-semibold text-white">To do</h2>
-              <span className="text-xs text-[#919191] font-normal">{34 + (todoTasks.length - 4)}</span>
+              <span className="text-xs text-[#919191] font-normal">{todoTasks.length}</span>
             </div>
 
             <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
@@ -500,7 +501,7 @@ function TasksContent() {
           <div className="bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-3.5 flex flex-col gap-3 h-[640px]">
             <div className="flex items-center justify-between pb-1 flex-shrink-0">
               <h2 className="text-sm sm:text-base font-semibold text-white">In progress</h2>
-              <span className="text-xs text-[#919191] font-normal">{30 + (inProgressTasks.length - 4)}</span>
+              <span className="text-xs text-[#919191] font-normal">{inProgressTasks.length}</span>
             </div>
 
             <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
@@ -584,7 +585,7 @@ function TasksContent() {
           <div className="bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-3.5 flex flex-col gap-3 h-[640px]">
             <div className="flex items-center justify-between pb-1 flex-shrink-0">
               <h2 className="text-sm sm:text-base font-semibold text-white">Done</h2>
-              <span className="text-xs text-[#919191] font-normal">{36 + (doneTasks.length - 4)}</span>
+              <span className="text-xs text-[#919191] font-normal">{doneTasks.length}</span>
             </div>
 
             <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
@@ -985,7 +986,11 @@ function TasksContent() {
 
 export default function TasksPage() {
   return (
-    <Suspense fallback={<div className="text-white p-6"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>}>
+    <Suspense fallback={
+      <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-10">
+        <Skeleton className="h-[400px] w-full bg-white/5 rounded-xl" />
+      </div>
+    }>
       <TasksContent />
     </Suspense>
   );

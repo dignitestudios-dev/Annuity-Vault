@@ -3,6 +3,7 @@
 import { useState } from "react";
 import SuccessModal from "@/components/shared/success-modal";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useGoogleCalendarStatus, connectGoogleCalendar, useDisconnectGoogleCalendar } from "@/features/settings/api/settings.service";
 import { useAppSelector } from "@/store";
 
@@ -39,7 +40,16 @@ export default function SettingsGoogleCalendarPage() {
   };
 
   if (isLoading) {
-    return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#6887A0]" /></div>;
+    return (
+      <div className="w-full flex flex-col font-sans">
+        <div className="flex items-center justify-between pb-4 border-b border-[#333333] mb-6">
+          <Skeleton className="h-8 w-[200px] bg-white/5 rounded-md" />
+        </div>
+        <div className="flex flex-col gap-3.5 w-full">
+          <Skeleton className="w-full h-[100px] bg-[#141C24] border border-white/5 rounded-xl shadow-sm" />
+        </div>
+      </div>
+    );
   }
 
   const isConfigured = !error || (error as any)?.response?.status !== 503;

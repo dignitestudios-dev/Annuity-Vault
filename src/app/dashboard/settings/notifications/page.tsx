@@ -5,6 +5,7 @@ import SuccessModal from "@/components/shared/success-modal";
 import { cn } from "@/lib/utils";
 import { useNotificationPreferences, useUpdateNotificationPreferences } from "@/features/settings/api/settings.service";
 import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface NotificationSettingItem {
   id: "days30" | "days60" | "days90" | "days180" | "taskDueDates" | "systemAlerts";
@@ -83,7 +84,18 @@ export default function SettingsNotificationsPage() {
   }, [preferences]);
 
   if (isLoading) {
-    return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#6887A0]" /></div>;
+    return (
+      <div className="w-full flex flex-col font-sans">
+        <div className="flex items-center justify-between pb-4 border-b border-[#333333] mb-6">
+          <Skeleton className="h-8 w-[150px] bg-white/5 rounded-md" />
+        </div>
+        <div className="flex flex-col gap-3.5 w-full">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={`skel-${i}`} className="w-full h-[74px] bg-[#141C24] border border-white/5 rounded-xl shadow-sm" />
+          ))}
+        </div>
+      </div>
+    );
   }
   
   if (error && (error as any)?.response?.status === 403) {

@@ -158,7 +158,10 @@ export default function NewContractDialog({
               name="client"
               control={control}
               render={({ field }) => (
-                <div className={errors.client ? "rounded-xl ring-1 ring-[#FF3E46]" : ""}>
+                <div className={`
+                  ${errors.client ? "rounded-xl ring-1 ring-[#FF3E46]" : ""}
+                  ${defaultClient ? "opacity-70 pointer-events-none" : ""}
+                `}>
                   <SearchableSelect
                     options={clientOptions}
                     value={field.value}

@@ -1,5 +1,6 @@
 "use client";
 import { Loader } from "@/components/ui/loader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -173,9 +174,16 @@ export default function ActivityAuditPage() {
 
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center text-xs text-[#919191]"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></TableCell>
-                </TableRow>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`} className="border-b border-white/[0.08] h-[51px]">
+                    <TableCell className="px-6 py-2.5"><Skeleton className="h-4 w-[100px] bg-white/5 rounded-md" /></TableCell>
+                    <TableCell className="px-6 py-2.5"><Skeleton className="h-4 w-[120px] bg-white/5 rounded-md" /></TableCell>
+                    <TableCell className="px-6 py-2.5"><Skeleton className="h-4 w-[80px] bg-white/5 rounded-md" /></TableCell>
+                    <TableCell className="px-6 py-2.5"><Skeleton className="h-4 w-[80px] bg-white/5 rounded-md" /></TableCell>
+                    <TableCell className="px-6 py-2.5"><Skeleton className="h-4 w-[120px] bg-white/5 rounded-md" /></TableCell>
+                    <TableCell className="px-6 py-2.5"><Skeleton className="h-4 w-[200px] bg-white/5 rounded-md" /></TableCell>
+                  </TableRow>
+                ))
               ) : logs.length > 0 ? (
                 logs.map((log) => (
                   <TableRow

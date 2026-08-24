@@ -34,16 +34,16 @@ export default function RecentActivityCard() {
             className="py-12 border-0 bg-transparent min-h-0"
           />
         ) : (
-          activities.slice(0, 5).map((activity) => (
+          activities.slice(0, 5).map((activity: any) => (
             <div
-              key={activity.id}
+              key={activity._id || activity.id}
               className="px-5 py-3.5 flex flex-col gap-1 hover:bg-white/[0.02] transition-colors"
             >
               <span className="text-sm font-medium text-white font-sans capitalize leading-tight">
-                {activity.action} in {activity.entityType}
+                {activity.action} in {activity.module || activity.entityType}
               </span>
               <span className="text-xs font-normal text-[#8C8C8C] font-sans">
-                {new Date(activity.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })} by {activity.userName}
+                {new Date(activity.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })} by {activity.performedBy?.name || activity.userName || "Unknown"}
               </span>
             </div>
           ))

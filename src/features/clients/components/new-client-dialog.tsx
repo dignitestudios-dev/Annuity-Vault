@@ -39,7 +39,7 @@ const newClientSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address").max(100, "Email must be less than 100 characters"),
   phone: z.string().regex(/^\+?[\d\s\-\(\)]+$/, "Invalid phone number format").min(10, "Phone number too short").max(20, "Phone number too long").optional().or(z.literal("")),
   address: z.string().min(1, "Address is required").max(200, "Address must be less than 200 characters"),
-  status: z.enum(["Active", "Archived", "Inactive", "Prospect"], {
+  status: z.enum(["Active", "Inactive", "Prospect"], {
     message: "Please select a valid status",
   }),
   dateOfBirth: z.date().optional(),
@@ -230,9 +230,6 @@ export default function NewClientDialog({
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
                       <SelectItem value="Active" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Active
-                      </SelectItem>
-                      <SelectItem value="Archived" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Archived
                       </SelectItem>
                       <SelectItem value="Inactive" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Inactive

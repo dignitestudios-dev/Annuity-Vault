@@ -42,15 +42,15 @@ export default function PendingTasksCard() {
             className="py-12 border-0 bg-transparent min-h-0"
           />
         ) : (
-          tasks.slice(0, 5).map((task) => (
+          tasks.slice(0, 5).map((task: any) => (
             <div
-              key={task.id}
+              key={task._id || task.id}
               className="w-full bg-[#0C1116] rounded-[8px] p-3 flex items-start gap-3 border border-white/5 hover:bg-[#0C1116]/80 transition-colors"
             >
               <div className="w-2 h-2 rounded-full bg-white mt-1.5 flex-shrink-0" />
               <div className="flex flex-col min-w-0">
                 <span className="text-xs sm:text-sm font-medium text-white font-sans leading-snug truncate">
-                  {task.title} — {task.clientName}
+                  {task.title} — {task.client?.firstName ? `${task.client.firstName} ${task.client.lastName}` : task.client?.name || task.clientName || "Unknown Client"}
                 </span>
                 <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5">
                   Due {new Date(task.dueDate).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}

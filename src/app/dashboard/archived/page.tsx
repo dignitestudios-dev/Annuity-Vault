@@ -1,5 +1,6 @@
 "use client";
 import { Loader } from "@/components/ui/loader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -159,7 +160,22 @@ function ArchivedContent() {
       <div className="flex flex-col gap-3.5 w-full min-h-[380px] justify-between">
         <div className="flex flex-col gap-3.5 w-full">
           {isLoading ? (
-            <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-[#919191] text-sm"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={`skeleton-${i}`} className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 h-[94px]">
+                <div className="flex flex-col gap-1.5 w-full">
+                  <Skeleton className="h-5 w-[150px] bg-white/5 rounded-md" />
+                  <Skeleton className="h-4 w-[250px] bg-white/5 rounded-md" />
+                  <Skeleton className="h-3 w-[100px] bg-white/5 rounded-md" />
+                </div>
+                <div className="flex flex-col sm:items-end gap-2 w-full max-w-[120px]">
+                  <div className="flex gap-2">
+                    <Skeleton className="h-7 w-[80px] bg-white/5 rounded-md" />
+                    <Skeleton className="h-7 w-7 bg-white/5 rounded-md" />
+                  </div>
+                  <Skeleton className="h-5 w-[60px] bg-white/5 rounded-md" />
+                </div>
+              </div>
+            ))
           ) : items.length === 0 ? (
             <EmptyState 
               icon={Archive}
@@ -259,7 +275,7 @@ function ArchivedContent() {
 
 export default function ArchivedPage() {
   return (
-    <Suspense fallback={<div className="text-white p-6"><div className="flex items-center justify-center p-6"><Loader className="text-white" /></div></div>}>
+    <Suspense fallback={<div className="text-white p-6"><Skeleton className="h-[400px] w-full bg-white/5 rounded-xl" /></div>}>
       <ArchivedContent />
     </Suspense>
   );

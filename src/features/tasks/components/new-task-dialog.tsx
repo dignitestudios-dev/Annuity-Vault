@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useCreateTask } from "../api/tasks.service";
 import { useClients } from "@/features/clients/api/clients.service";
+import SearchableSelect from "@/components/ui/searchable-select";
 import toast from "react-hot-toast";
 
 export interface TaskItem {
@@ -106,13 +107,23 @@ export default function NewTaskDialog({
   const { data: clientsData } = useClients({ limit: 100 });
   const clients = clientsData?.data || [];
 
+  const clientsOptions = clients.map((c) => ({
+    label: `${c.firstName} ${c.lastName}`,
+    value: c._id || c.id,
+  }));
+
+  const clientOptionsWithNone = [
+    { label: "None", value: "none" },
+    ...clientsOptions
+  ];
+
   const getClientDisplayName = (clientId?: string) => {
     if (!clientId || clientId === "none") return "None";
     if (selectedClientId && clientId === selectedClientId && selectedClientName) {
       return selectedClientName;
     }
-    const found = clients.find((c) => (c._id || c.id) === clientId);
-    if (found) return `${found.firstName} ${found.lastName}`;
+    const found = clientsOptions.find((c) => c.value === clientId);
+    if (found) return found.label;
     if (selectedClientName) return selectedClientName;
     return "Select client";
   };
@@ -282,39 +293,24 @@ export default function NewTaskDialog({
               <Controller
                 name="client"
                 control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={(val: string | null) => val && field.onChange(val)}>
-                    <SelectTrigger className="h-10 bg-[#141C24] border-0 text-white rounded-[12px] text-xs sm:text-sm justify-between px-3.5 shadow-none focus:ring-1 focus:ring-[#6887A0]">
-                      <span className={field.value && field.value !== "none" ? "text-white truncate" : "text-[#727272]"}>
-                        {getClientDisplayName(field.value)}
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      {selectedClientId ? (
-                        <SelectItem
-                          value={selectedClientId}
-                          className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer"
-                        >
-                          {selectedClientName || getClientDisplayName(selectedClientId)}
-                        </SelectItem>
-                      ) : (
-                        <>
-                          <SelectItem value="none" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer text-gray-400">
-                            None
-                          </SelectItem>
-                          {clients.map((client) => {
-                            const clientId = client._id || client.id;
-                            return (
-                              <SelectItem key={clientId} value={clientId} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                                {client.firstName} {client.lastName}
-                              </SelectItem>
-                            );
-                          })}
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                )}
+                render={({ field }) => {
+                  const options = selectedClientId 
+                    ? [{ label: selectedClientName || getClientDisplayName(selectedClientId), value: selectedClientId }]
+                    : clientOptionsWithNone;
+
+                  return (
+                    <div className={selectedClientId ? "opacity-70 pointer-events-none" : ""}>
+                      <SearchableSelect
+                        options={options}
+                        value={field.value || "none"}
+                        onChange={field.onChange}
+                        placeholder="Select Client..."
+                        searchPlaceholder="Search client..."
+                        className={errors.client ? "ring-1 ring-[#FF3E46]" : ""}
+                      />
+                    </div>
+                  );
+                }}
               />
             </div>
           </div>
