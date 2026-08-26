@@ -2,7 +2,8 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1",
+  // baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1",
+  baseURL: "https://416zwbs6-3003.inc1.devtunnels.ms/api/v1",
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
 });
@@ -24,7 +25,8 @@ axiosInstance.interceptors.response.use(
       if (typeof window !== "undefined") {
         localStorage.removeItem("auth-token");
         localStorage.removeItem("auth-user");
-        document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie =
+          "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         if (!window.location.pathname.startsWith("/auth/login")) {
           window.location.href = "/auth/login";
         }
@@ -40,7 +42,7 @@ axiosInstance.interceptors.response.use(
 
     toast.error(message);
     return Promise.reject(new Error(message));
-  }
+  },
 );
 
 export default axiosInstance;
