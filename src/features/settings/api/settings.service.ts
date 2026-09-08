@@ -35,20 +35,29 @@ export interface SecuritySettings {
   encryptionAtRest: boolean;
 }
 
-export interface GoogleCalendarStatus {
+export interface MicrosoftCalendarStatus {
   connected: boolean;
 }
 
-export interface GoogleCalendarConnect {
+export interface MicrosoftCalendarConnect {
   authUrl: string;
 }
+
+export interface MicrosoftCalendarSyncResult {
+  tasksCount: number;
+  anniversariesCount: number;
+}
+
+export type GoogleCalendarStatus = MicrosoftCalendarStatus;
+export type GoogleCalendarConnect = MicrosoftCalendarConnect;
 
 export const settingsKeys = {
   all: ["settings"] as const,
   profile: () => [...settingsKeys.all, "profile"] as const, // This would normally merge with auth/me
   notificationPreferences: () => [...settingsKeys.all, "notification-preferences"] as const,
   security: () => [...settingsKeys.all, "security"] as const,
-  googleCalendar: () => [...settingsKeys.all, "google-calendar"] as const,
+  microsoftCalendar: () => [...settingsKeys.all, "microsoft-calendar"] as const,
+  googleCalendar: () => [...settingsKeys.all, "microsoft-calendar"] as const,
 };
 
 // =======================
@@ -117,34 +126,53 @@ export const useSecuritySettings = () => {
 };
 
 // =======================
-// Google Calendar
+// Microsoft Calendar
 // =======================
-export const useGoogleCalendarStatus = () => {
+export const useMicrosoftCalendarStatus = () => {
   return useQuery({
-    queryKey: settingsKeys.googleCalendar(),
+    queryKey: settingsKeys.microsoftCalendar(),
     queryFn: async () => {
-      const { data } = await axiosInstance.get<{ data: GoogleCalendarStatus }>("/settings/google-calendar/status");
+      const { data } = await axiosInstance.get<{ data: MicrosoftCalendarStatus }>("/settings/microsoft-calendar/status");
       return data.data;
     },
   });
 };
 
-export const connectGoogleCalendar = async (): Promise<GoogleCalendarConnect> => {
-  const { data } = await axiosInstance.get<{ data: GoogleCalendarConnect }>("/settings/google-calendar/connect");
+export const connectMicrosoftCalendar = async (): Promise<MicrosoftCalendarConnect> => {
+  const { data } = await axiosInstance.get<{ data: MicrosoftCalendarConnect }>("/settings/microsoft-calendar/connect");
   return data.data;
 };
 
-export const useDisconnectGoogleCalendar = () => {
+export const useDisconnectMicrosoftCalendar = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      await axiosInstance.delete("/settings/google-calendar/disconnect");
+      const { data } = await axiosInstance.delete<{ message: string; data: null }>("/settings/microsoft-calendar/disconnect");
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: settingsKeys.googleCalendar() });
+      queryClient.invalidateQueries({ queryKey: settingsKeys.microsoftCalendar() });
     },
   });
 };
+
+export const useSyncMicrosoftCalendar = () => {
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await axiosInstance.post<{
+        success: boolean;
+        message: string;
+        data: MicrosoftCalendarSyncResult;
+      }>("/settings/microsoft-calendar/sync");
+      return data;
+    },
+  });
+};
+
+// Aliases for backwards compatibility
+export const useGoogleCalendarStatus = useMicrosoftCalendarStatus;
+export const connectGoogleCalendar = connectMicrosoftCalendar;
+export const useDisconnectGoogleCalendar = useDisconnectMicrosoftCalendar;
 
 // =======================
 // Data Management

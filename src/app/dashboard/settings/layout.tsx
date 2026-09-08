@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const SETTINGS_NAV_ITEMS = [
   { label: "Profile", href: "/dashboard/settings/profile" },
   { label: "Notification Settings", href: "/dashboard/settings/notifications" },
-  { label: "Google Calendar", href: "/dashboard/settings/google-calendar" },
+  { label: "Microsoft Calendar", href: "/dashboard/settings/microsoft-calendar" },
   { label: "Change Password", href: "/dashboard/settings/change-password" },
   { label: "Security", href: "/dashboard/settings/security" },
   { label: "Data Management", href: "/dashboard/settings/data-management" },
@@ -36,7 +36,10 @@ export default function SettingsLayout({
         <aside className="w-full md:w-[320px] flex-shrink-0 flex flex-col">
           <nav className="flex flex-col">
             {SETTINGS_NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href || (item.href === "/dashboard/settings/profile" && pathname === "/dashboard/settings");
+              const isActive =
+                pathname === item.href ||
+                (item.href === "/dashboard/settings/profile" && pathname === "/dashboard/settings") ||
+                (item.href === "/dashboard/settings/microsoft-calendar" && pathname === "/dashboard/settings/google-calendar");
               return (
                 <Link
                   key={item.href}
