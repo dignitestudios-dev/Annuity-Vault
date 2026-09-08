@@ -62,7 +62,7 @@ export default function ClientsFolderPage() {
           </button>
           <button
             onClick={() => setIsNewClientOpen(true)}
-            disabled={true}
+            // disabled={true}
             className="h-10 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white disabled:opacity-50 font-medium hover:opacity-90 rounded-[12px] text-sm transition-all shadow-sm font-sans flex items-center gap-2 cursor-not-allowed"
           >
             <Plus className="w-4 h-4 text-white" />
