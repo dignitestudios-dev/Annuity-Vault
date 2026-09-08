@@ -1,28 +1,36 @@
 interface LoginCredentials {
-  username: string;
-  email?: string;
-  password: string;
-}
-
-interface RegisterCredentials {
-  username: string;
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
 }
 
 interface User {
-  id: number;
-  username: string;
+  _id: string;
+  name: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  gender?: string;
-  image?: string;
+  phone?: string;
+  profilePicture?: string;
+  status: "Active" | "Inactive";
+  role: "Admin" | "Advisor";
+  jobTitle?: string;
+  firm?: string;
 }
 
-interface LoginResponse extends User {
-  accessToken: string;
-  refreshToken: string;
+interface LoginResponse {
+  token: string;
+  account: User;
+}
+
+interface ForgotPasswordCredentials {
+  email: string;
+}
+
+interface VerifyOtpCredentials {
+  email: string;
+  otp: string;
+}
+
+interface ResetPasswordCredentials {
+  resetToken: string;
+  password: string;
+  confirmPassword: string;
 }

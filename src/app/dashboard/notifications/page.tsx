@@ -1,82 +1,28 @@
 "use client";
+import { Loader } from "@/components/ui/loader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Calendar, CheckSquare, Info, Check } from "lucide-react";
+import { Calendar, CheckSquare, Info, Check, Bell } from "lucide-react";
 import SuccessModal from "@/components/shared/success-modal";
+import { EmptyState } from "@/components/shared/empty-state";
 import { cn } from "@/lib/utils";
 
-interface NotificationItem {
-  id: string;
-  category: "anniversaries" | "tasks" | "system";
-  title: string;
-  message: string;
-  client?: string;
-  date: string;
-  unread: boolean;
-}
+import { 
+  useNotifications, 
+  useMarkAllNotificationsRead, 
+  useMarkNotificationRead, 
+  NotificationItem 
+} from "@/features/notifications/api/notifications.service";
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "notif-1",
-    category: "anniversaries",
-    title: "Contract Anniversary — 14 days",
-    message: "Adam Smith's Pacific Life contract AV-2022-001847 anniversary is on January 15, 2025.",
-    client: "Adam Smith",
-    date: "2025-01-01",
-    unread: true,
-  },
-  {
-    id: "notif-2",
-    category: "anniversaries",
-    title: "Contract Anniversary — 20 days",
-    message: "Margaret Holloway's North American contract AV-2021-000594 anniversary is on May 20, 2025.",
-    client: "Margaret Holloway",
-    date: "2025-04-30",
-    unread: true,
-  },
-  {
-    id: "notif-3",
-    category: "anniversaries",
-    title: "Contract Anniversary — 81 days",
-    message: "James Ellington's Nationwide Variable Annuity AV-2019-000044 anniversary is on March 22, 2025.",
-    client: "James Ellington",
-    date: "2025-01-01",
-    unread: false,
-  },
-  {
-    id: "notif-4",
-    category: "tasks",
-    title: "Task Due Soon",
-    message: "Follow Up with Sandra Collins is due on February 1, 2025.",
-    client: "Sandra Collins",
-    date: "2025-01-25",
-    unread: false,
-  },
-  {
-    id: "notif-5",
-    category: "anniversaries",
-    title: "Contract Anniversary — 221 days",
-    message: "Patricia Nguyen's Allianz contract AV-2020-000112 anniversary is on November 8, 2025.",
-    client: "Patricia Nguyen",
-    date: "2025-01-01",
-    unread: false,
-  },
-  {
-    id: "notif-6",
-    category: "system",
-    title: "Annual Review Reminder",
-    message: "3 clients are due for their annual policy review this month.",
-    date: "2025-01-01",
-    unread: false,
-  },
-];
+type NotificationTab = "all" | "Anniversary" | "Task" | "System";
 
-const TABS = [
+const TABS: { id: NotificationTab; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "anniversaries", label: "Anniversaries" },
-  { id: "tasks", label: "Tasks" },
-  { id: "system", label: "System" },
+  { id: "Anniversary", label: "Anniversaries" },
+  { id: "Task", label: "Tasks" },
+  { id: "System", label: "System" },
 ];
 
 function NotificationsContent() {
@@ -84,52 +30,83 @@ function NotificationsContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  const tabParam = searchParams.get("tab") as "all" | "anniversaries" | "tasks" | "system" | null;
-  const [activeTab, setActiveTab] = useState<"all" | "anniversaries" | "tasks" | "system">(
-    tabParam && ["all", "anniversaries", "tasks", "system"].includes(tabParam) ? tabParam : "all"
+  const tabParam = searchParams.get("tab") as NotificationTab | null;
+  const [activeTab, setActiveTab] = useState<NotificationTab>(
+    tabParam && ["all", "Anniversary", "Task", "System"].includes(tabParam) ? tabParam : "all"
   );
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [feedbackModal, setFeedbackModal] = useState<{ isOpen: boolean; title: string; desc: string }>({
     isOpen: false,
     title: "",
     desc: "",
   });
 
-  // Sync state when query parameter updates
   useEffect(() => {
-    if (tabParam && ["all", "anniversaries", "tasks", "system"].includes(tabParam)) {
+    if (tabParam && ["all", "Anniversary", "Task", "System"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
 
-  const handleTabChange = (newTab: "all" | "anniversaries" | "tasks" | "system") => {
+  const handleTabChange = (newTab: NotificationTab) => {
     setActiveTab(newTab);
     const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", newTab);
+    if (newTab === "all") {
+      params.delete("tab");
+    } else {
+      params.set("tab", newTab);
+    }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-    setFeedbackModal({
-      isOpen: true,
-      title: "Notifications Updated",
-      desc: "All notifications have been marked as read.",
-    });
-  };
-
-  const filteredNotifications = notifications.filter((n) => {
-    if (activeTab === "all") return true;
-    return n.category === activeTab;
+  const { data, isLoading } = useNotifications({
+    type: activeTab === "all" ? undefined : activeTab,
+    page: 1, // Add pagination state if needed in the future
+    limit: 50,
   });
 
-  const getCategoryIcon = (category: "anniversaries" | "tasks" | "system") => {
+  const markAllAsReadMutation = useMarkAllNotificationsRead();
+  const markAsReadMutation = useMarkNotificationRead();
+
+  const notifications = data?.data?.notifications || [];
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllAsReadMutation.mutateAsync();
+      setFeedbackModal({
+        isOpen: true,
+        title: "Notifications Updated",
+        desc: "All notifications have been marked as read.",
+      });
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+    }
+  };
+
+  const handleNotificationClick = async (notification: NotificationItem) => {
+    if (!notification.isRead) {
+      try {
+        await markAsReadMutation.mutateAsync(notification.id);
+      } catch (error) {
+        console.error("Failed to mark as read:", error);
+      }
+    }
+    
+    // Optionally navigate based on relatedEntity
+    if (notification.relatedEntity) {
+      if (notification.relatedEntity.type === "Contract") {
+        router.push(`/dashboard/contracts/${notification.relatedEntity.id}`);
+      } else if (notification.relatedEntity.type === "Task") {
+        router.push(`/dashboard/tasks`);
+      }
+    }
+  };
+
+  const getCategoryIcon = (category: "Anniversary" | "Task" | "System") => {
     switch (category) {
-      case "anniversaries":
+      case "Anniversary":
         return <Calendar className="w-4 h-4 text-white" />;
-      case "tasks":
+      case "Task":
         return <CheckSquare className="w-4 h-4 text-white" />;
-      case "system":
+      case "System":
         return <Info className="w-4 h-4 text-white" />;
     }
   };
@@ -158,7 +135,7 @@ function NotificationsContent() {
           return (
             <button
               key={tab.id}
-              onClick={() => handleTabChange(tab.id as any)}
+              onClick={() => handleTabChange(tab.id)}
               className={cn(
                 "h-8 px-4 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap",
                 isActive
@@ -174,22 +151,40 @@ function NotificationsContent() {
 
       {/* 3. Notifications List */}
       <div className="flex flex-col gap-3.5 w-full">
-        {filteredNotifications.length === 0 ? (
-          <div className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-12 text-center text-xs sm:text-sm text-[#919191]">
-            No notifications in this category.
-          </div>
+        {isLoading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={`skeleton-${i}`} className="w-full bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-4 sm:p-5 flex items-start gap-4 h-[106px]">
+              <Skeleton className="w-8 h-8 rounded-lg bg-white/5 flex-shrink-0" />
+              <div className="flex flex-col flex-1 gap-2 w-full mt-0.5">
+                <Skeleton className="h-5 w-[120px] bg-white/5 rounded-md" />
+                <Skeleton className="h-4 w-full bg-white/5 rounded-md" />
+                <div className="flex gap-3 mt-1.5">
+                  <Skeleton className="h-4 w-[80px] bg-white/5 rounded-md" />
+                  <Skeleton className="h-4 w-[60px] bg-white/5 rounded-md" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : notifications.length === 0 ? (
+          <EmptyState 
+            icon={Bell}
+            title="No notifications"
+            description="You don't have any notifications in this category yet."
+            className="py-12"
+          />
         ) : (
-          filteredNotifications.map((item) => (
+          notifications.map((item) => (
             <div
               key={item.id}
+              onClick={() => handleNotificationClick(item)}
               className={cn(
-                "w-full bg-[#141C24] border rounded-xl p-4 sm:p-5 flex items-start gap-4 shadow-sm relative transition-all",
-                item.unread ? "border-[#FF0000]" : "border-[#0F1F3D]/20 hover:border-white/10"
+                "w-full bg-[#141C24] border rounded-xl p-4 sm:p-5 flex items-start gap-4 shadow-sm relative transition-all cursor-pointer",
+                !item.isRead ? "border-[#FF0000]" : "border-[#0F1F3D]/20 hover:border-white/10"
               )}
             >
               {/* Left Category Icon Container */}
               <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0 text-white mt-0.5">
-                {getCategoryIcon(item.category)}
+                {getCategoryIcon(item.type)}
               </div>
 
               {/* Main Content Details */}
@@ -198,7 +193,7 @@ function NotificationsContent() {
                   <h3 className="text-white font-medium text-sm sm:text-base tracking-tight">
                     {item.title}
                   </h3>
-                  {item.unread && (
+                  {!item.isRead && (
                     <div className="w-2 h-2 rounded-full bg-[#FF0000] flex-shrink-0" />
                   )}
                 </div>
@@ -208,10 +203,12 @@ function NotificationsContent() {
                 </p>
 
                 <div className="flex items-center gap-3 mt-1.5 text-xs">
-                  {item.client && (
-                    <span className="text-white font-medium">{item.client}</span>
+                  {item.relatedName && (
+                    <span className="text-white font-medium">{item.relatedName}</span>
                   )}
-                  <span className="text-[#919191] font-mono">{item.date}</span>
+                  <span className="text-[#919191] font-mono">
+                    {new Date(item.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </span>
                 </div>
               </div>
             </div>
@@ -232,7 +229,7 @@ function NotificationsContent() {
 
 export default function NotificationsPage() {
   return (
-    <Suspense fallback={<div className="text-white p-6">Loading notifications...</div>}>
+    <Suspense fallback={<div className="text-white p-6"><Skeleton className="h-[400px] w-full bg-white/5 rounded-xl" /></div>}>
       <NotificationsContent />
     </Suspense>
   );

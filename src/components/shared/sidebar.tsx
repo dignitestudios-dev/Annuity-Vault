@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import LogoutModal from "@/components/shared/logout-modal";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { logout as logoutAction } from "@/store/slices/auth.slice";
+import { useLogoutMutation } from "@/features/auth/api/auth.service";
 
 const NAV_ITEMS = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -34,13 +37,28 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+  const { mutate: logoutApi } = useLogoutMutation();
   const router = useRouter();
 
   const handleConfirmLogout = () => {
-    localStorage.removeItem("auth-token");
-    localStorage.removeItem("auth-user");
-    document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    router.push("/auth/login");
+    logoutApi(undefined, {
+      onSettled: () => {
+        localStorage.removeItem("auth-token");
+        localStorage.removeItem("auth-user");
+        document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        dispatch(logoutAction());
+        router.push("/auth/login");
+      }
+    });
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return "U";
+    const parts = name.split(" ");
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name[0].toUpperCase();
   };
 
   return (
@@ -68,14 +86,14 @@ export default function Sidebar() {
             {/* User Card */}
             <div className="w-full bg-[#141C24] border border-[#1F2E3C] rounded-[18px] p-3 flex items-center gap-3 shadow-md relative overflow-hidden flex-shrink-0">
               <div className="w-12 h-12 rounded-full bg-[#394A58] flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 border border-white/10 overflow-hidden">
-                <span className="text-sm font-semibold">AS</span>
+                <span className="text-sm font-semibold">{getInitials(user?.name || "")}</span>
               </div>
               <div className="flex flex-col min-w-0">
                 <h4 className="text-sm font-semibold text-white truncate font-sans">
-                  Adam Smith
+                  {user?.name || "User"}
                 </h4>
                 <span className="text-xs font-normal text-[#818181] truncate font-sans">
-                  Senior Advisor
+                  {typeof user?.role === 'object' ? (user?.role as any)?.name || "Advisor" : user?.role || "Advisor"}
                 </span>
               </div>
             </div>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Pencil,
@@ -10,102 +10,183 @@ import {
   Download,
   ExternalLink,
   Plus,
+  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Loader } from "@/components/ui/loader";
 import EditContractDialog from "@/features/contracts/components/edit-contract-dialog";
 import SuccessModal from "@/components/shared/success-modal";
 import DeleteModal from "@/components/shared/delete-modal";
 import ArchiveModal from "@/components/shared/archive-modal";
+import toast from "react-hot-toast";
 
-const CONTRACT_DETAILS = {
-  id: "IX-239032",
-  client: "Jacob Thompson",
-  provider: "Equitable",
-  type: "Immediate",
-  status: "Surrendered",
-  issueDate: "2020-08-04",
-  anniversary: "2027-03-06 (in 256 days)",
-  premium: "$305,000",
-  currentValue: "$127,416",
-  beneficiary: "Stephanie Lewis (Sibling) — 100%",
-  notes: "Client requested allocation rebalance after market",
+import { Skeleton } from "@/components/ui/skeleton";
+import { format, differenceInDays } from "date-fns";
+import { cn } from "@/lib/utils";
+import {
+  useContract,
+  useDeleteContract,
+  useAddContractNote,
+  useDeleteContractNote,
+  useAddContractDocument,
+  useDeleteContractDocument,
+} from "@/features/contracts/api/contracts.service";
+
+const getStatusStyle = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case "active":
+      return "bg-[#42CD7F] text-white border-0";
+    case "surrendered":
+      return "bg-[#FF3E46] text-white border-0";
+    case "matured":
+      return "bg-[#39BDF6] text-white border-0";
+    case "pending":
+      return "bg-[#FFE600] text-black border-0 font-semibold";
+    default:
+      return "bg-gray-600 text-white border-0";
+  }
 };
 
-const INITIAL_DOCUMENTS = [
-  {
-    id: "d1",
-    name: "Pacific Life Policy Contract.pdf",
-    meta: "2.4 MB · Uploaded 2022-01-18 by A. Smith",
-  },
-  {
-    id: "d2",
-    name: "Suitability Form — Smith.pdf",
-    meta: "890 KB · Uploaded 2022-01-18 by A. Smith",
-  },
-  {
-    id: "d3",
-    name: "Beneficiary Designation.pdf",
-    meta: "450 KB · Uploaded 2022-02-03 by A. Smith",
-  },
-  {
-    id: "d4",
-    name: "Athene Application 2023.pdf",
-    meta: "1.8 MB · Uploaded 2023-06-22 by A. Smith",
-  },
-];
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value || 0);
+};
 
-const INITIAL_NOTES = [
-  {
-    id: "n1",
-    text: "Anniversary review completed; no changes requested",
-    date: "2025-09-02",
-  },
-];
+const formatAnniversary = (dateString?: string) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  // Create a date for this year's anniversary
+  const thisYearAnniversary = new Date(date);
+  thisYearAnniversary.setFullYear(now.getFullYear());
+  
+  // If anniversary already passed this year, look at next year's
+  if (thisYearAnniversary < now) {
+    thisYearAnniversary.setFullYear(now.getFullYear() + 1);
+  }
+  
+  const daysDiff = differenceInDays(thisYearAnniversary, now);
+  const formattedDate = format(thisYearAnniversary, "yyyy-MM-dd");
+  
+  return `${formattedDate} (${daysDiff > 0 ? 'in ' : ''}${Math.abs(daysDiff)} days)`;
+};
 
 export default function ContractDetailsPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
-
-  const [documents, setDocuments] = useState(INITIAL_DOCUMENTS);
-  const [notes, setNotes] = useState(INITIAL_NOTES);
+  const [deletingItem, setDeletingItem] = useState<{ id: string; type: "note" | "document" | "contract" } | null>(null);
   const [newNote, setNewNote] = useState("");
 
-  const [deletingItem, setDeletingItem] = useState<{
-    type: "contract" | "document" | "note";
-    id?: string;
-  } | null>(null);
+  const params = useParams();
+  const contractId = params.id as string;
+  const { data: contract, isLoading } = useContract(contractId);
+  const deleteContract = useDeleteContract();
+  const addNote = useAddContractNote(contractId);
+  const deleteNote = useDeleteContractNote(contractId);
+  const addDocument = useAddContractDocument(contractId);
+  const deleteDocument = useDeleteContractDocument(contractId);
 
-  const handleConfirmDelete = () => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("File size exceeds 20MB limit.");
+      e.target.value = "";
+      return;
+    }
+
+    // Validate type (Images, PDF, Word, Excel)
+    const validTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Invalid file type. Only Images, PDF, Word, and Excel are allowed.");
+      e.target.value = '';
+      return;
+    }
+
+    addDocument.mutate(file, {
+      onSuccess: () => {
+        toast.success("Document uploaded successfully!");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Failed to upload document");
+      }
+    });
+  };
+
+  const handleConfirmDelete = async () => {
     if (deletingItem?.type === "document" && deletingItem.id) {
-      setDocuments(documents.filter((d) => d.id !== deletingItem.id));
+      try {
+        await deleteDocument.mutateAsync(deletingItem.id);
+        toast.success("Document deleted successfully!");
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to delete document");
+      }
     } else if (deletingItem?.type === "note" && deletingItem.id) {
-      setNotes(notes.filter((n) => n.id !== deletingItem.id));
+      try {
+        await deleteNote.mutateAsync(deletingItem.id);
+        toast.success("Note deleted successfully!");
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to delete note");
+      }
+    } else if (deletingItem?.type === "contract") {
+      try {
+        await deleteContract.mutateAsync(contractId);
+        setIsArchiveOpen(true);
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to delete contract");
+      }
     }
     setDeletingItem(null);
-    setIsArchiveOpen(true);
   };
 
   const handleArchiveClose = () => {
     setIsArchiveOpen(false);
-    router.push("/dashboard/archived");
+    router.push("/dashboard/contracts");
   };
 
-  const handleAddNote = (e: React.FormEvent) => {
+  const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim()) return;
-    setNotes([
-      {
-        id: Date.now().toString(),
-        text: newNote.trim(),
-        date: new Date().toISOString().split("T")[0],
-      },
-      ...notes,
-    ]);
-    setNewNote("");
+    try {
+      await addNote.mutateAsync(newNote.trim());
+      setNewNote("");
+      toast.success("Note added successfully!");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to add note");
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans p-6">
+        <Skeleton className="w-full h-[300px] bg-white/5 rounded-[12px]" />
+      </div>
+    );
+  }
+
+  if (!contract) return null;
 
   return (
     <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans">
@@ -123,14 +204,14 @@ export default function ContractDetailsPage() {
           </button>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl lg:text-[28px] font-semibold text-white tracking-tight leading-tight">
-              {CONTRACT_DETAILS.id}
+              {contract.contractNumber}
             </h1>
-            <Badge className="bg-[#FF3E46] text-white border-0 px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize">
-              {CONTRACT_DETAILS.status}
+            <Badge className={cn("px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize", getStatusStyle(contract.status))}>
+              {contract.status}
             </Badge>
           </div>
           <span className="text-sm font-normal text-[#919191]">
-            {CONTRACT_DETAILS.provider} • {CONTRACT_DETAILS.type}
+            {contract.provider} • {contract.contractType}
           </span>
         </div>
 
@@ -145,9 +226,9 @@ export default function ContractDetailsPage() {
           </button>
           <button
             onClick={() =>
-              setDeletingItem({ type: "contract" })
+              setDeletingItem({ id: contract.id, type: "contract" })
             }
-            className="h-9 px-4 bg-[#FF0000] text-white hover:bg-red-600 rounded-[12px] text-xs sm:text-sm font-medium transition-all flex items-center gap-2 shadow-sm"
+            className="h-9 px-4 bg-[#FF0000] text-white hover:bg-red-600 rounded-[12px] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
           >
             <Trash2 className="w-3.5 h-3.5 text-white" />
             <span>Delete</span>
@@ -170,7 +251,7 @@ export default function ContractDetailsPage() {
                 Client
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.client}
+                {contract.client ? `${contract.client.firstName} ${contract.client.lastName}` : "N/A"}
               </span>
             </div>
 
@@ -179,7 +260,7 @@ export default function ContractDetailsPage() {
                 Provider
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.provider}
+                {contract.provider}
               </span>
             </div>
 
@@ -188,7 +269,7 @@ export default function ContractDetailsPage() {
                 Type
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.type}
+                {contract.contractType}
               </span>
             </div>
 
@@ -197,18 +278,18 @@ export default function ContractDetailsPage() {
                 Status
               </span>
               <div>
-                <Badge className="bg-[#FF3E46] text-white border-0 px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize">
-                  {CONTRACT_DETAILS.status}
+                <Badge className={cn("px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize", getStatusStyle(contract.status))}>
+                  {contract.status}
                 </Badge>
               </div>
             </div>
 
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
-                Issue date
+                Start date
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.issueDate}
+                {contract.startDate ? format(new Date(contract.startDate), "yyyy-MM-dd") : "N/A"}
               </span>
             </div>
 
@@ -217,7 +298,7 @@ export default function ContractDetailsPage() {
                 Anniversary
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.anniversary}
+                {formatAnniversary(contract.anniversaryDate)}
               </span>
             </div>
 
@@ -226,7 +307,7 @@ export default function ContractDetailsPage() {
                 Premium
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.premium}
+                {formatCurrency(contract.premiumAmount)}
               </span>
             </div>
 
@@ -235,7 +316,7 @@ export default function ContractDetailsPage() {
                 Current value
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.currentValue}
+                {formatCurrency(contract.contractValue)}
               </span>
             </div>
 
@@ -244,7 +325,7 @@ export default function ContractDetailsPage() {
                 Beneficiary
               </span>
               <span className="text-white font-normal">
-                {CONTRACT_DETAILS.beneficiary}
+                {contract.beneficiaryInformation || "N/A"}
               </span>
             </div>
 
@@ -252,8 +333,8 @@ export default function ContractDetailsPage() {
               <span className="text-xs uppercase tracking-wider text-[#919191]">
                 Notes
               </span>
-              <span className="text-white font-normal">
-                {CONTRACT_DETAILS.notes}
+              <span className="text-white font-normal whitespace-pre-wrap">
+                {contract.notes || "None"}
               </span>
             </div>
           </div>
@@ -265,44 +346,97 @@ export default function ContractDetailsPage() {
             <h3 className="text-base font-semibold text-white tracking-tight">
               Documents
             </h3>
-            <button className="h-7 px-3 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-medium hover:opacity-90 rounded-[12px] text-xs transition-all flex items-center gap-1 shadow-sm">
-              <Plus className="w-3 h-3 text-white" />
-              <span>Upload Document</span>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={addDocument.isPending}
+              className="h-7 px-3 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-medium hover:opacity-90 rounded-[12px] text-xs transition-all flex items-center gap-1 shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              {addDocument.isPending ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader className="w-3 h-3 text-white" />
+                  <span>Uploading...</span>
+                </div>
+              ) : (
+                <>
+                  <Plus className="w-3 h-3 text-white" />
+                  <span>Upload Document</span>
+                </>
+              )}
             </button>
           </div>
 
           <div className="flex flex-col divide-y divide-white/10">
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="p-3.5 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-8 h-8 bg-white/10 rounded-[8px] flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">
-                    PDF
+            {(contract.documents || []).length > 0 ? (
+              (contract.documents || []).map((doc) => (
+                <div
+                  key={doc._id}
+                  className="p-3.5 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 bg-white/10 rounded-[8px] flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">
+                      {doc.fileType?.split("/").pop()?.toUpperCase().substring(0, 4) || "DOC"}
+                    </div>
+                    <div className="flex flex-col gap-0.5 truncate">
+                      <a
+                        href={doc.location}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-medium text-white truncate hover:underline"
+                      >
+                        {doc.fileName}
+                      </a>
+                      <span className="text-[11px] text-[#919191] truncate">
+                        {(doc.fileSize ? (doc.fileSize / 1024 / 1024).toFixed(2) : "0")} MB · Uploaded by {doc.uploadedBy || 'User'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-0.5 truncate">
-                    <span className="text-xs font-medium text-white truncate">
-                      {doc.name}
-                    </span>
-                    <span className="text-[11px] text-[#919191] truncate">
-                      {doc.meta}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors">
-                    <Trash2
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {doc.location && (
+                      <>
+                        <a
+                          href={doc.location}
+                          download
+                          className="w-6 h-6 bg-[#42CD7F] rounded-[4px] flex items-center justify-center text-white hover:bg-emerald-600 transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5 text-white" />
+                        </a>
+                        <a
+                          href={doc.location}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-6 h-6 bg-[#829CB0] rounded-[4px] flex items-center justify-center text-white hover:bg-slate-600 transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-white" />
+                        </a>
+                      </>
+                    )}
+                    <button
                       onClick={() =>
-                        setDeletingItem({ type: "document", id: doc.id })
+                        setDeletingItem({ type: "document", id: doc._id })
                       }
-                      className="w-3.5 h-3.5 text-white"
-                    />
-                  </button>
+                      className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-white" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <EmptyState
+                icon={FileText}
+                title="No Documents"
+                description="No documents found for this contract."
+                className="py-12"
+              />
+            )}
           </div>
         </div>
       </div>
@@ -323,45 +457,55 @@ export default function ContractDetailsPage() {
               value={newNote}
               onChange={(e) => setNewNote(e.target.value)}
               placeholder="Add a note to this contract…"
-              className="flex-1 bg-[#0C1116] border-0 text-white placeholder-[#919191] text-xs sm:text-sm rounded-[12px] px-4 h-10 outline-none focus:ring-1 focus:ring-[#6887A0]"
+              disabled={addNote.isPending}
+              className="flex-1 bg-[#0C1116] border-0 text-white placeholder-[#919191] text-xs sm:text-sm rounded-[12px] px-4 h-10 outline-none focus:ring-1 focus:ring-[#6887A0] disabled:opacity-60"
             />
             <button
               type="submit"
-              className="h-9 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-xs sm:text-sm font-medium transition-all shadow-sm"
+              disabled={addNote.isPending || !newNote.trim()}
+              className="h-9 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-xs sm:text-sm font-medium transition-all shadow-sm flex items-center justify-center min-w-[70px] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              Add
+              {addNote.isPending ? <Loader className="w-4 h-4 text-white" /> : "Add"}
             </button>
           </form>
 
           {/* Notes List */}
           <div className="w-full flex flex-col">
-            {notes.map((note) => (
+            {(contract.contractNotes || []).length > 0 ? (contract.contractNotes || []).map((note) => (
               <div
-                key={note.id}
+                key={note._id}
                 className="w-full bg-[#0C1116] rounded-[8px] p-3.5 flex items-center justify-between gap-4 border border-white/5"
               >
                 <div className="flex flex-col gap-1">
                   <p className="text-xs sm:text-sm text-white font-normal">
-                    {note.text}
+                    {note.body}
                   </p>
-                  <span className="text-[11px] text-[#919191]">{note.date}</span>
+                  <span className="text-[11px] text-[#919191]">{format(new Date(note.createdAt), "MMM d, yyyy h:mm a")}</span>
                 </div>
                 <button
                   onClick={() =>
-                    setDeletingItem({ type: "note", id: note.id })
+                    setDeletingItem({ type: "note", id: note._id })
                   }
                   className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors flex-shrink-0"
                 >
                   <Trash2 className="w-3.5 h-3.5 text-white" />
                 </button>
               </div>
-            ))}
+            )) : (
+              <EmptyState
+                icon={FileText}
+                title="No Notes"
+                description="No notes have been added to this contract yet."
+                className="py-12"
+              />
+            )}
           </div>
         </div>
       </div>
 
       {/* Edit Contract Dialog */}
       <EditContractDialog
+        contract={contract}
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         onSubmitSuccess={() => setIsSuccessOpen(true)}

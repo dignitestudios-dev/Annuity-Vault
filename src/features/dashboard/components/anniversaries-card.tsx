@@ -4,38 +4,27 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
-const ANNIVERSARIES = [
-  {
-    days: "10d",
-    name: "Margaret Williams",
-    carrier: "Symetra • IM-897769",
-    date: "2026-06-23",
-    countdown: "in 10 days",
-  },
-  {
-    days: "40d",
-    name: "Thomas Lopez",
-    carrier: "Symetra • IX-187337",
-    date: "2026-07-20",
-    countdown: "in 40 days",
-  },
-  {
-    days: "90d",
-    name: "Edward Wright",
-    carrier: "Brighthouse • VR-104342",
-    date: "2026-08-30",
-    countdown: "in 90 days",
-  },
-  {
-    days: "142d",
-    name: "Christopher Mitchell",
-    carrier: "Lincoln Financial • IM-746162",
-    date: "2026-10-30",
-    countdown: "in 142 days",
-  },
-];
+import { useDashboardSummary } from "@/features/dashboard/api/dashboard.service";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Calendar } from "lucide-react";
+function calculateDaysDifference(dateString: string) {
+  const target = new Date(dateString);
+  const now = new Date();
+  const diffTime = target.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
 
 export default function AnniversariesCard() {
+  const { data, isLoading } = useDashboardSummary();
+
+  if (isLoading) {
+    return <Skeleton className="h-[300px] w-full bg-[#141C24] rounded-[12px]" />;
+  }
+
+  const anniversaries = data?.upcomingAnniversaries || [];
+
   return (
     <Card className="bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] flex flex-col overflow-hidden shadow-sm h-full">
       {/* Card Header */}
@@ -54,34 +43,48 @@ export default function AnniversariesCard() {
 
       {/* Card List Items */}
       <div className="flex flex-col divide-y divide-white/10">
-        {ANNIVERSARIES.map((item) => (
-          <div
-            key={item.name}
-            className="px-5 py-3.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-[38px] h-[38px] rounded-[8px] bg-white/10 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 font-sans">
-                {item.days}
+        {anniversaries.length === 0 ? (
+          <EmptyState 
+            icon={Calendar}
+            title="No upcoming anniversaries"
+            className="py-12 border-0 bg-transparent min-h-0"
+          />
+        ) : (
+          anniversaries.slice(0, 5).map((item: any) => {
+            const diffDays = calculateDaysDifference(item.anniversaryDate);
+            const daysDisplay = diffDays > 0 ? `${diffDays}d` : diffDays === 0 ? "Today" : `${Math.abs(diffDays)}d ago`;
+            const countdown = diffDays > 0 ? `in ${diffDays} days` : diffDays === 0 ? "Today" : `${Math.abs(diffDays)} days ago`;
+
+            return (
+              <div
+                key={item.contractId || item.id || Math.random().toString()}
+                className="px-5 py-3.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="w-[38px] h-[38px] rounded-[8px] bg-white/10 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 font-sans">
+                    {daysDisplay}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-white font-sans leading-tight">
+                      {item.client?.firstName ? `${item.client.firstName} ${item.client.lastName}` : item.clientName || "Unknown Client"}
+                    </span>
+                    <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5">
+                      {item.provider || item.contractNumber || item.contractType}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-white font-sans leading-tight">
+                    {new Date(item.anniversaryDate).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                  </span>
+                  <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5">
+                    {countdown}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-white font-sans leading-tight">
-                  {item.name}
-                </span>
-                <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5">
-                  {item.carrier}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col items-end">
-              <span className="text-sm font-medium text-white font-sans leading-tight">
-                {item.date}
-              </span>
-              <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5">
-                {item.countdown}
-              </span>
-            </div>
-          </div>
-        ))}
+            );
+          })
+        )}
       </div>
     </Card>
   );

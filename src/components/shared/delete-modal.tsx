@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
 
 interface DeleteModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ interface DeleteModalProps {
   description?: string;
   confirmText?: string;
   cancelText?: string;
+  isPending?: boolean;
 }
 
 export default function DeleteModal({
@@ -29,14 +31,18 @@ export default function DeleteModal({
   description = "Are you sure you want to delete this client?",
   confirmText = "Yes, Delete Now",
   cancelText = "No, keep it",
+  isPending = false,
 }: DeleteModalProps) {
   const handleConfirm = () => {
     onConfirm();
-    onClose();
+    // Don't close immediately if pending is supported, let the parent close it.
+    if (isPending === undefined) {
+      onClose();
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isPending && onClose()}>
       <DialogContent showCloseButton={false} className="sm:max-w-[340px] bg-[#0C1116] border-white/10 shadow-2xl p-6 rounded-[12px] flex flex-col items-center justify-center text-center gap-4">
         {/* Red Danger Warning Triangle Icon */}
         <div className="w-[42px] h-[42px] flex items-center justify-center flex-shrink-0">
@@ -59,6 +65,7 @@ export default function DeleteModal({
             type="button"
             variant="secondary"
             onClick={onClose}
+            disabled={isPending}
             className="flex-1 h-[44px] bg-[#2B343D] text-white hover:bg-[#394551] rounded-[12px] text-xs font-semibold border-0"
           >
             {cancelText}
@@ -66,8 +73,10 @@ export default function DeleteModal({
           <Button
             type="button"
             onClick={handleConfirm}
+            disabled={isPending}
             className="flex-1 h-[44px] bg-[#FF0000] text-white hover:bg-red-600 rounded-[12px] text-xs font-semibold border-0 shadow-sm"
           >
+            {isPending ? <Loader className="w-4 h-4 mr-2" /> : null}
             {confirmText}
           </Button>
         </DialogFooter>

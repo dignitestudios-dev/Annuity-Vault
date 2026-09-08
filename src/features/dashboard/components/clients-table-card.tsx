@@ -23,60 +23,27 @@ const STATUS_STYLES: Record<StatusType, string> = {
   Prospect: "bg-[#FF6A00] hover:bg-[#FF6A00]/80 text-white border-0",
 };
 
-const CLIENTS = [
-  {
-    initials: "JT",
-    name: "Jacob Thompson",
-    dob: "DOB 1947-06-01",
-    email: "jacob.thompson0@example.com",
-    phone: "(322) 573-3458",
-    contracts: 4,
-    status: "Archived" as StatusType,
-    created: "2024-10-07",
-  },
-  {
-    initials: "BS",
-    name: "Barbara Smith",
-    dob: "DOB 1947-06-01",
-    email: "barbara.smith5@example.com",
-    phone: "(628) 908-1698",
-    contracts: 7,
-    status: "Active" as StatusType,
-    created: "2025-03-25",
-  },
-  {
-    initials: "AB",
-    name: "Anthony Brown",
-    dob: "DOB 1947-06-01",
-    email: "anthony.brown2@example.com",
-    phone: "(571) 124-2556",
-    contracts: 2,
-    status: "Inactive" as StatusType,
-    created: "2024-06-26",
-  },
-  {
-    initials: "PW",
-    name: "Patricia Williams",
-    dob: "DOB 1947-06-01",
-    email: "patricia.williams3@example.com",
-    phone: "(371) 680-2885",
-    contracts: 6,
-    status: "Prospect" as StatusType,
-    created: "2024-12-11",
-  },
-  {
-    initials: "MA",
-    name: "Mark Anderson",
-    dob: "DOB 1947-06-01",
-    email: "mark.anderson4@example.com",
-    phone: "(676) 723-9349",
-    contracts: 7,
-    status: "Active" as StatusType,
-    created: "2024-10-16",
-  },
-];
+import { useDashboardSummary } from "@/features/dashboard/api/dashboard.service";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Users } from "lucide-react";
+
+function getInitials(name: string) {
+  if (!name) return "U";
+  const parts = name.trim().split(" ");
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return name[0].toUpperCase();
+}
 
 export default function ClientsTableCard() {
+  const { data, isLoading } = useDashboardSummary();
+
+  if (isLoading) {
+    return <Skeleton className="h-[400px] w-full bg-[#141C24] rounded-[12px]" />;
+  }
+
+  const clients = data?.clients || [];
+
   return (
     <Card className="bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] flex flex-col overflow-hidden shadow-sm w-full">
       {/* Header */}
@@ -117,61 +84,76 @@ export default function ClientsTableCard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {CLIENTS.map((client) => (
-              <TableRow
-                key={client.email}
-                className="border-b border-white/10 hover:bg-white/[0.02] transition-colors"
-              >
-                {/* Name & Avatar */}
-                <TableCell className="px-6 py-3.5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-[30px] h-[30px] rounded-full bg-white/10 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0 font-sans">
-                      {client.initials}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-white font-sans leading-tight">
-                        {client.name}
-                      </span>
-                      <span className="text-xs font-normal text-[#8C8C8C] font-sans">
-                        {client.dob}
-                      </span>
-                    </div>
-                  </div>
-                </TableCell>
-
-                {/* Email */}
-                <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
-                  {client.email}
-                </TableCell>
-
-                {/* Phone */}
-                <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
-                  {client.phone}
-                </TableCell>
-
-                {/* Contracts */}
-                <TableCell className="px-6 py-3.5 text-sm text-white font-sans text-center">
-                  {client.contracts}
-                </TableCell>
-
-                {/* Status Badge */}
-                <TableCell className="px-6 py-3.5">
-                  <Badge
-                    className={cn(
-                      "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize font-sans",
-                      STATUS_STYLES[client.status]
-                    )}
-                  >
-                    {client.status}
-                  </Badge>
-                </TableCell>
-
-                {/* Created */}
-                <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
-                  {client.created}
+            {clients.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-0">
+                  <EmptyState 
+                    icon={Users}
+                    title="No clients found"
+                    className="py-12 border-0 bg-transparent min-h-0"
+                  />
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              clients.map((client: any) => {
+                const name = client.firstName ? `${client.firstName} ${client.lastName}` : client.name || "Unknown";
+                return (
+                <TableRow
+                  key={client._id || client.id}
+                  className="border-b border-white/10 hover:bg-white/[0.02] transition-colors"
+                >
+                  {/* Name & Avatar */}
+                  <TableCell className="px-6 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-[30px] h-[30px] rounded-full bg-white/10 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0 font-sans">
+                        {getInitials(name)}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-white font-sans leading-tight">
+                          {name}
+                        </span>
+                        <span className="text-xs font-normal text-[#8C8C8C] font-sans">
+                          {client.email}
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Email */}
+                  <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
+                    {client.email}
+                  </TableCell>
+
+                  {/* Phone */}
+                  <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
+                    {client.phone}
+                  </TableCell>
+
+                  {/* Contracts */}
+                  <TableCell className="px-6 py-3.5 text-sm text-white font-sans text-center">
+                    {client.contracts?.length || client.contractsCount || 0}
+                  </TableCell>
+
+                  {/* Status Badge */}
+                  <TableCell className="px-6 py-3.5">
+                    <Badge
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize font-sans",
+                        STATUS_STYLES[client.status as StatusType] || "bg-gray-600 hover:bg-gray-500 text-white border-0"
+                      )}
+                    >
+                      {client.status}
+                    </Badge>
+                  </TableCell>
+
+                  {/* Created */}
+                  <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
+                    {new Date(client.createdAt || client.lastContact).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                  </TableCell>
+                </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </div>

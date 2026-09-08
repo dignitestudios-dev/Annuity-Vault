@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 
 export default function LoginForm() {
   const { form, onSubmit, isPending } = useLogin();
+  const { formState: { errors } } = form;
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -54,18 +55,23 @@ export default function LoginForm() {
             {/* Email Address Field */}
             <div className="flex flex-col gap-1.5 w-full">
               <Label 
-                htmlFor="username" 
+                htmlFor="email" 
                 className="text-xs font-medium text-white capitalize leading-[15px]"
               >
-                Email Address
+                Email Address <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="username"
-                type="text"
+                id="email"
+                type="email"
                 placeholder="Enter email address"
-                {...form.register("username")}
-                className="h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] px-3 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E]"
+                {...form.register("email")}
+                className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] px-3 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.email ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
+              {errors.email && (
+                <p className="text-[11px] font-medium text-[#FF3E46]">
+                  {errors.email.message as string}
+                </p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -73,16 +79,14 @@ export default function LoginForm() {
               <Label 
                 htmlFor="password" 
                 className="text-xs font-medium text-white capitalize leading-[15px]"
-              >
-                Password
-              </Label>
+              >Password <span className="text-destructive">*</span></Label>
               <div className="relative w-full">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter password here"
                   {...form.register("password")}
-                  className="h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E]"
+                  className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.password ? "ring-1 ring-[#FF3E46]" : ""}`}
                 />
                 <button
                   type="button"
@@ -97,6 +101,11 @@ export default function LoginForm() {
                   )}
                 </button>
               </div>
+              {errors.password && (
+                <p className="text-[11px] font-medium text-[#FF3E46]">
+                  {errors.password.message as string}
+                </p>
+              )}
 
               {/* Forgot Password Link */}
               <div className="flex justify-end w-full mt-0.5">

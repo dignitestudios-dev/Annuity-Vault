@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,6 +21,10 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { useCreateTask } from "../api/tasks.service";
+import { useClients } from "@/features/clients/api/clients.service";
+import SearchableSelect from "@/components/ui/searchable-select";
+import toast from "react-hot-toast";
 
 export interface TaskItem {
   id: string;
@@ -27,33 +32,17 @@ export interface TaskItem {
   priority: "Urgent" | "High" | "Medium" | "Low";
   desc: string;
   due: string;
-  status: "To do" | "In progress" | "Done";
+  status: "To Do" | "In Progress" | "Done";
   client?: string;
-  assignedTo?: string;
 }
 
-interface NewTaskDialogProps {
+export interface NewTaskDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddTask: (task: TaskItem) => void;
+  onSuccess?: () => void;
+  defaultClient?: { id: string; name: string } | string;
+  defaultDate?: string;
 }
-
-const CLIENT_OPTIONS = [
-  "Jacob Thompson",
-  "Eleanor Vance",
-  "Marcus Brody",
-  "Sophia Martinez",
-  "Robert Chen",
-  "Amelia Davis",
-  "David Wilson",
-];
-
-const ADVISOR_OPTIONS = [
-  "Jordan Reed",
-  "Adam Smith",
-  "Sarah Connor",
-  "Michael Scott",
-];
 
 // Zod Validation Schema
 const newTaskSchema = z.object({
@@ -61,15 +50,14 @@ const newTaskSchema = z.object({
     .string()
     .min(1, "Title is required")
     .max(100, "Title must be less than 100 characters"),
-  desc: z.string().optional(),
+  desc: z.string().max(500, "Description must be less than 500 characters").optional().or(z.literal("")),
   priority: z.enum(["Urgent", "High", "Medium", "Low"], {
     message: "Please select a priority",
   }),
-  status: z.enum(["To do", "In progress", "Done"], {
+  status: z.enum(["To Do", "In Progress", "Done"], {
     message: "Please select a status",
   }),
   due: z.string().min(1, "Due date is required"),
-  assignedTo: z.string().min(1, "Assigned advisor is required"),
   client: z.string().optional(),
 });
 
@@ -78,8 +66,13 @@ type NewTaskFormData = z.infer<typeof newTaskSchema>;
 export default function NewTaskDialog({
   isOpen,
   onClose,
-  onAddTask,
+  onSuccess,
+  defaultClient,
+  defaultDate,
 }: NewTaskDialogProps) {
+  const selectedClientId = typeof defaultClient === "object" ? defaultClient?.id : defaultClient;
+  const selectedClientName = typeof defaultClient === "object" ? defaultClient?.name : undefined;
+
   const {
     register,
     handleSubmit,
@@ -92,27 +85,70 @@ export default function NewTaskDialog({
       title: "",
       desc: "",
       priority: "Medium",
-      status: "To do",
-      due: "2026-06-23",
-      assignedTo: "Jordan Reed",
-      client: "Jacob Thompson",
+      status: "To Do",
+      due: defaultDate || new Date().toISOString().split('T')[0],
+      client: selectedClientId || "none",
     },
   });
 
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        title: "",
+        desc: "",
+        priority: "Medium",
+        status: "To Do",
+        due: defaultDate || new Date().toISOString().split('T')[0],
+        client: selectedClientId || "none",
+      });
+    }
+  }, [isOpen, selectedClientId, defaultDate, reset]);
+
+  const { data: clientsData } = useClients({ limit: 100 });
+  const clients = clientsData?.data || [];
+
+  const clientsOptions = clients.map((c) => ({
+    label: `${c.firstName} ${c.lastName}`,
+    value: c._id || c.id,
+  }));
+
+  const clientOptionsWithNone = [
+    { label: "None", value: "none" },
+    ...clientsOptions
+  ];
+
+  const getClientDisplayName = (clientId?: string) => {
+    if (!clientId || clientId === "none") return "None";
+    if (selectedClientId && clientId === selectedClientId && selectedClientName) {
+      return selectedClientName;
+    }
+    const found = clientsOptions.find((c) => c.value === clientId);
+    if (found) return found.label;
+    if (selectedClientName) return selectedClientName;
+    return "Select client";
+  };
+
+  const createTask = useCreateTask();
+
   const onSubmit = (data: NewTaskFormData) => {
-    onAddTask({
-      id: `t-${Date.now()}`,
+    createTask.mutate({
       title: data.title,
-      desc: data.desc || "No description provided.",
-      due: data.due,
+      description: data.desc,
+      dueDate: data.due,
       priority: data.priority,
       status: data.status,
-      assignedTo: data.assignedTo,
-      client: data.client,
+      client: data.client && data.client !== "none" ? data.client : undefined,
+    }, {
+      onSuccess: () => {
+        toast.success("Task created successfully!");
+        reset();
+        onClose();
+        onSuccess?.();
+      },
+      onError: (err: any) => {
+        toast.error(err?.message || "Failed to create task");
+      }
     });
-
-    reset();
-    onClose();
   };
 
   const handleClose = () => {
@@ -132,7 +168,7 @@ export default function NewTaskDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5 pt-1" noValidate>
           {/* 1. Title Field */}
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-white">Title</Label>
+            <Label className="text-sm font-medium text-white">Title <span className="text-destructive">*</span></Label>
             <Input
               {...register("title")}
               placeholder="Enter title here"
@@ -166,7 +202,7 @@ export default function NewTaskDialog({
           <div className="grid grid-cols-2 gap-3">
             {/* Priority */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-white">Priority</Label>
+              <Label className="text-sm font-medium text-white">Priority <span className="text-destructive">*</span></Label>
               <Controller
                 name="priority"
                 control={control}
@@ -201,7 +237,7 @@ export default function NewTaskDialog({
 
             {/* Status */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-white">Status</Label>
+              <Label className="text-sm font-medium text-white">Status <span className="text-destructive">*</span></Label>
               <Controller
                 name="status"
                 control={control}
@@ -211,11 +247,11 @@ export default function NewTaskDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      <SelectItem value="To do" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                        Todo
+                      <SelectItem value="To Do" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                        To Do
                       </SelectItem>
-                      <SelectItem value="In progress" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                        In progress
+                      <SelectItem value="In Progress" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
+                        In Progress
                       </SelectItem>
                       <SelectItem value="Done" className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
                         Done
@@ -232,11 +268,11 @@ export default function NewTaskDialog({
             </div>
           </div>
 
-          {/* 4. Due Date & Assigned To (2 Columns) */}
+          {/* 4. Due Date & Client (2 Columns) */}
           <div className="grid grid-cols-2 gap-3">
             {/* Due Date */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-white">Due Date</Label>
+              <Label className="text-sm font-medium text-white">Due Date <span className="text-destructive">*</span></Label>
               <Input
                 type="date"
                 {...register("due")}
@@ -251,59 +287,35 @@ export default function NewTaskDialog({
               )}
             </div>
 
-            {/* Assigned To */}
+            {/* Client (Optional) */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-white">Assigned To</Label>
+              <Label className="text-sm font-medium text-white">Client (Optional)</Label>
               <Controller
-                name="assignedTo"
+                name="client"
                 control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={(val: string | null) => val && field.onChange(val)}>
-                    <SelectTrigger className="h-10 bg-[#141C24] border-0 text-white rounded-[12px] text-xs sm:text-sm justify-between px-3.5 shadow-none focus:ring-1 focus:ring-[#6887A0]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      {ADVISOR_OPTIONS.map((name) => (
-                        <SelectItem key={name} value={name} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                          {name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                render={({ field }) => {
+                  const options = selectedClientId 
+                    ? [{ label: selectedClientName || getClientDisplayName(selectedClientId), value: selectedClientId }]
+                    : clientOptionsWithNone;
+
+                  return (
+                    <div className={selectedClientId ? "opacity-70 pointer-events-none" : ""}>
+                      <SearchableSelect
+                        options={options}
+                        value={field.value || "none"}
+                        onChange={field.onChange}
+                        placeholder="Select Client..."
+                        searchPlaceholder="Search client..."
+                        className={errors.client ? "ring-1 ring-[#FF3E46]" : ""}
+                      />
+                    </div>
+                  );
+                }}
               />
-              {errors.assignedTo && (
-                <p className="text-[11px] font-medium text-[#FF3E46] mt-1">
-                  {errors.assignedTo.message}
-                </p>
-              )}
             </div>
           </div>
 
-          {/* 5. Client (Optional) */}
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium text-white">Client (Optional)</Label>
-            <Controller
-              name="client"
-              control={control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={(val: string | null) => val && field.onChange(val)}>
-                  <SelectTrigger className="h-10 bg-[#141C24] border-0 text-white rounded-[12px] text-xs sm:text-sm justify-between px-3.5 shadow-none focus:ring-1 focus:ring-[#6887A0]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                    {CLIENT_OPTIONS.map((cName) => (
-                      <SelectItem key={cName} value={cName} className="text-xs sm:text-sm text-white hover:bg-white/10 cursor-pointer">
-                        {cName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
-
-          {/* 6. Footer Buttons */}
+          {/* 5. Footer Buttons */}
           <div className="pt-3 flex items-center justify-center gap-3">
             <Button
               type="button"
@@ -315,8 +327,9 @@ export default function NewTaskDialog({
             <Button
               type="submit"
               className="w-[150px] h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] hover:opacity-95 text-white rounded-[12px] text-sm font-medium border-0 shadow-md cursor-pointer"
+              disabled={createTask.isPending}
             >
-              Create Task
+              {createTask.isPending ? "Creating..." : "Create Task"}
             </Button>
           </div>
         </form>

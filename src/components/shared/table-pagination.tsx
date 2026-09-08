@@ -17,7 +17,7 @@ export default function TablePagination({
   totalPages,
   onPageChange,
   totalItems,
-  itemsPerPage = 10,
+  itemsPerPage = 20,
   className,
 }: TablePaginationProps) {
   if (totalPages <= 1 && !totalItems) return null;

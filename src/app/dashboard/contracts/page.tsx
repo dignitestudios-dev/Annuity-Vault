@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, FileText, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -22,130 +22,55 @@ import {
 import NewContractDialog from "@/features/contracts/components/new-contract-dialog";
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
+import { EmptyState } from "@/components/shared/empty-state";
 import { cn } from "@/lib/utils";
+import { useContracts, exportContracts } from "@/features/contracts/api/contracts.service";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format, differenceInDays } from "date-fns";
 
-const CONTRACTS_LIST = [
-  {
-    contractNo: "IX-239032",
-    client: "Jacob Thompson",
-    provider: "Equitable",
-    type: "Immediate",
-    value: "$205,617",
-    anniversary: "2026-08-25 (62d)",
-    status: "Surrendered",
-    statusStyle: "bg-[#FF3E46] text-white border-0",
-  },
-  {
-    contractNo: "IX-842169",
-    client: "Jeffrey Clark",
-    provider: "MassMutual",
-    type: "Immediate",
-    value: "$318,599",
-    anniversary: "2026-11-20 (149d)",
-    status: "Active",
-    statusStyle: "bg-[#42CD7F] text-white border-0",
-  },
-  {
-    contractNo: "IM-742846",
-    client: "Jerry Anderson",
-    provider: "Allianz Life",
-    type: "Indexed",
-    value: "$126,597",
-    anniversary: "2026-12-19 (178d)",
-    status: "Matured",
-    statusStyle: "bg-[#39BDF6] text-white border-0",
-  },
-  {
-    contractNo: "IM-310621",
-    client: "George Nguyen",
-    provider: "MassMutual",
-    type: "Fixed",
-    value: "$375,788",
-    anniversary: "2027-03-13 (262d)",
-    status: "Surrendered",
-    statusStyle: "bg-[#FF3E46] text-white border-0",
-  },
-  {
-    contractNo: "IX-815811",
-    client: "Steven Jackson",
-    provider: "Pacific Life",
-    type: "Immediate",
-    value: "$252,648",
-    anniversary: "2027-04-03 (283d)",
-    status: "Active",
-    statusStyle: "bg-[#42CD7F] text-white border-0",
-  },
-  {
-    contractNo: "VR-357824",
-    client: "Joseph Mitchell",
-    provider: "New York Life",
-    type: "Fixed",
-    value: "$484,208",
-    anniversary: "2026-11-17 (146d)",
-    status: "Active",
-    statusStyle: "bg-[#42CD7F] text-white border-0",
-  },
-  {
-    contractNo: "IM-531720",
-    client: "Sandra Thompson",
-    provider: "Prudential",
-    type: "Indexed",
-    value: "$252,917",
-    anniversary: "2026-10-25 (123d)",
-    status: "Pending",
-    statusStyle: "bg-[#FFE600] text-black border-0 font-semibold",
-  },
-  {
-    contractNo: "FX-289078",
-    client: "Justin Williams",
-    provider: "Prudential",
-    type: "Fixed",
-    value: "$198,400",
-    anniversary: "2026-09-14 (82d)",
-    status: "Active",
-    statusStyle: "bg-[#42CD7F] text-white border-0",
-  },
-  {
-    contractNo: "AN-491024",
-    client: "Emma Robinson",
-    provider: "Lincoln Financial",
-    type: "Indexed",
-    value: "$412,000",
-    anniversary: "2026-10-01 (99d)",
-    status: "Active",
-    statusStyle: "bg-[#42CD7F] text-white border-0",
-  },
-  {
-    contractNo: "IX-908123",
-    client: "Cynthia Lee",
-    provider: "Jackson National",
-    type: "Immediate",
-    value: "$289,350",
-    anniversary: "2026-12-05 (164d)",
-    status: "Pending",
-    statusStyle: "bg-[#FFE600] text-black border-0 font-semibold",
-  },
-  {
-    contractNo: "VR-671290",
-    client: "David Brooks",
-    provider: "Allianz Life",
-    type: "Fixed",
-    value: "$530,100",
-    anniversary: "2027-01-20 (210d)",
-    status: "Active",
-    statusStyle: "bg-[#42CD7F] text-white border-0",
-  },
-  {
-    contractNo: "IM-823411",
-    client: "Samantha Nguyen",
-    provider: "MassMutual",
-    type: "Indexed",
-    value: "$340,750",
-    anniversary: "2027-02-15 (236d)",
-    status: "Matured",
-    statusStyle: "bg-[#39BDF6] text-white border-0",
-  },
-];
+const getStatusStyle = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case "active":
+      return "bg-[#42CD7F] text-white border-0";
+    case "surrendered":
+      return "bg-[#FF3E46] text-white border-0";
+    case "matured":
+      return "bg-[#39BDF6] text-white border-0";
+    case "pending":
+      return "bg-[#FFE600] text-black border-0 font-semibold";
+    default:
+      return "bg-gray-600 text-white border-0";
+  }
+};
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value || 0);
+};
+
+const formatAnniversary = (dateString?: string) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  // Create a date for this year's anniversary
+  const thisYearAnniversary = new Date(date);
+  thisYearAnniversary.setFullYear(now.getFullYear());
+  
+  // If anniversary already passed this year, look at next year's
+  if (thisYearAnniversary < now) {
+    thisYearAnniversary.setFullYear(now.getFullYear() + 1);
+  }
+  
+  const daysDiff = differenceInDays(thisYearAnniversary, now);
+  const formattedDate = format(thisYearAnniversary, "yyyy-MM-dd");
+  
+  return `${formattedDate} (${daysDiff}d)`;
+};
 
 export default function ContractsPage() {
   const router = useRouter();
@@ -155,28 +80,37 @@ export default function ContractsPage() {
   const [isNewContractOpen, setIsNewContractOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const itemsPerPage = 20;
 
-  const filteredContracts = CONTRACTS_LIST.filter((contract) => {
-    const matchesSearch =
-      contract.contractNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contract.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contract.provider.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesType =
-      selectedType === "All Types" || contract.type === selectedType;
-
-    const matchesStatus =
-      selectedStatus === "All Statuses" || contract.status === selectedStatus;
-
-    return matchesSearch && matchesType && matchesStatus;
+  const { data, isLoading } = useContracts({
+    search: searchQuery || undefined,
+    contractType: selectedType !== "All Types" ? selectedType : undefined,
+    status: selectedStatus !== "All Statuses" ? selectedStatus : undefined,
+    page: currentPage,
+    limit: itemsPerPage,
   });
 
-  const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
-  const paginatedContracts = filteredContracts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const contracts = data?.data || [];
+  const totalPages = data?.total ? Math.ceil(data.total / itemsPerPage) : 1;
+  const totalItems = data?.total || 0;
+
+  const handleExportPDF = async () => {
+    try {
+      await exportContracts("pdf", searchQuery || undefined, selectedType !== "All Types" ? selectedType : undefined, selectedStatus !== "All Statuses" ? selectedStatus : undefined);
+      setIsSuccessOpen(true);
+    } catch (error) {
+      console.error("Export PDF failed:", error);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      await exportContracts("csv", searchQuery || undefined, selectedType !== "All Types" ? selectedType : undefined, selectedStatus !== "All Statuses" ? selectedStatus : undefined);
+      setIsSuccessOpen(true);
+    } catch (error) {
+      console.error("Export CSV failed:", error);
+    }
+  };
 
   return (
     <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-8 font-sans">
@@ -186,13 +120,31 @@ export default function ContractsPage() {
           Contracts
         </h1>
 
-        <button
-          onClick={() => setIsNewContractOpen(true)}
-          className="h-10 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-medium hover:opacity-90 rounded-[12px] text-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer"
-        >
-          <Plus className="w-4 h-4 text-white" />
-          <span>New Contract</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportPDF}
+            className="h-10 px-4 bg-[#141C24] hover:bg-white/10 text-white rounded-[12px] text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-white/5 shadow-sm cursor-pointer"
+          >
+            <FileText className="w-4 h-4 text-[#919191]" />
+            <span>Export PDF</span>
+          </button>
+
+          <button
+            onClick={handleExportCSV}
+            className="h-10 px-4 bg-[#141C24] hover:bg-white/10 text-white rounded-[12px] text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-white/5 shadow-sm cursor-pointer"
+          >
+            <Download className="w-4 h-4 text-[#919191]" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            onClick={() => setIsNewContractOpen(true)}
+            className="h-10 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-medium hover:opacity-90 rounded-[12px] text-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-white" />
+            <span>New Contract</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar Container (#394A58) */}
@@ -297,38 +249,46 @@ export default function ContractsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedContracts.length > 0 ? (
-                paginatedContracts.map((contract) => (
+              {isLoading ? (
+                Array.from({ length: itemsPerPage }).map((_, i) => (
+                  <TableRow key={i} className="border-b border-white/10 h-14">
+                    <TableCell colSpan={7}>
+                      <Skeleton className="h-6 w-full bg-white/5" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : contracts.length > 0 ? (
+                contracts.map((contract) => (
                   <TableRow
-                    key={contract.contractNo}
+                    key={contract.id}
                     onClick={() =>
-                      router.push(`/dashboard/contracts/${contract.contractNo}`)
+                      router.push(`/dashboard/contracts/${contract.id}`)
                     }
                     className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14 cursor-pointer"
                   >
                     <TableCell className="px-6 py-3.5 text-sm font-medium text-white">
-                      {contract.contractNo}
+                      {contract.contractNumber}
                     </TableCell>
                     <TableCell className="px-6 py-3.5 text-sm text-white">
-                      {contract.client}
+                      {contract.client ? `${contract.client.firstName} ${contract.client.lastName}` : 'Unknown Client'}
                     </TableCell>
                     <TableCell className="px-6 py-3.5 text-sm text-white">
                       {contract.provider}
                     </TableCell>
                     <TableCell className="px-6 py-3.5 text-sm text-white">
-                      {contract.type}
+                      {contract.contractType}
                     </TableCell>
                     <TableCell className="px-6 py-3.5 text-sm text-white">
-                      {contract.value}
+                      {formatCurrency(contract.contractValue)}
                     </TableCell>
                     <TableCell className="px-6 py-3.5 text-sm text-white">
-                      {contract.anniversary}
+                      {formatAnniversary(contract.anniversaryDate)}
                     </TableCell>
                     <TableCell className="px-6 py-3.5">
                       <Badge
                         className={cn(
                           "px-2.5 py-0.5 rounded-[8px] text-xs font-medium capitalize",
-                          contract.statusStyle
+                          getStatusStyle(contract.status)
                         )}
                       >
                         {contract.status}
@@ -338,11 +298,12 @@ export default function ContractsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="h-32 text-center text-sm text-[#919191] font-sans"
-                  >
-                    No contracts found matching your search.
+                  <TableCell colSpan={7} className="h-48 text-center">
+                    <EmptyState
+                      icon={FileText}
+                      title="No Contracts Found"
+                      description="No contracts found matching your search."
+                    />
                   </TableCell>
                 </TableRow>
               )}
@@ -356,7 +317,7 @@ export default function ContractsPage() {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
-            totalItems={filteredContracts.length}
+            totalItems={totalItems}
             itemsPerPage={itemsPerPage}
           />
         </div>
@@ -369,12 +330,12 @@ export default function ContractsPage() {
         onSubmitSuccess={() => setIsSuccessOpen(true)}
       />
 
-      {/* Contract Created Success Popup */}
+      {/* Contract Created / Export Success Popup */}
       <SuccessModal
         isOpen={isSuccessOpen}
         onClose={() => setIsSuccessOpen(false)}
-        title="Contract created!"
-        description="You have successfully created new contract!"
+        title="Success"
+        description="Operation completed successfully."
       />
     </div>
   );

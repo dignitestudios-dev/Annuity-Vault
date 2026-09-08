@@ -7,16 +7,25 @@ import { ArrowLeft, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const forgotPasswordSchema = z.object({
+  email: z.string().min(1, "Email is required").email("Invalid email address").max(100, "Email must be less than 100 characters"),
+});
+type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordForm() {
-  const [email, setEmail] = useState("");
+  const { register, handleSubmit, formState: { errors } } = useForm<ForgotPasswordData>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: "" }
+  });
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) {
-      setIsSubmitted(true);
-    }
+  const onSubmit = (data: ForgotPasswordData) => {
+    console.log("Forgot password data:", data);
+    setIsSubmitted(true);
   };
 
   return (
@@ -54,7 +63,7 @@ export default function ForgotPasswordForm() {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="w-full flex flex-col gap-5">
               
               {/* Email Address Field */}
               <div className="flex flex-col gap-1.5 w-full">
@@ -62,17 +71,20 @@ export default function ForgotPasswordForm() {
                   htmlFor="email" 
                   className="text-xs font-medium text-white capitalize leading-[15px]"
                 >
-                  Email Address
+                  Email Address <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="email"
                   type="email"
-                  required
                   placeholder="Enter email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] px-3 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E]"
+                  {...register("email")}
+                  className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] px-3 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.email ? "ring-1 ring-[#FF3E46]" : ""}`}
                 />
+                {errors.email && (
+                  <p className="text-[11px] font-medium text-[#FF3E46]">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
 
               {/* Submit Button */}
