@@ -24,6 +24,7 @@ import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useContract,
   useDeleteContract,
@@ -32,6 +33,7 @@ import {
   useAddContractDocument,
   useDeleteContractDocument,
 } from "@/features/contracts/api/contracts.service";
+import { Contract } from "@/features/contracts/types/contracts.types";
 
 const getStatusStyle = (status: string) => {
   switch (status?.toLowerCase()) {
@@ -61,25 +63,27 @@ const formatAnniversary = (dateString?: string) => {
   if (!dateString) return "N/A";
   const date = new Date(dateString);
   const now = new Date();
-  
+
   // Create a date for this year's anniversary
   const thisYearAnniversary = new Date(date);
   thisYearAnniversary.setFullYear(now.getFullYear());
-  
+
   // If anniversary already passed this year, look at next year's
   if (thisYearAnniversary < now) {
     thisYearAnniversary.setFullYear(now.getFullYear() + 1);
   }
-  
+
   const daysDiff = differenceInDays(thisYearAnniversary, now);
   const formattedDate = format(thisYearAnniversary, "yyyy-MM-dd");
-  
+
   return `${formattedDate} (${daysDiff > 0 ? 'in ' : ''}${Math.abs(daysDiff)} days)`;
 };
 
 export default function ContractDetailsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isDeletingRef = useRef(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -95,6 +99,11 @@ export default function ContractDetailsPage() {
   const deleteNote = useDeleteContractNote(contractId);
   const addDocument = useAddContractDocument(contractId);
   const deleteDocument = useDeleteContractDocument(contractId);
+
+  const isDeletePending =
+    deleteDocument.isPending ||
+    deleteNote.isPending ||
+    deleteContract.isPending;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -136,29 +145,36 @@ export default function ContractDetailsPage() {
   };
 
   const handleConfirmDelete = async () => {
-    if (deletingItem?.type === "document" && deletingItem.id) {
-      try {
-        await deleteDocument.mutateAsync(deletingItem.id);
+    if (!deletingItem || isDeletingRef.current || isDeletePending) return;
+    isDeletingRef.current = true;
+    const currentItem = deletingItem;
+
+    try {
+      if (currentItem.type === "document" && currentItem.id) {
+        await deleteDocument.mutateAsync(currentItem.id);
         toast.success("Document deleted successfully!");
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to delete document");
-      }
-    } else if (deletingItem?.type === "note" && deletingItem.id) {
-      try {
-        await deleteNote.mutateAsync(deletingItem.id);
+      } else if (currentItem.type === "note" && currentItem.id) {
+        await deleteNote.mutateAsync(currentItem.id);
         toast.success("Note deleted successfully!");
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to delete note");
-      }
-    } else if (deletingItem?.type === "contract") {
-      try {
+      } else if (currentItem.type === "contract") {
         await deleteContract.mutateAsync(contractId);
         setIsArchiveOpen(true);
-      } catch (err: any) {
-        toast.error(err?.message || "Failed to delete contract");
       }
+    } catch (err: any) {
+      // If note was already deleted/archived on server, prune it from cache
+      if (currentItem.type === "note" && currentItem.id) {
+        queryClient.setQueryData<Contract>(["contracts", contractId], (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            contractNotes: (old.contractNotes || []).filter((n) => n._id !== currentItem.id),
+          };
+        });
+      }
+    } finally {
+      setDeletingItem(null);
+      isDeletingRef.current = false;
     }
-    setDeletingItem(null);
   };
 
   const handleArchiveClose = () => {
@@ -188,6 +204,13 @@ export default function ContractDetailsPage() {
 
   if (!contract) return null;
 
+  const activeDocuments = (contract.documents || []).filter(
+    (doc) => !doc.isArchived && !doc.isDeleted
+  );
+  const activeNotes = (contract.contractNotes || []).filter(
+    (note) => !note.isArchived && !note.isDeleted
+  );
+
   return (
     <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans">
       {/* Top Header Navigation Row */}
@@ -212,6 +235,7 @@ export default function ContractDetailsPage() {
           </div>
           <span className="text-sm font-normal text-[#919191]">
             {contract.provider} • {contract.contractType}
+            {contract.policyNumber ? ` • Policy #${contract.policyNumber}` : ""}
           </span>
         </div>
 
@@ -228,7 +252,8 @@ export default function ContractDetailsPage() {
             onClick={() =>
               setDeletingItem({ id: contract.id, type: "contract" })
             }
-            className="h-9 px-4 bg-[#FF0000] text-white hover:bg-red-600 rounded-[12px] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+            disabled={isDeletePending}
+            className="h-9 px-4 bg-[#FF0000] text-white hover:bg-red-600 rounded-[12px] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2 className="w-3.5 h-3.5 text-white" />
             <span>Delete</span>
@@ -246,6 +271,15 @@ export default function ContractDetailsPage() {
             </h3>
           </div>
           <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8 text-sm">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Policy number
+              </span>
+              <span className="text-white font-normal">
+                {contract.policyNumber || "N/A"}
+              </span>
+            </div>
+
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
                 Client
@@ -373,8 +407,8 @@ export default function ContractDetailsPage() {
           </div>
 
           <div className="flex flex-col divide-y divide-white/10">
-            {(contract.documents || []).length > 0 ? (
-              (contract.documents || []).map((doc) => (
+            {activeDocuments.length > 0 ? (
+              activeDocuments.map((doc) => (
                 <div
                   key={doc._id}
                   className="p-3.5 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
@@ -422,9 +456,14 @@ export default function ContractDetailsPage() {
                       onClick={() =>
                         setDeletingItem({ type: "document", id: doc._id })
                       }
-                      className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors cursor-pointer"
+                      disabled={isDeletePending || deletingItem?.id === doc._id}
+                      className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-white" />
+                      {isDeletePending && deletingItem?.id === doc._id ? (
+                        <Loader className="w-3.5 h-3.5 text-white" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5 text-white" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -471,27 +510,34 @@ export default function ContractDetailsPage() {
 
           {/* Notes List */}
           <div className="w-full flex flex-col">
-            {(contract.contractNotes || []).length > 0 ? (contract.contractNotes || []).map((note) => (
-              <div
-                key={note._id}
-                className="w-full bg-[#0C1116] rounded-[8px] p-3.5 flex items-center justify-between gap-4 border border-white/5"
-              >
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs sm:text-sm text-white font-normal">
-                    {note.body}
-                  </p>
-                  <span className="text-[11px] text-[#919191]">{format(new Date(note.createdAt), "MMM d, yyyy h:mm a")}</span>
-                </div>
-                <button
-                  onClick={() =>
-                    setDeletingItem({ type: "note", id: note._id })
-                  }
-                  className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors flex-shrink-0"
+            {activeNotes.length > 0 ? (
+              activeNotes.map((note) => (
+                <div
+                  key={note._id}
+                  className="w-full bg-[#0C1116] rounded-[8px] p-3.5 flex items-center justify-between gap-4 border border-white/5"
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-white" />
-                </button>
-              </div>
-            )) : (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs sm:text-sm text-white font-normal">
+                      {note.body}
+                    </p>
+                    <span className="text-[11px] text-[#919191]">{format(new Date(note.createdAt), "MMM d, yyyy h:mm a")}</span>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setDeletingItem({ type: "note", id: note._id })
+                    }
+                    disabled={isDeletePending || deletingItem?.id === note._id}
+                    className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors flex-shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isDeletePending && deletingItem?.id === note._id ? (
+                      <Loader className="w-3.5 h-3.5 text-white" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5 text-white" />
+                    )}
+                  </button>
+                </div>
+              ))
+            ) : (
               <EmptyState
                 icon={FileText}
                 title="No Notes"
@@ -522,21 +568,24 @@ export default function ContractDetailsPage() {
       {/* Delete Confirmation Modal */}
       <DeleteModal
         isOpen={!!deletingItem}
-        onClose={() => setDeletingItem(null)}
+        onClose={() => {
+          if (!isDeletePending) setDeletingItem(null);
+        }}
         onConfirm={handleConfirmDelete}
+        isPending={isDeletePending}
         title={
           deletingItem?.type === "document"
             ? "Delete Document"
             : deletingItem?.type === "note"
-            ? "Delete Note"
-            : "Delete Contract"
+              ? "Delete Note"
+              : "Delete Contract"
         }
         description={
           deletingItem?.type === "document"
             ? "Are you sure you want to delete this document?"
             : deletingItem?.type === "note"
-            ? "Are you sure you want to delete this note?"
-            : "Are you sure you want to delete this contract?"
+              ? "Are you sure you want to delete this note?"
+              : "Are you sure you want to delete this contract?"
         }
       />
 

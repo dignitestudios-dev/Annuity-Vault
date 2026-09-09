@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axios";
 import { TasksQuery, TasksResponse, TaskResponse, Task, CreateTaskDTO, UpdateTaskDTO } from "../types/tasks.types";
 
@@ -51,6 +51,21 @@ export const useTasks = (filters: TasksQuery = {}) => {
   });
 };
 
+export const useInfiniteTasks = (filters: Omit<TasksQuery, "page"> = {}) => {
+  return useInfiniteQuery({
+    queryKey: [...tasksKeys.list(filters), "infinite"],
+    queryFn: ({ pageParam = 1 }) => getTasks({ ...filters, page: pageParam as number, limit: filters.limit || 10 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { currentPage, totalPages } = lastPage.pagination || {};
+      if (currentPage !== undefined && totalPages !== undefined && currentPage < totalPages) {
+        return currentPage + 1;
+      }
+      return undefined;
+    },
+  });
+};
+
 export const useTask = (id: string) => {
   return useQuery({
     queryKey: tasksKeys.detail(id),
@@ -96,7 +111,7 @@ export const useDeleteTask = () => {
 
 export const exportTasks = async (format: "pdf" | "csv", search?: string, status?: string, priority?: string) => {
   const response = await axiosInstance.get<TasksResponse>("/tasks", {
-    params: { search, status, priority, limit: 1000 },
+    params: { search, status, priority, limit: 100 },
   });
   
   const tasks = response.data.data;

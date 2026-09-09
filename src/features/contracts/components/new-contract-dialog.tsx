@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -77,6 +77,7 @@ export default function NewContractDialog({
     handleSubmit,
     control,
     reset,
+    watch,
     formState: { errors },
   } = useForm<NewContractFormData>({
     resolver: zodResolver(newContractSchema),
@@ -94,6 +95,18 @@ export default function NewContractDialog({
       anniversaryDate: new Date(),
     },
   });
+
+  const premiumAmount = watch("premiumAmount");
+  const contractValue = watch("contractValue");
+
+  const parseMonetaryValue = (val?: string) => {
+    if (!val) return 0;
+    const cleaned = String(val).replace(/[^0-9.-]+/g, "");
+    return parseFloat(cleaned) || 0;
+  };
+
+  const isHighPremium = parseMonetaryValue(premiumAmount) > 1000000;
+  const isHighContractValue = parseMonetaryValue(contractValue) > 1000000;
 
   useEffect(() => {
     if (isOpen) {
@@ -285,9 +298,6 @@ export default function NewContractDialog({
                       <SelectItem value="Matured" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Matured
                       </SelectItem>
-                      <SelectItem value="Inactive" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Inactive
-                      </SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -375,9 +385,16 @@ export default function NewContractDialog({
                 type="number"
                 {...register("premiumAmount")}
                 placeholder="100000"
-                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.premiumAmount ? "ring-1 ring-[#FF3E46]" : ""}`}
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.premiumAmount ? "ring-1 ring-[#FF3E46]" : isHighPremium ? "ring-1 ring-[#F59E0B]" : ""}`}
               />
-              {errors.premiumAmount && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.premiumAmount.message}</p>}
+              {errors.premiumAmount ? (
+                <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.premiumAmount.message}</p>
+              ) : isHighPremium ? (
+                <p className="text-[11px] font-medium text-[#F59E0B] flex items-center gap-1 mt-0.5 leading-snug">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-[#F59E0B]" />
+                  Value exceeds standard limit. Please confirm this amount.
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-white">Contract Value <span className="text-destructive">*</span></Label>
@@ -385,9 +402,16 @@ export default function NewContractDialog({
                 type="number"
                 {...register("contractValue")}
                 placeholder="100000"
-                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.contractValue ? "ring-1 ring-[#FF3E46]" : ""}`}
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.contractValue ? "ring-1 ring-[#FF3E46]" : isHighContractValue ? "ring-1 ring-[#F59E0B]" : ""}`}
               />
-              {errors.contractValue && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.contractValue.message}</p>}
+              {errors.contractValue ? (
+                <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.contractValue.message}</p>
+              ) : isHighContractValue ? (
+                <p className="text-[11px] font-medium text-[#F59E0B] flex items-center gap-1 mt-0.5 leading-snug">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-[#F59E0B]" />
+                  Value exceeds standard limit. Please confirm this amount.
+                </p>
+              ) : null}
             </div>
           </div>
 

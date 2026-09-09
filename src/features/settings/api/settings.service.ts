@@ -9,6 +9,7 @@ export interface ProfilePayload {
   phone?: string;
   jobTitle?: string;
   firm?: string;
+  profilePicture?: File | string | null;
 }
 
 export interface PasswordPayload {
@@ -63,15 +64,54 @@ export const settingsKeys = {
 // =======================
 // Profile & Password
 // =======================
+export const useProfile = () => {
+  return useQuery({
+    queryKey: settingsKeys.profile(),
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<{
+        success?: boolean;
+        data?: User;
+        user?: User;
+      }>("/auth/me");
+      return (data?.data || data?.user || data) as User;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: ProfilePayload) => {
-      const { data } = await axiosInstance.patch("/settings/profile", payload);
+    mutationFn: async (payload: ProfilePayload | FormData) => {
+      let dataToSend: any;
+      let headers: Record<string, string> | undefined = undefined;
+
+      if (payload instanceof FormData) {
+        dataToSend = payload;
+        headers = { "Content-Type": "multipart/form-data" };
+      } else if (payload.profilePicture instanceof File) {
+        const formData = new FormData();
+        if (payload.name) formData.append("name", payload.name);
+        if (payload.phone) formData.append("phone", payload.phone);
+        if (payload.jobTitle) formData.append("jobTitle", payload.jobTitle);
+        if (payload.firm) formData.append("firm", payload.firm);
+        formData.append("profilePicture", payload.profilePicture);
+        dataToSend = formData;
+        headers = { "Content-Type": "multipart/form-data" };
+      } else {
+        dataToSend = payload;
+      }
+
+      const { data } = await axiosInstance.patch(
+        "/settings/profile",
+        dataToSend,
+        headers ? { headers } : undefined
+      );
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auth"] }); // assuming profile affects auth/me
+      queryClient.invalidateQueries({ queryKey: ["auth"] });
+      queryClient.invalidateQueries({ queryKey: settingsKeys.profile() });
     },
   });
 };

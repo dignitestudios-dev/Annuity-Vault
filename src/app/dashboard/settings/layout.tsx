@@ -10,7 +10,7 @@ const SETTINGS_NAV_ITEMS = [
   { label: "Notification Settings", href: "/dashboard/settings/notifications" },
   { label: "Microsoft Calendar", href: "/dashboard/settings/microsoft-calendar" },
   { label: "Change Password", href: "/dashboard/settings/change-password" },
-  { label: "Security", href: "/dashboard/settings/security" },
+  // { label: "Security", href: "/dashboard/settings/security" },
   { label: "Data Management", href: "/dashboard/settings/data-management" },
   { label: "Terms & Conditions", href: "/dashboard/settings/terms-and-conditions" },
   { label: "Privacy Policy", href: "/dashboard/settings/privacy-policy" },

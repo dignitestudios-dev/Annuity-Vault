@@ -172,6 +172,7 @@ export default function ContractsTab({ clientId, contracts = [], isLoading = fal
           onPageChange={setCurrentPage}
           totalItems={contracts.length}
           itemsPerPage={itemsPerPage}
+          itemLabel="contracts"
         />
       </div>
 

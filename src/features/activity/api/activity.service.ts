@@ -50,16 +50,28 @@ const getAuditLogs = async (params: AuditLogsParams): Promise<AuditLogsResponse>
   return data;
 };
 
+const getAuditLogsById = async (id: string, params?: AuditLogsParams): Promise<AuditLogsResponse> => {
+  const { data } = await axiosInstance.get<AuditLogsResponse>(`/clients/${id}/activity`, { params });
+  return data;
+};
+
 export const useAuditLogs = (filters: AuditLogsParams) => {
   return useQuery({
     queryKey: activityKeys.list(filters),
     queryFn: () => getAuditLogs(filters),
   });
 };
+export const useAuditLogsById = (id: string, params?: AuditLogsParams) => {
+  return useQuery({
+    queryKey: ["audit-logs-by-id", id, params],
+    queryFn: () => getAuditLogsById(id, params),
+    enabled: !!id,
+  });
+};
 
 export const exportAuditLogs = async (format: "pdf" | "csv", search?: string, action?: string, module?: string) => {
   const response = await axiosInstance.get<AuditLogsResponse>("/audit-logs", {
-    params: { search, action, module, limit: 1000 },
+    params: { search, action, module, limit: 100 },
   });
   
   const logs = response.data.data;

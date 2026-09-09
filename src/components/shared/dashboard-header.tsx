@@ -6,11 +6,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useNotifications } from "@/features/notifications/api/notifications.service";
+import { useAppSelector } from "@/store";
 
 export default function DashboardHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const user = useAppSelector((state) => state.auth.user);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -31,6 +33,7 @@ export default function DashboardHeader() {
   };
 
   const { data } = useNotifications({ limit: 5 });
+
   const notifications = data?.data?.notifications || [];
   const unreadCount = data?.data?.unreadCount || 0;
 
@@ -39,7 +42,7 @@ export default function DashboardHeader() {
       {/* Greeting Title & Subtitle */}
       <div className="flex flex-col gap-1">
         <h1 className="text-xl lg:text-[20px] font-semibold text-white leading-tight font-sans">
-          Good morning, Adam Smith
+          Good morning, {user?.name || "Advisor"}
         </h1>
         <p className="text-xs lg:text-sm font-normal text-[#919191] font-sans">
           Wednesday, January 15, 2025 &mdash; {unreadCount} unread notifications

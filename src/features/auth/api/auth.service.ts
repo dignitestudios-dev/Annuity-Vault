@@ -1,7 +1,16 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axios";
 
 export const authService = {
+  getProfile: async (): Promise<User> => {
+    const { data } = await axiosInstance.get<{
+      success?: boolean;
+      data?: User;
+      user?: User;
+    }>("/auth/me");
+    return (data?.data || data?.user || data) as User;
+  },
+
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
     const { data } = await axiosInstance.post<{ success: boolean; data: LoginResponse }>("/auth/login", credentials);
     // Based on the guide, response might just be the envelope or the data directly.
@@ -75,6 +84,14 @@ export const useResetPasswordMutation = () => {
 export const useLogoutMutation = () => {
   return useMutation({
     mutationFn: authService.logout,
+  });
+};
+
+export const useGetProfile = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: authService.getProfile,
+    enabled: options?.enabled,
   });
 };
 

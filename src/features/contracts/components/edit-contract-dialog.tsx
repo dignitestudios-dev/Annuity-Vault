@@ -293,9 +293,6 @@ export default function EditContractDialog({
                       <SelectItem value="Matured" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Matured
                       </SelectItem>
-                      <SelectItem value="Inactive" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Inactive
-                      </SelectItem>
                     </SelectContent>
                   </Select>
                 )}

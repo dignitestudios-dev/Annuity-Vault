@@ -237,6 +237,7 @@ function ArchivedContent() {
               onPageChange={setCurrentPage}
               totalItems={totalItems}
               itemsPerPage={itemsPerPage}
+              itemLabel="items"
             />
       </div>
 

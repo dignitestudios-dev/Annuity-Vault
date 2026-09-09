@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Plus, Search, FileText, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -38,6 +39,8 @@ const getStatusStyle = (status: string) => {
       return "bg-[#39BDF6] text-white border-0";
     case "pending":
       return "bg-[#FFE600] text-black border-0 font-semibold";
+    case "inactive":
+      return "bg-[#828282] text-white border-0";
     default:
       return "bg-gray-600 text-white border-0";
   }
@@ -75,6 +78,7 @@ const formatAnniversary = (dateString?: string) => {
 export default function ContractsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
   const [selectedType, setSelectedType] = useState("All Types");
   const [selectedStatus, setSelectedStatus] = useState("All Statuses");
   const [isNewContractOpen, setIsNewContractOpen] = useState(false);
@@ -83,7 +87,7 @@ export default function ContractsPage() {
   const itemsPerPage = 20;
 
   const { data, isLoading } = useContracts({
-    search: searchQuery || undefined,
+    search: debouncedSearch || undefined,
     contractType: selectedType !== "All Types" ? selectedType : undefined,
     status: selectedStatus !== "All Statuses" ? selectedStatus : undefined,
     page: currentPage,
@@ -96,7 +100,7 @@ export default function ContractsPage() {
 
   const handleExportPDF = async () => {
     try {
-      await exportContracts("pdf", searchQuery || undefined, selectedType !== "All Types" ? selectedType : undefined, selectedStatus !== "All Statuses" ? selectedStatus : undefined);
+      await exportContracts("pdf", debouncedSearch || undefined, selectedType !== "All Types" ? selectedType : undefined, selectedStatus !== "All Statuses" ? selectedStatus : undefined);
       setIsSuccessOpen(true);
     } catch (error) {
       console.error("Export PDF failed:", error);
@@ -105,7 +109,7 @@ export default function ContractsPage() {
 
   const handleExportCSV = async () => {
     try {
-      await exportContracts("csv", searchQuery || undefined, selectedType !== "All Types" ? selectedType : undefined, selectedStatus !== "All Statuses" ? selectedStatus : undefined);
+      await exportContracts("csv", debouncedSearch || undefined, selectedType !== "All Types" ? selectedType : undefined, selectedStatus !== "All Statuses" ? selectedStatus : undefined);
       setIsSuccessOpen(true);
     } catch (error) {
       console.error("Export CSV failed:", error);
@@ -185,8 +189,9 @@ export default function ContractsPage() {
               >
                 <SelectItem value="All Types">All Types</SelectItem>
                 <SelectItem value="Fixed">Fixed</SelectItem>
-                <SelectItem value="Indexed">Indexed</SelectItem>
                 <SelectItem value="Immediate">Immediate</SelectItem>
+                <SelectItem value="Deferred">Deferred</SelectItem>
+                <SelectItem value="Variable">Variable</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -210,9 +215,9 @@ export default function ContractsPage() {
               >
                 <SelectItem value="All Statuses">All Statuses</SelectItem>
                 <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Matured">Matured</SelectItem>
-                <SelectItem value="Surrendered">Surrendered</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="Surrendered">Surrendered</SelectItem>
+                <SelectItem value="Matured">Matured</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -267,7 +272,12 @@ export default function ContractsPage() {
                     className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14 cursor-pointer"
                   >
                     <TableCell className="px-6 py-3.5 text-sm font-medium text-white">
-                      {contract.contractNumber}
+                      <div>{contract.contractNumber}</div>
+                      {contract.policyNumber ? (
+                        <div className="text-xs text-[#919191] font-normal">
+                          Policy: {contract.policyNumber}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell className="px-6 py-3.5 text-sm text-white">
                       {contract.client ? `${contract.client.firstName} ${contract.client.lastName}` : 'Unknown Client'}
@@ -319,6 +329,7 @@ export default function ContractsPage() {
             onPageChange={setCurrentPage}
             totalItems={totalItems}
             itemsPerPage={itemsPerPage}
+            itemLabel="contracts"
           />
         </div>
       </div>

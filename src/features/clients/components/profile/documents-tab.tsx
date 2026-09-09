@@ -93,14 +93,14 @@ export default function DocumentsTab({ clientId, documents }: DocumentsTabProps)
         <h3 className="text-lg lg:text-xl font-semibold text-white tracking-tight">
           Documents
         </h3>
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          onChange={handleFileChange} 
-          className="hidden" 
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
           accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
         />
-        <button 
+        <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploadDocMutation.isPending}
           className="h-8 px-3.5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-medium hover:opacity-90 rounded-[12px] text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 min-w-[150px]"
@@ -123,7 +123,7 @@ export default function DocumentsTab({ clientId, documents }: DocumentsTabProps)
       {/* Documents List */}
       <div className="w-full flex flex-col">
         {!documents || documents.length === 0 ? (
-          <EmptyState 
+          <EmptyState
             icon={FileText}
             title="No documents uploaded"
             className="py-12 border-0 bg-transparent min-h-0"
@@ -135,11 +135,11 @@ export default function DocumentsTab({ clientId, documents }: DocumentsTabProps)
               const docTitle = doc?.title || (doc as any)?.fileName || (doc as any)?.name || `Document ${index + 1}`;
               const docUrl = doc?.url || (doc as any)?.location || (doc as any)?.fileUrl || "";
               const docType = doc?.type || (doc as any)?.fileType || "";
-              const isPdf = 
+              const isPdf =
                 (typeof docTitle === "string" && docTitle.toLowerCase().endsWith(".pdf")) ||
                 (typeof docUrl === "string" && docUrl.toLowerCase().endsWith(".pdf")) ||
                 (typeof docType === "string" && docType.toLowerCase().includes("pdf"));
-              const isImage = 
+              const isImage =
                 (typeof docUrl === "string" && docUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null) ||
                 (typeof docType === "string" && docType.toLowerCase().includes("image"));
               const docId = doc?._id || (doc as any)?.id || `doc-${index}`;
@@ -171,17 +171,17 @@ export default function DocumentsTab({ clientId, documents }: DocumentsTabProps)
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {docUrl && (
                       <>
-                        <a 
-                          href={docUrl} 
-                          download 
+                        <a
+                          href={docUrl}
+                          download
                           className="w-6 h-6 bg-[#42CD7F] rounded-[4px] flex items-center justify-center text-white hover:bg-emerald-600 transition-colors"
                         >
                           <Download className="w-3.5 h-3.5 text-white" />
                         </a>
-                        <a 
-                          href={docUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
+                        <a
+                          href={docUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="w-6 h-6 bg-[#829CB0] rounded-[4px] flex items-center justify-center text-white hover:bg-slate-600 transition-colors"
                         >
                           <ExternalLink className="w-3.5 h-3.5 text-white" />
@@ -209,8 +209,9 @@ export default function DocumentsTab({ clientId, documents }: DocumentsTabProps)
       {/* Delete Document Confirmation Modal */}
       <DeleteModal
         isOpen={!!deletingDocId}
-        onClose={() => setDeletingDocId(null)}
+        onClose={() => !archiveDocMutation.isPending && setDeletingDocId(null)}
         onConfirm={confirmDeleteDoc}
+        isPending={archiveDocMutation.isPending}
         title="Delete Document"
         description="Are you sure you want to delete this document?"
       />

@@ -9,6 +9,7 @@ interface TablePaginationProps {
   onPageChange: (page: number) => void;
   totalItems?: number;
   itemsPerPage?: number;
+  itemLabel?: string;
   className?: string;
 }
 
@@ -18,6 +19,7 @@ export default function TablePagination({
   onPageChange,
   totalItems,
   itemsPerPage = 20,
+  itemLabel,
   className,
 }: TablePaginationProps) {
   if (totalPages <= 1 && !totalItems) return null;
@@ -61,9 +63,12 @@ export default function TablePagination({
       <div className="text-xs sm:text-sm text-[#919191] font-normal">
         {totalItems ? (
           <>
-            Showing <span className="text-white font-medium">{startItem}</span> to{" "}
-            <span className="text-white font-medium">{endItem}</span> of{" "}
-            <span className="text-white font-medium">{totalItems}</span> entries
+            Showing{" "}
+            <span className="text-white font-medium">
+              {startItem}–{endItem}
+            </span>{" "}
+            of <span className="text-white font-medium">{totalItems}</span>{" "}
+            {itemLabel || "entries"}
           </>
         ) : (
           <>

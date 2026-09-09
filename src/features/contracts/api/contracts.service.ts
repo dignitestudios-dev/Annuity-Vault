@@ -121,22 +121,30 @@ export const useDeleteContractDocument = (contractId: string) => {
       const response = await axiosInstance.delete(`/contracts/${contractId}/documents/${docId}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, docId) => {
+      queryClient.setQueryData<Contract>(["contracts", contractId], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          documents: (old.documents || []).filter((d) => d._id !== docId),
+        };
+      });
       queryClient.invalidateQueries({ queryKey: ["contracts", contractId] });
     },
   });
 };
 
-export const useAddContractNote = (id: string) => {
+export const useAddContractNote = (contractId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (body: string) => {
-      const response = await axiosInstance.post(`/contracts/${id}/notes`, { body });
+    mutationFn: async (body: string | { body: string }) => {
+      const payload = typeof body === "string" ? { body } : body;
+      const response = await axiosInstance.post(`/contracts/${contractId}/notes`, payload);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contracts", id] });
+      queryClient.invalidateQueries({ queryKey: ["contracts", contractId] });
     },
   });
 };
@@ -149,7 +157,14 @@ export const useDeleteContractNote = (contractId: string) => {
       const response = await axiosInstance.delete(`/contracts/${contractId}/notes/${noteId}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, noteId) => {
+      queryClient.setQueryData<Contract>(["contracts", contractId], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          contractNotes: (old.contractNotes || []).filter((n) => n._id !== noteId),
+        };
+      });
       queryClient.invalidateQueries({ queryKey: ["contracts", contractId] });
     },
   });
@@ -157,7 +172,7 @@ export const useDeleteContractNote = (contractId: string) => {
 
 export const exportContracts = async (format: "pdf" | "csv", search?: string, contractType?: string, status?: string) => {
   const response = await axiosInstance.get<GetContractsResponse>("/contracts", {
-    params: { search, contractType, status, limit: 1000 },
+    params: { search, contractType, status, limit: 100 },
   });
   
   const contracts = response.data.data;

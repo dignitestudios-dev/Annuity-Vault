@@ -63,7 +63,7 @@ export const useAnniversaries = (filters: AnniversariesParams) => {
 
 export const exportAnniversaries = async (format: "pdf" | "csv", search?: string, timeWindow?: number) => {
   const response = await axiosInstance.get<AnniversariesResponse>("/anniversaries", {
-    params: { search, window: timeWindow, limit: 1000 },
+    params: { search, window: timeWindow, limit: 100 },
   });
   
   const anniversaries = response.data.data.rows;

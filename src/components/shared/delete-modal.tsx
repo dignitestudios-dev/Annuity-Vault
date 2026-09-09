@@ -34,6 +34,7 @@ export default function DeleteModal({
   isPending = false,
 }: DeleteModalProps) {
   const handleConfirm = () => {
+    if (isPending) return;
     onConfirm();
     // Don't close immediately if pending is supported, let the parent close it.
     if (isPending === undefined) {

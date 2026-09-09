@@ -3,6 +3,7 @@ import { Loader } from "@/components/ui/loader";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useRouter } from "next/navigation";
 import { Search, FileText, Download } from "lucide-react";
 import {
@@ -13,16 +14,24 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
 
 import { useAuditLogs, exportAuditLogs, AuditLogItem } from "@/features/activity/api/activity.service";
 
-
-
 export default function ActivityAuditPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 400);
+  const [selectedModule, setSelectedModule] = useState("All Modules");
+  const [selectedAction, setSelectedAction] = useState("All Actions");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -39,7 +48,9 @@ export default function ActivityAuditPage() {
   const { data, isLoading } = useAuditLogs({
     page: currentPage,
     limit: itemsPerPage,
-    search: searchTerm || undefined,
+    search: debouncedSearch || undefined,
+    action: selectedAction !== "All Actions" ? selectedAction : undefined,
+    module: selectedModule !== "All Modules" ? selectedModule : undefined,
   });
 
   const logs = data?.data || [];
@@ -48,7 +59,12 @@ export default function ActivityAuditPage() {
 
   const handleExportPDF = async () => {
     try {
-      await exportAuditLogs("pdf", searchTerm || undefined);
+      await exportAuditLogs(
+        "pdf",
+        debouncedSearch || undefined,
+        selectedAction !== "All Actions" ? selectedAction : undefined,
+        selectedModule !== "All Modules" ? selectedModule : undefined
+      );
       setFeedbackModal({
         isOpen: true,
         title: "PDF Export Complete",
@@ -61,7 +77,12 @@ export default function ActivityAuditPage() {
 
   const handleExportCSV = async () => {
     try {
-      await exportAuditLogs("csv", searchTerm || undefined);
+      await exportAuditLogs(
+        "csv",
+        debouncedSearch || undefined,
+        selectedAction !== "All Actions" ? selectedAction : undefined,
+        selectedModule !== "All Modules" ? selectedModule : undefined
+      );
       setFeedbackModal({
         isOpen: true,
         title: "CSV Export Complete",
@@ -128,20 +149,82 @@ export default function ActivityAuditPage() {
         </div>
       </div>
 
-      {/* 2. Full Width Search Bar Container (#394A58 Container) */}
-      <div className="w-full bg-[#394A58] p-3 rounded-xl shadow-sm flex items-center">
-        <div className="flex items-center gap-2.5 px-3.5 h-10 bg-[#141C24] rounded-xl text-white text-xs sm:text-sm w-full">
-          <Search className="w-4 h-4 text-[#919191] flex-shrink-0" />
+      {/* 2. Filter Bar Container (#394A58) */}
+      <div className="w-full bg-[#394A58] border border-white/5 rounded-xl p-3 sm:p-4 flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4 shadow-sm">
+        {/* Search Input Box */}
+        <div className="relative w-full md:flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8C8C8C]" />
           <input
             type="text"
+            placeholder="Search activity & audit logs..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Search"
-            className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-[#919191] outline-none"
+            className="w-full h-10 pl-10 pr-4 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-xs sm:text-sm focus:outline-none focus:border-white/20 font-sans"
           />
+        </div>
+
+        {/* Dropdown Filters */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          {/* Module Select Filter */}
+          <div className="w-full sm:w-[180px]">
+            <Select
+              value={selectedModule}
+              onValueChange={(val: string | null) => {
+                if (val) setSelectedModule(val);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full h-10 bg-[#141C24] border border-white/5 text-white rounded-[12px] text-xs sm:text-sm focus:ring-0 font-sans">
+                <SelectValue placeholder="All Modules" />
+              </SelectTrigger>
+              <SelectContent
+                side="bottom"
+                alignItemWithTrigger={false}
+                className="bg-[#141C24] border-white/10 text-white font-sans"
+              >
+                <SelectItem value="All Modules">All Modules</SelectItem>
+                <SelectItem value="Contracts">Contracts</SelectItem>
+                <SelectItem value="Clients">Clients</SelectItem>
+                <SelectItem value="Tasks">Tasks</SelectItem>
+                <SelectItem value="Documents">Documents</SelectItem>
+                <SelectItem value="Notes">Notes</SelectItem>
+                <SelectItem value="Settings">Settings</SelectItem>
+              
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Action Select Filter */}
+          <div className="w-full sm:w-[180px]">
+            <Select
+              value={selectedAction}
+              onValueChange={(val: string | null) => {
+                if (val) setSelectedAction(val);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full h-10 bg-[#141C24] border border-white/5 text-white rounded-[12px] text-xs sm:text-sm focus:ring-0 font-sans">
+                <SelectValue placeholder="All Actions" />
+              </SelectTrigger>
+              <SelectContent
+                side="bottom"
+                alignItemWithTrigger={false}
+                className="bg-[#141C24] border-white/10 text-white font-sans"
+              >
+                <SelectItem value="All Actions">All Actions</SelectItem>
+                <SelectItem value="Create">Create</SelectItem>
+                <SelectItem value="Update">Update</SelectItem>
+                <SelectItem value="Delete">Delete</SelectItem>
+                <SelectItem value="Archive">Archive</SelectItem>
+                <SelectItem value="Upload">Upload</SelectItem>
+                <SelectItem value="Restore">Restore</SelectItem>
+               
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -230,6 +313,7 @@ export default function ActivityAuditPage() {
             onPageChange={setCurrentPage}
             totalItems={totalItems}
             itemsPerPage={itemsPerPage}
+            itemLabel="activities"
           />
         </div>
       </div>

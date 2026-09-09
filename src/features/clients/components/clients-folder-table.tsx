@@ -235,6 +235,7 @@ export default function ClientsFolderTable() {
             onPageChange={setCurrentPage}
             totalItems={totalItems}
             itemsPerPage={itemsPerPage}
+            itemLabel="clients"
           />
         </div>
       </div>

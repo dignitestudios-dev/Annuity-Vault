@@ -86,7 +86,11 @@ export default function Sidebar() {
             {/* User Card */}
             <div className="w-full bg-[#141C24] border border-[#1F2E3C] rounded-[18px] p-3 flex items-center gap-3 shadow-md relative overflow-hidden flex-shrink-0">
               <div className="w-12 h-12 rounded-full bg-[#394A58] flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 border border-white/10 overflow-hidden">
-                <span className="text-sm font-semibold">{getInitials(user?.name || "")}</span>
+                {user?.profilePicture ? (
+                  <img src={user.profilePicture} alt={user.name || "User"} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-sm font-semibold">{getInitials(user?.name || "")}</span>
+                )}
               </div>
               <div className="flex flex-col min-w-0">
                 <h4 className="text-sm font-semibold text-white truncate font-sans">

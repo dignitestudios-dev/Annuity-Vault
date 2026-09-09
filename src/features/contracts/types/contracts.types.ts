@@ -6,6 +6,8 @@ export interface ContractDocument {
   location: string;
   uploadedBy: string;
   uploadedByType: string;
+  isArchived?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface ContractNote {
@@ -14,6 +16,8 @@ export interface ContractNote {
   createdBy: string;
   createdByType: string;
   createdAt: string;
+  isArchived?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface ContractClient {

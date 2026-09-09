@@ -79,7 +79,7 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
       {/* Notes List */}
       <div className="w-full flex flex-col">
         {notes.length === 0 ? (
-          <EmptyState 
+          <EmptyState
             icon={Pin}
             title="No notes added"
             className="py-12 border-0 bg-transparent min-h-0"
@@ -121,8 +121,9 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
       {/* Delete Note Confirmation Modal */}
       <DeleteModal
         isOpen={!!deletingNoteId}
-        onClose={() => setDeletingNoteId(null)}
+        onClose={() => !archiveNoteMutation.isPending && setDeletingNoteId(null)}
         onConfirm={confirmDeleteNote}
+        isPending={archiveNoteMutation.isPending}
         title="Delete Note"
         description="Are you sure you want to delete this note?"
       />

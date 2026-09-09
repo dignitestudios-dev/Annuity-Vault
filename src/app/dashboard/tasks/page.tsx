@@ -2,7 +2,7 @@
 import { Loader } from "@/components/ui/loader";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Plus, Search, FileText, Download, Calendar as CalendarIcon, List as ListIcon, LayoutGrid, Pencil, Trash2, ChevronLeft, ChevronRight, CheckSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -23,14 +23,13 @@ import {
 } from "@/components/ui/table";
 import NewTaskDialog from "@/features/tasks/components/new-task-dialog";
 import { Task } from "@/features/tasks/types/tasks.types";
-import { useTasks, useUpdateTask, useDeleteTask, exportTasks } from "@/features/tasks/api/tasks.service";
+import { useInfiniteTasks, useUpdateTask, useDeleteTask, exportTasks } from "@/features/tasks/api/tasks.service";
 import { format, parseISO } from "date-fns";
 import EditTaskDialog from "@/features/tasks/components/edit-task-dialog";
 import TaskDetailsDialog from "@/features/tasks/components/task-details-dialog";
 import DateTasksDialog from "@/features/tasks/components/date-tasks-dialog";
 import SuccessModal from "@/components/shared/success-modal";
 import DeleteModal from "@/components/shared/delete-modal";
-import TablePagination from "@/components/shared/table-pagination";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/empty-state";
 
@@ -54,12 +53,55 @@ function TasksContent() {
     tabParam && ["kanban", "list", "calendar"].includes(tabParam) ? tabParam : "kanban"
   );
 
-  const { data: tasksData, isLoading, refetch } = useTasks();
+  // Month Navigation State
+  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(() => new Date().getMonth());
+
+  const {
+    data: infiniteTasksData,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteTasks({
+    limit: 10,
+    search: searchTerm || undefined,
+    status: statusFilter !== "all" ? (statusFilter as any) : undefined,
+    priority: priorityFilter !== "all" ? (priorityFilter as any) : undefined,
+  });
   const updateTaskMutation = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
 
-  const tasksList: Task[] = tasksData?.data || [];
+  const tasksList: Task[] = useMemo(() => {
+    return infiniteTasksData?.pages.flatMap((page) => page.data) || [];
+  }, [infiniteTasksData]);
 
+  const totalItems = infiniteTasksData?.pages[0]?.pagination?.totalItems ?? tasksList.length;
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentEl = loadMoreRef.current;
+    if (currentEl) {
+      observer.observe(currentEl);
+    }
+
+    return () => {
+      if (currentEl) observer.unobserve(currentEl);
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Synchronize activeTab when tabParam in searchParams updates
   useEffect(() => {
@@ -74,12 +116,6 @@ function TasksContent() {
     params.set("tab", newTab);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
-
-  // Month Navigation State (Default to June 2026)
-  const [listCurrentPage, setListCurrentPage] = useState(1);
-  const listItemsPerPage = 20;
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonthIndex, setCurrentMonthIndex] = useState(5); // 0-indexed: 5 = June
 
   // Modal / Dialog States
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
@@ -664,6 +700,27 @@ function TasksContent() {
               )}
             </div>
           </div>
+
+          {/* Scroll / Load More trigger for Kanban */}
+          {hasNextPage && (
+            <div className="mt-4 flex flex-col items-center justify-center gap-2 py-2">
+              {isFetchingNextPage ? (
+                <div className="flex items-center gap-2 text-xs text-[#919191]">
+                  <Loader className="w-4 h-4 text-white" />
+                  <span>Loading more tasks...</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fetchNextPage()}
+                  className="h-8 px-4 bg-[#202B36] hover:bg-[#2A3745] text-white text-xs font-medium rounded-lg transition-colors border border-white/10 cursor-pointer"
+                >
+                  Load More Tasks ({totalItems - tasksList.length} remaining)
+                </button>
+              )}
+            </div>
+          )}
+          <div ref={activeTab === "kanban" ? loadMoreRef : undefined} className="h-4 w-full" />
         </div>
       )}
 
@@ -693,20 +750,18 @@ function TasksContent() {
               </TableHeader>
 
               <TableBody>
-                {filteredTasks
-                  .slice((listCurrentPage - 1) * listItemsPerPage, listCurrentPage * listItemsPerPage)
-                  .map((task) => (
+                {filteredTasks.map((task) => (
                   <TableRow
                     key={task._id}
                     className="border-b border-white/[0.08] hover:bg-white/[0.02] transition-colors h-[66px] cursor-pointer"
                     onClick={() => setSelectedDetailsTask(task)}
                   >
-                    <TableCell className="px-6 py-2.5">
+                    <TableCell className="px-6 py-2.5 max-w-[320px] sm:max-w-[420px]">
                       <div className="flex flex-col">
-                        <span className="text-xs sm:text-sm font-medium text-white leading-snug">
+                        <span className="text-xs sm:text-sm font-medium text-white leading-snug break-words">
                           {task.title}
                         </span>
-                        <span className="text-[12px] text-[#919191] font-normal leading-tight line-clamp-1 mt-0.5">
+                        <span className="text-[12px] text-[#919191] font-normal leading-relaxed break-words whitespace-pre-line mt-0.5">
                           {task.description || "No description provided."}
                         </span>
                       </div>
@@ -775,14 +830,26 @@ function TasksContent() {
             </Table>
           </div>
 
-          <div className="px-6 pb-4">
-            <TablePagination
-              currentPage={listCurrentPage}
-              totalPages={Math.ceil(filteredTasks.length / listItemsPerPage)}
-              onPageChange={setListCurrentPage}
-              totalItems={filteredTasks.length}
-              itemsPerPage={listItemsPerPage}
-            />
+          <div className="px-6 py-4 flex flex-col items-center justify-center gap-2 border-t border-white/10">
+            <div className="text-xs text-[#919191]">
+              Showing {tasksList.length} of {totalItems} tasks
+            </div>
+            {isFetchingNextPage && (
+              <div className="flex items-center gap-2 text-xs text-[#919191] py-1">
+                <Loader className="w-4 h-4 text-white" />
+                <span>Loading more tasks...</span>
+              </div>
+            )}
+            {hasNextPage && !isFetchingNextPage && (
+              <button
+                type="button"
+                onClick={() => fetchNextPage()}
+                className="h-8 px-4 bg-[#202B36] hover:bg-[#2A3745] text-white text-xs font-medium rounded-lg transition-colors border border-white/10 cursor-pointer"
+              >
+                Load More Tasks ({totalItems - tasksList.length} remaining)
+              </button>
+            )}
+            <div ref={activeTab === "list" ? loadMoreRef : undefined} className="h-4 w-full" />
           </div>
         </div>
       )}
@@ -804,6 +871,17 @@ function TasksContent() {
                   title="Previous Month"
                 >
                   <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentYear(new Date().getFullYear());
+                    setCurrentMonthIndex(new Date().getMonth());
+                  }}
+                  className="px-2 py-0.5 rounded text-xs font-medium text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Go to current month"
+                >
+                  Today
                 </button>
                 <button
                   type="button"

@@ -213,10 +213,10 @@ function ClientDetailsContent() {
 
     const dateStr = t.dueDate
       ? new Date(t.dueDate).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        })
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
       : "No Date";
 
     return {
@@ -257,19 +257,19 @@ function ClientDetailsContent() {
         clientSince={
           client.createdAt
             ? new Date(client.createdAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-              })
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            })
             : "--"
         }
         created={
           client.createdAt
             ? new Date(client.createdAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-              })
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            })
             : "--"
         }
         email={client.email || "--"}
@@ -312,9 +312,9 @@ function ClientDetailsContent() {
 
       {/* Dynamic Tab Panels */}
       {activeTab === "contracts" && (
-        <ContractsTab 
-          clientId={clientId || client?.id || client?._id} 
-          contracts={mappedContracts} 
+        <ContractsTab
+          clientId={clientId || client?.id || client?._id}
+          contracts={mappedContracts}
           isLoading={isLoadingContracts}
         />
       )}

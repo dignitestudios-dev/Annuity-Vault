@@ -1,8 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -13,12 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectTrigger,
@@ -33,18 +24,51 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 
-const newClientSchema = z.object({
-  firstName: z.string().min(1, "First Name is required").max(50, "First Name must be less than 50 characters"),
-  lastName: z.string().min(1, "Last Name is required").max(50, "Last Name must be less than 50 characters"),
-  email: z.string().min(1, "Email is required").email("Invalid email address").max(100, "Email must be less than 100 characters"),
-  phone: z.string().regex(/^\+?[\d\s\-\(\)]+$/, "Invalid phone number format").min(10, "Phone number too short").max(20, "Phone number too long").optional().or(z.literal("")),
-  address: z.string().min(1, "Address is required").max(200, "Address must be less than 200 characters"),
-  status: z.enum(["Active", "Inactive", "Prospect"], {
-    message: "Please select a valid status",
-  }),
-  dateOfBirth: z.date().optional(),
-  notes: z.string().max(500, "Notes must be less than 500 characters").optional().or(z.literal("")),
-});
+const newClientSchema = z
+  .object({
+    firstName: z
+      .string()
+      .trim()
+      .min(1, "First Name is required")
+      .max(50, "First Name cannot exceed 50 characters"),
+    lastName: z
+      .string()
+      .trim()
+      .min(1, "Last Name is required")
+      .max(50, "Last Name cannot exceed 50 characters"),
+    email: z
+      .string()
+      .min(1, "Email is required")
+      .email("Invalid email address")
+      .max(100, "Email cannot exceed 100 characters"),
+    phone: z
+      .string()
+      .regex(/^\+?[\d\s\-\(\)]+$/, "Invalid phone number format")
+      .min(10, "Phone number too short")
+      .max(20, "Phone number too long")
+      .optional()
+      .or(z.literal("")),
+    address: z
+      .string()
+      .min(1, "Address is required")
+      .max(200, "Address cannot exceed 200 characters"),
+    status: z.enum(["Active", "Inactive", "Prospect"], {
+      message: "Please select a valid status",
+    }),
+    dateOfBirth: z.string().optional().or(z.literal("")),
+    notes: z
+      .string()
+      .max(500, "Notes cannot exceed 500 characters")
+      .optional()
+      .or(z.literal("")),
+  })
+  .refine(
+    (data) => `${data.firstName} ${data.lastName}`.trim().length <= 60,
+    {
+      message: "Full client name cannot exceed 60 characters",
+      path: ["firstName"],
+    }
+  );
 
 type NewClientFormData = z.infer<typeof newClientSchema>;
 
@@ -67,6 +91,7 @@ export default function NewClientDialog({
     formState: { errors },
   } = useForm<NewClientFormData>({
     resolver: zodResolver(newClientSchema),
+    mode: "onChange",
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -74,6 +99,7 @@ export default function NewClientDialog({
       phone: "",
       address: "",
       status: "Active",
+      dateOfBirth: "",
       notes: "",
     },
   });
@@ -89,7 +115,7 @@ export default function NewClientDialog({
         phone: data.phone,
         address: data.address,
         status: data.status,
-        dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
+        dateOfBirth: data.dateOfBirth ? data.dateOfBirth : undefined,
         notes: data.notes,
       },
       {
@@ -149,7 +175,7 @@ export default function NewClientDialog({
               <Input
                 type="email"
                 {...register("email")}
-                placeholder="Enter Email"
+                placeholder="e.g. alex@example.com"
                 className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.email ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
               {errors.email && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.email.message}</p>}
@@ -159,7 +185,7 @@ export default function NewClientDialog({
               <Input
                 type="tel"
                 {...register("phone")}
-                placeholder="Enter Phone No."
+                placeholder="e.g. +1 (555) 000-0000"
                 className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.phone ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
               {errors.phone && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.phone.message}</p>}
@@ -180,37 +206,21 @@ export default function NewClientDialog({
 
           {/* Row 4: Date & Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {/* Date Select using Shadcn Calendar + Popover */}
+            {/* Date Select */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-white">Date</Label>
-              <Controller
-                name="dateOfBirth"
-                control={control}
-                render={({ field }) => (
-                  <Popover>
-                    <PopoverTrigger
-                      render={
-                        <button
-                          type="button"
-                          className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
-                        >
-                          <span className={field.value ? "text-white" : "text-[#919191]"}>
-                            {field.value ? format(field.value, "MM/dd/yyyy") : "mm/dd/yyyy"}
-                          </span>
-                          <CalendarIcon className="w-4 h-4 text-[#919191]" />
-                        </button>
-                      }
-                    />
-                    <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
+              <Input
+                type="date"
+                {...register("dateOfBirth")}
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] px-3.5 focus-visible:ring-1 focus-visible:ring-[#6887A0] [color-scheme:dark] ${
+                  errors.dateOfBirth ? "ring-1 ring-[#FF3E46]" : ""
+                }`}
               />
+              {errors.dateOfBirth && (
+                <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
+                  {errors.dateOfBirth.message}
+                </p>
+              )}
             </div>
 
             {/* Status Select */}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { 
   Activity, 
   Upload, 
@@ -18,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/ui/loader";
 import { EmptyState } from "@/components/shared/empty-state";
 import TablePagination from "@/components/shared/table-pagination";
-import { useAuditLogs, AuditLogItem } from "@/features/activity/api/activity.service";
+import { useAuditLogs, AuditLogItem, useAuditLogsById } from "@/features/activity/api/activity.service";
 import { cn } from "@/lib/utils";
 
 interface ActivityTabProps {
@@ -29,12 +30,13 @@ interface ActivityTabProps {
 export default function ActivityTab({ clientId, clientName }: ActivityTabProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 400);
   const itemsPerPage = 10;
 
-  const { data, isLoading } = useAuditLogs({
+  const { data, isLoading } = useAuditLogsById(clientId || "", {
     page: currentPage,
     limit: itemsPerPage,
-    search: searchTerm || undefined,
+    search: debouncedSearch || undefined,
   });
 
   const logs: AuditLogItem[] = data?.data || [];
@@ -100,29 +102,6 @@ export default function ActivityTab({ clientId, clientName }: ActivityTabProps) 
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] overflow-hidden shadow-sm flex flex-col justify-between">
-        <div className="h-[65px] bg-[#394A58] px-6 flex flex-wrap items-center justify-between gap-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-[120px] h-6 bg-[#4A5D6E] animate-pulse rounded-[6px]"></div>
-          </div>
-          <div className="w-full sm:w-[260px] h-9 bg-[#4A5D6E] animate-pulse rounded-[10px]"></div>
-        </div>
-        <div className="p-6">
-          <div className="relative border-l border-white/10 ml-4 pl-6 sm:pl-8 flex flex-col gap-6">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="relative flex flex-col gap-2">
-                <div className="absolute -left-[37px] sm:-left-[45px] top-1.5 w-6 h-6 rounded-full bg-[#192430] animate-pulse border border-white/15"></div>
-                <div className="w-full h-28 bg-[#192430] animate-pulse rounded-[10px] border border-white/5"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] overflow-hidden shadow-sm flex flex-col justify-between">
       {/* 1. Header Row (#394A58) */}
@@ -156,12 +135,21 @@ export default function ActivityTab({ clientId, clientName }: ActivityTabProps) 
 
       {/* 2. Timeline Activity Feed */}
       <div className="p-6">
-        {logs.length === 0 ? (
+        {isLoading ? (
+          <div className="relative border-l border-white/10 ml-4 pl-6 sm:pl-8 flex flex-col gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="relative flex flex-col gap-2">
+                <div className="absolute -left-[37px] sm:-left-[45px] top-1.5 w-6 h-6 rounded-full bg-[#192430] animate-pulse border border-white/15"></div>
+                <div className="w-full h-28 bg-[#192430] animate-pulse rounded-[10px] border border-white/5"></div>
+              </div>
+            ))}
+          </div>
+        ) : logs.length === 0 ? (
           <EmptyState
             icon={Activity}
             title="No activity logs found"
             description={
-              searchTerm
+              debouncedSearch
                 ? "No activity logs match your search filter."
                 : "Activity and audit logs will appear here once actions are performed."
             }
@@ -263,6 +251,7 @@ export default function ActivityTab({ clientId, clientName }: ActivityTabProps) 
             onPageChange={setCurrentPage}
             totalItems={totalItems}
             itemsPerPage={itemsPerPage}
+            itemLabel="activities"
           />
         </div>
       )}

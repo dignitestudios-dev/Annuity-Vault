@@ -49,7 +49,7 @@ export const clientsService = {
   },
 
   archiveClientNote: async ({ clientId, noteId }: { clientId: string; noteId: string }): Promise<any> => {
-    const response = await axiosInstance.patch(`/clients/${clientId}/notes/${noteId}`);
+    const response = await axiosInstance.delete(`/clients/${clientId}/notes/${noteId}`);
     return response.data.data || response.data;
   },
 
@@ -66,7 +66,7 @@ export const clientsService = {
   },
 
   archiveClientDocument: async ({ clientId, docId }: { clientId: string; docId: string }): Promise<any> => {
-    const response = await axiosInstance.patch(`/clients/${clientId}/documents/${docId}`);
+    const response = await axiosInstance.delete(`/clients/${clientId}/documents/${docId}`);
     return response.data.data || response.data;
   },
 };

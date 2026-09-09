@@ -302,6 +302,7 @@ export default function AnniversariesPage() {
             onPageChange={setCurrentPage}
             totalItems={totalItems}
             itemsPerPage={itemsPerPage}
+            itemLabel="anniversaries"
           />
         </div>
       </div>
