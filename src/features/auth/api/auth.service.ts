@@ -11,17 +11,29 @@ export const authService = {
     return data.data ? data.data : (data as unknown as LoginResponse);
   },
 
-  forgotPassword: async (credentials: ForgotPasswordCredentials): Promise<void> => {
-    await axiosInstance.post("/auth/forgot-password", credentials);
+  forgotPassword: async (credentials: ForgotPasswordCredentials): Promise<any> => {
+    const { data } = await axiosInstance.post("/auth/forgot-password", credentials);
+    return data;
   },
 
   verifyOtp: async (credentials: VerifyOtpCredentials): Promise<{ resetToken: string }> => {
-    const { data } = await axiosInstance.post<{ success: boolean; data: { resetToken: string } }>("/auth/verify-otp", credentials);
-    return data.data ? data.data : (data as unknown as { resetToken: string });
+    const { data } = await axiosInstance.post<{
+      success?: boolean;
+      data?: { resetToken: string };
+      resetToken?: string;
+    }>("/auth/verify-otp", credentials);
+    const resetToken = data?.data?.resetToken || data?.resetToken || "";
+    return { resetToken };
   },
 
-  resetPassword: async (credentials: ResetPasswordCredentials): Promise<void> => {
-    await axiosInstance.post("/auth/reset-password", credentials);
+  resetPassword: async (credentials: ResetPasswordCredentials): Promise<any> => {
+    const { data } = await axiosInstance.post("/auth/reset-password", credentials);
+    return data;
+  },
+
+  resendOtp: async (credentials: ResendOtpCredentials): Promise<any> => {
+    const { data } = await axiosInstance.post("/auth/resend-otp", credentials);
+    return data;
   },
 
   logout: async (): Promise<void> => {
@@ -48,6 +60,12 @@ export const useVerifyOtpMutation = () => {
   });
 };
 
+export const useResendOtpMutation = () => {
+  return useMutation({
+    mutationFn: authService.resendOtp,
+  });
+};
+
 export const useResetPasswordMutation = () => {
   return useMutation({
     mutationFn: authService.resetPassword,
@@ -59,3 +77,4 @@ export const useLogoutMutation = () => {
     mutationFn: authService.logout,
   });
 };
+

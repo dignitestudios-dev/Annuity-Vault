@@ -34,3 +34,8 @@ interface ResetPasswordCredentials {
   password: string;
   confirmPassword: string;
 }
+
+interface ResendOtpCredentials {
+  email: string;
+}
+

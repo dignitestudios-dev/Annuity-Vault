@@ -3,13 +3,16 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Eye, EyeOff, Check } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff, Check, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import toast from "react-hot-toast";
+import { useResetPasswordMutation } from "@/features/auth/api/auth.service";
 
 const resetPasswordSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters").max(50, "Password must be less than 50 characters"),
@@ -22,6 +25,10 @@ const resetPasswordSchema = z.object({
 type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPasswordForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tokenFromUrl = searchParams.get("token");
+
   const { register, handleSubmit, formState: { errors } } = useForm<ResetPasswordData>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { password: "", confirmPassword: "" }
@@ -30,9 +37,33 @@ export default function ResetPasswordForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  const { mutate: resetPassword, isPending } = useResetPasswordMutation();
+
   const onSubmit = (data: ResetPasswordData) => {
-    console.log("Reset password data:", data);
-    setIsSubmitted(true);
+    const resetToken = tokenFromUrl || (typeof window !== "undefined" ? sessionStorage.getItem("resetToken") : null);
+
+    if (!resetToken) {
+      toast.error("Reset token is missing or has expired. Please verify OTP again.");
+      router.push("/auth/forgot-password");
+      return;
+    }
+
+    resetPassword(
+      {
+        resetToken,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Password updated successfully!");
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem("resetToken");
+          }
+          setIsSubmitted(true);
+        },
+      }
+    );
   };
 
   return (
@@ -76,7 +107,7 @@ export default function ResetPasswordForm() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter password here"
                     {...register("password")}
-                    className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.password ? "ring-1 ring-[#FF3E46]" : ""}`}
+                    className={`h-10 w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.password ? "ring-1 ring-[#FF3E46]" : ""}`}
                   />
                   <button
                     type="button"
@@ -112,7 +143,7 @@ export default function ResetPasswordForm() {
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Re-enter password here"
                     {...register("confirmPassword")}
-                    className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.confirmPassword ? "ring-1 ring-[#FF3E46]" : ""}`}
+                    className={`h-10 w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.confirmPassword ? "ring-1 ring-[#FF3E46]" : ""}`}
                   />
                   <button
                     type="button"
@@ -139,9 +170,11 @@ export default function ResetPasswordForm() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full h-[40px] bg-gradient-to-r from-[#66859E] to-[#849EB2] rounded-[10px] text-xs font-bold text-white capitalize hover:opacity-95 transition-opacity shadow-md border-0 mt-1"
+                disabled={isPending}
+                className="w-full h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] rounded-[10px] text-xs font-bold text-white capitalize hover:opacity-95 transition-opacity shadow-md border-0 mt-1 flex items-center justify-center gap-2"
               >
-                Update
+                {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isPending ? "Updating..." : "Update"}
               </Button>
             </form>
           </div>
@@ -165,8 +198,8 @@ export default function ResetPasswordForm() {
             {/* Back to Login Button */}
             <Button
               type="button"
-              onClick={() => (window.location.href = "/auth/login")}
-              className="w-full h-[40px] bg-gradient-to-r from-[#66859E] to-[#849EB2] rounded-[10px] text-xs font-bold text-white capitalize hover:opacity-95 transition-opacity shadow-md border-0 mt-2"
+              onClick={() => router.push("/auth/login")}
+              className="w-full h-10 bg-gradient-to-r from-[#66859E] to-[#849EB2] rounded-[10px] text-xs font-bold text-white capitalize hover:opacity-95 transition-opacity shadow-md border-0 mt-2"
             >
               Back to Log In
             </Button>
@@ -176,3 +209,4 @@ export default function ResetPasswordForm() {
     </div>
   );
 }
+
