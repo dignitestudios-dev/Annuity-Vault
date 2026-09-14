@@ -121,14 +121,27 @@ export default function SettingsProfilePage() {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/gif,image/webp,image/*"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) {
-            setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file));
+          if (!file) return;
+
+          const maxSizeBytes = 10 * 1024 * 1024; // 10 MB
+          if (file.size > maxSizeBytes) {
+            toast.error("Profile picture size must be less than 10MB.");
+            e.target.value = "";
+            return;
           }
+
+          if (!file.type.startsWith("image/")) {
+            toast.error("Please upload a valid image file (JPEG, PNG, WebP, GIF).");
+            e.target.value = "";
+            return;
+          }
+
+          setSelectedFile(file);
+          setPreviewUrl(URL.createObjectURL(file));
         }}
       />
 

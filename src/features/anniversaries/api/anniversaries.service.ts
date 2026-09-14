@@ -81,7 +81,8 @@ export const exportAnniversaries = async (format: "pdf" | "csv", search?: string
       ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(","))
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -89,6 +90,7 @@ export const exportAnniversaries = async (format: "pdf" | "csv", search?: string
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   } else if (format === "pdf") {
     const jsPDF = (await import("jspdf")).default;
     const autoTable = (await import("jspdf-autotable")).default;

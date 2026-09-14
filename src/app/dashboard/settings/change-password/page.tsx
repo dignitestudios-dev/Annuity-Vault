@@ -16,7 +16,8 @@ const changePasswordSchema = z
       .min(8, "New password must be at least 8 characters")
       .max(50, "Password must be less than 50 characters")
       .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number"),
+      .regex(/[0-9]/, "Password must contain at least one number")
+      .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
     confirmPassword: z.string().min(1, "Please confirm your new password").max(50, "Password must be less than 50 characters"),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {

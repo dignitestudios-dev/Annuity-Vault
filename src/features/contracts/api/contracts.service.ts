@@ -34,14 +34,14 @@ export const useContracts = (params?: GetContractsParams) => {
   });
 };
 
-export const useContract = (id: string) => {
+export const useContract = (id: string, enabled: boolean = true) => {
   return useQuery({
     queryKey: ["contracts", id],
     queryFn: async () => {
       const response = await axiosInstance.get<GetContractResponse>(`/contracts/${id}`);
       return {...response.data.data, id: response.data.data._id};
     },
-    enabled: !!id,
+    enabled: !!id && enabled,
   });
 };
 
@@ -84,8 +84,12 @@ export const useDeleteContract = () => {
       const response = await axiosInstance.delete(`/contracts/${id}`);
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+    onSuccess: (_data, id) => {
+      queryClient.removeQueries({ queryKey: ["contracts", id] });
+      queryClient.invalidateQueries({
+        queryKey: ["contracts"],
+        predicate: (query) => query.queryKey[1] !== id,
+      });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -194,7 +198,8 @@ export const exportContracts = async (format: "pdf" | "csv", search?: string, co
       ].map(field => `"${field}"`).join(","))
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -202,6 +207,7 @@ export const exportContracts = async (format: "pdf" | "csv", search?: string, co
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   } else if (format === "pdf") {
     const jsPDF = (await import("jspdf")).default;
     const autoTable = (await import("jspdf-autotable")).default;
