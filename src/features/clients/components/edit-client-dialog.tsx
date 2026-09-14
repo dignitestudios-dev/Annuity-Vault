@@ -34,51 +34,43 @@ import { z } from "zod";
 import toast from "react-hot-toast";
 import { useEffect } from "react";
 
-const editClientSchema = z
-  .object({
-    firstName: z
-      .string()
-      .trim()
-      .min(1, "First Name is required")
-      .max(50, "First Name cannot exceed 50 characters"),
-    lastName: z
-      .string()
-      .trim()
-      .min(1, "Last Name is required")
-      .max(50, "Last Name cannot exceed 50 characters"),
-    email: z
-      .string()
-      .min(1, "Email is required")
-      .email("Invalid email address")
-      .max(100, "Email cannot exceed 100 characters"),
-    phone: z
-      .string()
-      .regex(/^\+?[\d\s\-\(\)]+$/, "Invalid phone number format")
-      .min(10, "Phone number too short")
-      .max(20, "Phone number too long")
-      .optional()
-      .or(z.literal("")),
-    address: z
-      .string()
-      .min(1, "Address is required")
-      .max(200, "Address cannot exceed 200 characters"),
-    status: z.enum(["Active", "Inactive", "Prospect"], {
-      message: "Please select a valid status",
-    }),
-    dateOfBirth: z.date().optional(),
-    notes: z
-      .string()
-      .max(500, "Notes cannot exceed 500 characters")
-      .optional()
-      .or(z.literal("")),
-  })
-  .refine(
-    (data) => `${data.firstName} ${data.lastName}`.trim().length <= 60,
-    {
-      message: "Full client name cannot exceed 60 characters",
-      path: ["firstName"],
-    }
-  );
+const editClientSchema = z.object({
+  firstName: z
+    .string()
+    .trim()
+    .min(1, "First Name is required")
+    .max(50, "First Name cannot exceed 50 characters"),
+  lastName: z
+    .string()
+    .trim()
+    .min(1, "Last Name is required")
+    .max(50, "Last Name cannot exceed 50 characters"),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Invalid email address")
+    .max(100, "Email cannot exceed 100 characters"),
+  phone: z
+    .string()
+    .regex(/^\+?[\d\s\-\(\)]+$/, "Invalid phone number format")
+    .min(10, "Phone number too short")
+    .max(20, "Phone number too long")
+    .optional()
+    .or(z.literal("")),
+  address: z
+    .string()
+    .min(1, "Address is required")
+    .max(200, "Address cannot exceed 200 characters"),
+  status: z.enum(["Active", "Inactive", "Prospect"], {
+    message: "Please select a valid status",
+  }),
+  dateOfBirth: z.date().optional(),
+  notes: z
+    .string()
+    .max(500, "Notes cannot exceed 500 characters")
+    .optional()
+    .or(z.literal("")),
+});
 
 type EditClientFormData = z.infer<typeof editClientSchema>;
 

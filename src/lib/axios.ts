@@ -2,7 +2,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://0hw8tf6g-3001.inc1.devtunnels.ms/api/v1",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || " https://api.dev.annuity-vault.com/api/v1",
   // baseURL: "https://416zwbs6-3003.inc1.devtunnels.ms/api/v1",
   timeout: 10000,
   headers: { "Content-Type": "application/json" },

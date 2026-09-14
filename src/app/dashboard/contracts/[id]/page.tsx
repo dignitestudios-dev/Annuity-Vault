@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -43,10 +43,8 @@ const getStatusStyle = (status: string) => {
       return "bg-[#FF3E46] text-white border-0";
     case "matured":
       return "bg-[#39BDF6] text-white border-0";
-    case "pending":
-      return "bg-[#FFE600] text-black border-0 font-semibold";
     default:
-      return "bg-gray-600 text-white border-0";
+      return "bg-[#66859E] text-white border-0";
   }
 };
 
@@ -59,18 +57,17 @@ const formatCurrency = (value: number) => {
   }).format(value || 0);
 };
 
-const formatAnniversary = (dateString?: string) => {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
+const formatAnniversary = (anniversaryDate?: string) => {
+  if (!anniversaryDate) return "N/A";
+  const date = new Date(anniversaryDate);
   const now = new Date();
+  const currentYear = now.getFullYear();
+  const anniversaryMonth = date.getMonth();
+  const anniversaryDay = date.getDate();
 
-  // Create a date for this year's anniversary
-  const thisYearAnniversary = new Date(date);
-  thisYearAnniversary.setFullYear(now.getFullYear());
-
-  // If anniversary already passed this year, look at next year's
+  let thisYearAnniversary = new Date(currentYear, anniversaryMonth, anniversaryDay);
   if (thisYearAnniversary < now) {
-    thisYearAnniversary.setFullYear(now.getFullYear() + 1);
+    thisYearAnniversary = new Date(currentYear + 1, anniversaryMonth, anniversaryDay);
   }
 
   const daysDiff = differenceInDays(thisYearAnniversary, now);
@@ -90,10 +87,20 @@ export default function ContractDetailsPage() {
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<{ id: string; type: "note" | "document" | "contract" } | null>(null);
   const [newNote, setNewNote] = useState("");
+  const [isContractDeleted, setIsContractDeleted] = useState(false);
+  const [cachedContract, setCachedContract] = useState<Contract | null>(null);
 
   const params = useParams();
   const contractId = params.id as string;
-  const { data: contract, isLoading } = useContract(contractId);
+  const { data: contractData, isLoading } = useContract(contractId, !isContractDeleted);
+
+  useEffect(() => {
+    if (contractData) {
+      setCachedContract(contractData);
+    }
+  }, [contractData]);
+
+  const contract = contractData || cachedContract;
   const deleteContract = useDeleteContract();
   const addNote = useAddContractNote(contractId);
   const deleteNote = useDeleteContractNote(contractId);
@@ -157,6 +164,7 @@ export default function ContractDetailsPage() {
         await deleteNote.mutateAsync(currentItem.id);
         toast.success("Note deleted successfully!");
       } else if (currentItem.type === "contract") {
+        setIsContractDeleted(true);
         await deleteContract.mutateAsync(contractId);
         setIsArchiveOpen(true);
       }
@@ -179,6 +187,7 @@ export default function ContractDetailsPage() {
 
   const handleArchiveClose = () => {
     setIsArchiveOpen(false);
+    queryClient.removeQueries({ queryKey: ["contracts", contractId] });
     router.push("/dashboard/contracts");
   };
 

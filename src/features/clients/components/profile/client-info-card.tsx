@@ -58,7 +58,7 @@ export default function ClientInfoCard({
         </div>
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-white flex-shrink-0" />
-          <span>{address}</span>
+          <span className="break-all">{address}</span>
         </div>
         <div className="flex items-center gap-2">
           <CalendarIcon className="w-4 h-4 text-white flex-shrink-0" />

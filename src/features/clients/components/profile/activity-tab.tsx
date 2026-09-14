@@ -13,7 +13,8 @@ import {
   User, 
   Folder,
   FileText,
-  Search
+  Search,
+  ArrowRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/ui/loader";
@@ -21,6 +22,202 @@ import { EmptyState } from "@/components/shared/empty-state";
 import TablePagination from "@/components/shared/table-pagination";
 import { useAuditLogs, AuditLogItem, useAuditLogsById } from "@/features/activity/api/activity.service";
 import { cn } from "@/lib/utils";
+
+// Standard Field Labels for accurate human-readable display
+const FIELD_LABELS: Record<string, string> = {
+  firstName: "First Name",
+  lastName: "Last Name",
+  email: "Email",
+  phone: "Phone",
+  address: "Address",
+  status: "Status",
+  dateOfBirth: "Date of Birth",
+  notes: "Notes",
+  city: "City",
+  state: "State",
+  zipCode: "Zip Code",
+  totalAUM: "Total AUM",
+  contractNumber: "Contract #",
+  policyNumber: "Policy #",
+  provider: "Provider",
+  contractType: "Contract Type",
+  contractValue: "Contract Value",
+  anniversaryDate: "Anniversary Date",
+  commission: "Commission",
+  title: "Title",
+  description: "Description",
+  dueDate: "Due Date",
+  priority: "Priority",
+  assignedTo: "Assigned To",
+};
+
+// System / internal fields that should not be shown as user-content updates
+const IGNORED_FIELDS = new Set([
+  "_id",
+  "id",
+  "__v",
+  "createdAt",
+  "updatedAt",
+  "createdBy",
+  "createdByType",
+  "clientId",
+  "contractsCount",
+  "clientNotes",
+  "documents",
+]);
+
+interface ParsedFieldChange {
+  field: string;
+  label: string;
+  from?: string;
+  to?: string;
+  value?: string;
+}
+
+const formatFieldValue = (val: any): string => {
+  if (val === null || val === undefined || val === "") return "--";
+  if (typeof val === "boolean") return val ? "Yes" : "No";
+  if (typeof val === "number") return val.toLocaleString();
+  if (typeof val === "string") {
+    // Check if ISO date
+    if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/.test(val)) {
+      try {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+        }
+      } catch {
+        // fall back to string
+      }
+    }
+    return val;
+  }
+  if (typeof val === "object") {
+    if (val.name) return String(val.name);
+    if (val.title) return String(val.title);
+    return JSON.stringify(val);
+  }
+  return String(val);
+};
+
+function parseAuditLogChanges(log: AuditLogItem): {
+  isStructured: boolean;
+  changes: ParsedFieldChange[];
+  fallbackText: string;
+} {
+  const rawChange = log.change || "";
+  const rawObj = (log as any).changes || (log as any).details || (log as any).diff;
+
+  let dataObj: any = rawObj;
+  if (!dataObj && typeof rawChange === "string") {
+    const trimmed = rawChange.trim();
+    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+      try {
+        dataObj = JSON.parse(trimmed);
+      } catch {
+        dataObj = null;
+      }
+    }
+  }
+
+  const parsedChanges: ParsedFieldChange[] = [];
+
+  if (Array.isArray(dataObj)) {
+    for (const item of dataObj) {
+      if (!item || typeof item !== "object") continue;
+      const fieldKey = item.field || item.key || item.name;
+      if (!fieldKey || IGNORED_FIELDS.has(fieldKey)) continue;
+
+      const fromVal = item.from !== undefined ? item.from : item.oldValue !== undefined ? item.oldValue : item.old;
+      const toVal = item.to !== undefined ? item.to : item.newValue !== undefined ? item.newValue : item.new !== undefined ? item.new : item.value;
+
+      // Filter out unchanged fields where before and after values are identical
+      if (fromVal !== undefined && toVal !== undefined) {
+        if (JSON.stringify(fromVal) === JSON.stringify(toVal) || String(fromVal).trim() === String(toVal).trim()) {
+          continue;
+        }
+      }
+
+      parsedChanges.push({
+        field: fieldKey,
+        label: FIELD_LABELS[fieldKey] || fieldKey.replace(/([A-Z])/g, " $1").replace(/^./, (s:any) => s.toUpperCase()).trim(),
+        from: fromVal !== undefined ? formatFieldValue(fromVal) : undefined,
+        to: toVal !== undefined ? formatFieldValue(toVal) : undefined,
+        value: toVal !== undefined ? formatFieldValue(toVal) : formatFieldValue(item.value),
+      });
+    }
+  } else if (dataObj && typeof dataObj === "object") {
+    for (const [key, val] of Object.entries(dataObj)) {
+      if (IGNORED_FIELDS.has(key)) continue;
+      if (val && typeof val === "object" && ("from" in val || "to" in val || "old" in val || "new" in val || "oldValue" in val || "newValue" in val)) {
+        const vObj = val as any;
+        const fromVal = vObj.from !== undefined ? vObj.from : vObj.oldValue !== undefined ? vObj.oldValue : vObj.old;
+        const toVal = vObj.to !== undefined ? vObj.to : vObj.newValue !== undefined ? vObj.newValue : vObj.new;
+
+        // Skip unchanged fields
+        if (fromVal !== undefined && toVal !== undefined) {
+          if (JSON.stringify(fromVal) === JSON.stringify(toVal) || String(fromVal).trim() === String(toVal).trim()) {
+            continue;
+          }
+        }
+
+        parsedChanges.push({
+          field: key,
+          label: FIELD_LABELS[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).trim(),
+          from: fromVal !== undefined ? formatFieldValue(fromVal) : undefined,
+          to: toVal !== undefined ? formatFieldValue(toVal) : undefined,
+        });
+      } else {
+        parsedChanges.push({
+          field: key,
+          label: FIELD_LABELS[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).trim(),
+          value: formatFieldValue(val),
+        });
+      }
+    }
+  }
+
+  // Fallback: parse string formatted diffs e.g. "status: Active -> Inactive" or "firstName: from A to B"
+  if (parsedChanges.length === 0 && rawChange.includes("->")) {
+    const parts = rawChange.split(/,\s*/);
+    for (const part of parts) {
+      const match = part.match(/([^:]+):\s*(.*?)\s*->\s*(.*)/);
+      if (match) {
+        const [, fieldName, fromVal, toVal] = match;
+        const cleanField = fieldName.trim();
+        if (IGNORED_FIELDS.has(cleanField)) continue;
+        if (fromVal.trim() === toVal.trim()) continue; // skip unchanged
+
+        parsedChanges.push({
+          field: cleanField,
+          label: FIELD_LABELS[cleanField] || cleanField.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).trim(),
+          from: formatFieldValue(fromVal.trim()),
+          to: formatFieldValue(toVal.trim()),
+        });
+      }
+    }
+  } else if (parsedChanges.length === 0 && rawChange.toLowerCase().includes("changed from")) {
+    const match = rawChange.match(/([a-zA-Z\s]+)\s+changed from\s+['"]?([^'"]+)['"]?\s+to\s+['"]?([^'"]+)['"]?/i);
+    if (match) {
+      const [, fieldName, fromVal, toVal] = match;
+      const cleanField = fieldName.trim();
+      if (fromVal.trim() !== toVal.trim()) {
+        parsedChanges.push({
+          field: cleanField,
+          label: FIELD_LABELS[cleanField] || cleanField.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).trim(),
+          from: formatFieldValue(fromVal.trim()),
+          to: formatFieldValue(toVal.trim()),
+        });
+      }
+    }
+  }
+
+  return {
+    isStructured: parsedChanges.length > 0,
+    changes: parsedChanges,
+    fallbackText: rawChange || "No changes recorded.",
+  };
+}
 
 interface ActivityTabProps {
   clientId?: string;
@@ -205,18 +402,73 @@ export default function ActivityTab({ clientId, clientName }: ActivityTabProps) 
                     </div>
 
                     {/* Middle: Record Label & Change Details */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-2">
                       {log.recordLabel && (
                         <h4 className="text-sm font-semibold text-white tracking-tight flex items-center gap-1.5">
                           <FileText className="w-3.5 h-3.5 text-[#849EB2] flex-shrink-0" />
                           <span className="truncate">{log.recordLabel}</span>
                         </h4>
                       )}
-                      {log.change && (
-                        <p className="text-xs text-[#CACACA] leading-relaxed break-words">
-                          {log.change}
-                        </p>
-                      )}
+
+                      {/* Accurate Field Changes Display */}
+                      {(() => {
+                        const changeInfo = parseAuditLogChanges(log);
+                        if (changeInfo.isStructured && changeInfo.changes.length > 0) {
+                          return (
+                            <div className="flex flex-col gap-1.5 bg-[#141C24] p-3 rounded-[8px] border border-white/5 mt-0.5">
+                              <span className="text-[11px] font-semibold text-[#849EB2] uppercase tracking-wider">
+                                Updated Fields ({changeInfo.changes.length})
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {changeInfo.changes.map((change, idx) => (
+                                  <div
+                                    key={`${change.field}-${idx}`}
+                                    className="flex flex-col gap-1 bg-[#0C1116] p-2.5 rounded-[6px] border border-white/5"
+                                  >
+                                    <span className="text-xs font-medium text-[#919191]">
+                                      {change.label}
+                                    </span>
+                                    {change.from !== undefined && change.to !== undefined ? (
+                                      <div className="flex items-center gap-1.5 text-xs flex-wrap">
+                                        <span
+                                          className="text-[#FF3E46]/80 line-through truncate max-w-[130px]"
+                                          title={change.from || ""}
+                                        >
+                                          {change.from}
+                                        </span>
+                                        <ArrowRight className="w-3 h-3 text-[#6887A0] flex-shrink-0" />
+                                        <span
+                                          className="text-[#42CD7F] font-medium truncate max-w-[130px]"
+                                          title={change.to || ""}
+                                        >
+                                          {change.to}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span
+                                        className="text-xs text-white font-medium truncate"
+                                        title={change.value || change.to || ""}
+                                      >
+                                        {change.value || change.to || "--"}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (log.change) {
+                          return (
+                            <p className="text-xs text-[#CACACA] leading-relaxed break-words bg-[#141C24] px-3 py-2 rounded-[8px] border border-white/5">
+                              {log.change}
+                            </p>
+                          );
+                        }
+
+                        return null;
+                      })()}
                     </div>
 
                     {/* Bottom Row: Performed By */}

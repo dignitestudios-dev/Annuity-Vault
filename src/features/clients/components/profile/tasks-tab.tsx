@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, CheckSquare } from "lucide-react";
+import { Plus, CheckSquare, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
@@ -15,16 +15,7 @@ import {
 import NewTaskDialog from "@/features/tasks/components/new-task-dialog";
 import SuccessModal from "@/components/shared/success-modal";
 import { cn } from "@/lib/utils";
-
-interface TaskItem {
-  id: string;
-  title: string;
-  due: string;
-  priority: string;
-  priorityStyle: string;
-  status: string;
-  statusStyle: string;
-}
+import ViewTaskDialog, { TaskItem } from "./view-task-dialog";
 
 interface TasksTabProps {
   clientId?: string;
@@ -36,6 +27,7 @@ interface TasksTabProps {
 export default function TasksTab({ clientId, clientName, tasks = [], isLoading = false }: TasksTabProps) {
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
 
   const safeTasks = Array.isArray(tasks) ? tasks : [];
 
@@ -52,6 +44,8 @@ export default function TasksTab({ clientId, clientName, tasks = [], isLoading =
             <div className="w-24 h-4 bg-[#192430] animate-pulse rounded-[4px]"></div>
             <div className="w-24 h-4 bg-[#192430] animate-pulse rounded-[4px]"></div>
             <div className="w-24 h-4 bg-[#192430] animate-pulse rounded-[4px]"></div>
+            <div className="w-24 h-4 bg-[#192430] animate-pulse rounded-[4px]"></div>
+            <div className="w-16 h-4 bg-[#192430] animate-pulse rounded-[4px] ml-auto"></div>
           </div>
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-14 border-b border-white/10 w-full px-6 flex items-center gap-6">
@@ -84,24 +78,30 @@ export default function TasksTab({ clientId, clientName, tasks = [], isLoading =
         <Table className="w-full">
           <TableHeader className="bg-transparent border-b border-white/10">
             <TableRow className="border-b border-white/10 hover:bg-transparent h-10">
-              <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6">
+              <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6 font-sans">
                 Title
               </TableHead>
-              <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6">
+              <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6 font-sans">
+                Description
+              </TableHead>
+              <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6 font-sans">
                 Due
               </TableHead>
-              <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6">
+              <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6 font-sans">
                 Priority
               </TableHead>
-              <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6">
+              <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6 font-sans">
                 Status
+              </TableHead>
+              <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6 font-sans text-right">
+                Actions
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {safeTasks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-12">
+                <TableCell colSpan={6} className="py-12">
                   <EmptyState 
                     icon={CheckSquare}
                     title="No tasks found"
@@ -113,12 +113,16 @@ export default function TasksTab({ clientId, clientName, tasks = [], isLoading =
               safeTasks.map((task) => (
                 <TableRow
                   key={task.id}
-                  className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14"
+                  className="border-b border-white/10 hover:bg-white/[0.02] transition-colors h-14 cursor-pointer"
+                  onClick={() => setSelectedTask(task)}
                 >
-                  <TableCell className="px-6 py-3.5 text-sm font-medium text-white">
+                  <TableCell className="px-6 py-3.5 text-sm font-medium text-white max-w-[200px] truncate">
                     {task.title}
                   </TableCell>
-                  <TableCell className="px-6 py-3.5 text-sm text-white">
+                  <TableCell className="px-6 py-3.5 text-sm text-[#919191] max-w-[260px] truncate" title={task.description}>
+                    {task.description || "--"}
+                  </TableCell>
+                  <TableCell className="px-6 py-3.5 text-sm text-white whitespace-nowrap">
                     {task.due}
                   </TableCell>
                   <TableCell className="px-6 py-3.5">
@@ -141,12 +145,33 @@ export default function TasksTab({ clientId, clientName, tasks = [], isLoading =
                       {task.status}
                     </Badge>
                   </TableCell>
+                  <TableCell
+                    className="px-6 py-3.5 text-right whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTask(task)}
+                      title="View Task Details"
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-[6px] bg-[#2B343D] text-[#919191] hover:text-white hover:bg-[#394551] transition-colors cursor-pointer shadow-sm"
+                    >
+                      <Eye className="w-4 h-4 text-white" />
+                    </button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* View Task Dialog (Full Details & Description) */}
+      <ViewTaskDialog
+        task={selectedTask}
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        clientName={clientName}
+      />
 
       {/* New Task Dialog (pre-selected for this client) */}
       <NewTaskDialog

@@ -222,6 +222,7 @@ function ClientDetailsContent() {
     return {
       id: t._id,
       title: t.title,
+      description: t.description || "",
       due: dateStr,
       priority: t.priority,
       priorityStyle,
