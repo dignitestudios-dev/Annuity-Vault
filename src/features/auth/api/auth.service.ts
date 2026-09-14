@@ -47,7 +47,12 @@ export const authService = {
 
   logout: async (): Promise<void> => {
     await axiosInstance.post("/auth/logout");
-  }
+  },
+
+  updateFcmToken: async (fcmToken: string): Promise<any> => {
+    const { data } = await axiosInstance.patch("/auth/fcm-token", { fcmToken });
+    return data;
+  },
 };
 
 // React Query Hooks
@@ -84,6 +89,12 @@ export const useResetPasswordMutation = () => {
 export const useLogoutMutation = () => {
   return useMutation({
     mutationFn: authService.logout,
+  });
+};
+
+export const useUpdateFcmTokenMutation = () => {
+  return useMutation({
+    mutationFn: (fcmToken: string) => authService.updateFcmToken(fcmToken),
   });
 };
 

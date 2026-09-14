@@ -39,3 +39,7 @@ interface ResendOtpCredentials {
   email: string;
 }
 
+interface UpdateFcmTokenPayload {
+  fcmToken: string;
+}
+
