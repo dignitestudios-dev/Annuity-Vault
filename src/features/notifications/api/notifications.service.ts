@@ -3,13 +3,15 @@ import axiosInstance from "@/lib/axios";
 
 export interface NotificationItem {
   id: string;
+  _id?: string;
   type: "Anniversary" | "Task" | "System";
   title: string;
   message: string;
-  relatedName: string;
+  relatedName?: string;
   relatedEntity?: {
     type: "Contract" | "Task";
-    id: string;
+    id?: string;
+    _id?: string;
   };
   isRead: boolean;
   createdAt: string;
@@ -42,10 +44,26 @@ export const notificationsKeys = {
 
 const getNotifications = async (params: NotificationsParams): Promise<NotificationsResponse> => {
   const { data } = await axiosInstance.get<NotificationsResponse>("/notifications", { params });
+  if (data?.data?.notifications) {
+    data.data.notifications = data.data.notifications.map((n: any) => ({
+      ...n,
+      id: n.id || n._id || "",
+      relatedEntity: n.relatedEntity
+        ? {
+            ...n.relatedEntity,
+            id: n.relatedEntity.id || n.relatedEntity._id || "",
+          }
+        : undefined,
+    }));
+  }
   return data;
 };
 
 const markAsRead = async (id: string): Promise<void> => {
+  if (!id || id === "undefined" || id === "null") {
+    console.warn("Attempted to mark notification as read with undefined ID");
+    return;
+  }
   await axiosInstance.patch(`/notifications/${id}/read`);
 };
 
