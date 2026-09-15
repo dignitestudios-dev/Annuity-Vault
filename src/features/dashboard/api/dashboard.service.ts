@@ -9,9 +9,10 @@ export const dashboardService = {
   },
 };
 
-export function useDashboardSummary() {
+export function useDashboardSummary(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["dashboard", "summary"],
     queryFn: dashboardService.getSummary,
+    enabled: options?.enabled ?? true,
   });
 }

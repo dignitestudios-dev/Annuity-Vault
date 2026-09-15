@@ -102,7 +102,7 @@ export const useGetProfile = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["auth", "me"],
     queryFn: authService.getProfile,
-    enabled: options?.enabled,
+    enabled: options?.enabled ?? true,
   });
 };
 
