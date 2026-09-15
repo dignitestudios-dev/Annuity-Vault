@@ -12,7 +12,7 @@ import { Loader } from "@/components/ui/loader";
 
 interface NotesTabProps {
   clientId: string;
-  notes: ClientNote[];
+  notes: (ClientNote | any)[];
 }
 
 export default function NotesTab({ clientId, notes }: NotesTabProps) {
@@ -56,6 +56,8 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
     router.push("/dashboard/archived");
   };
 
+  const activeNotes = (notes || []).filter((note) => !note.isDeleted && !note.isArchived);
+
   return (
     <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] p-6 flex flex-col gap-6 shadow-sm">
       {/* Top Add Note Input Box */}
@@ -78,43 +80,64 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
 
       {/* Notes List */}
       <div className="w-full flex flex-col">
-        {notes.length === 0 ? (
+        {activeNotes.length === 0 ? (
           <EmptyState
             icon={Pin}
             title="No notes added"
             className="py-12 border-0 bg-transparent min-h-0"
           />
         ) : (
-          notes.filter(note => !note.isDeleted).map((note) => (
-            <div
-              key={note._id}
-              className="w-full border-b border-white/10 py-4 flex items-center justify-between gap-4"
-            >
-              <div className="flex items-start gap-3 flex-1">
-                <Pin className="w-4 h-4 text-[#576574] flex-shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm text-white font-normal leading-snug">
-                    {note.body}
-                  </p>
-                  <span className="text-xs text-[#919191]">
-                    {new Date(note.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
+          activeNotes.map((note, index) => {
+            const noteId = note._id || note.id || `note-${index}`;
+            const noteText =
+              note.body ||
+              note.text ||
+              note.content ||
+              note.note ||
+              note.description ||
+              (typeof note === "string" ? note : "");
+            const dateStr = note.createdAt || note.date || note.updatedAt;
 
-              <button
-                onClick={() => setDeletingNoteId(note._id)}
-                disabled={archiveNoteMutation.isPending && deletingNoteId === note._id}
-                className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors flex-shrink-0 disabled:opacity-50"
+            return (
+              <div
+                key={noteId}
+                className="w-full border-b border-white/10 py-4 flex items-center justify-between gap-4"
               >
-                {archiveNoteMutation.isPending && deletingNoteId === note._id ? (
-                  <Loader className="w-3.5 h-3.5 text-white" />
-                ) : (
-                  <Trash2 className="w-3.5 h-3.5 text-white" />
+                <div className="flex items-start gap-3 flex-1">
+                  <Pin className="w-4 h-4 text-[#576574] flex-shrink-0 mt-0.5" />
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm text-white font-normal leading-snug whitespace-pre-wrap">
+                      {noteText}
+                    </p>
+                    <span className="text-xs text-[#919191]">
+                      {dateStr
+                        ? new Date(dateStr).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : "--"}
+                    </span>
+                  </div>
+                </div>
+
+                {noteId !== "initial-note" && (
+                  <button
+                    onClick={() => setDeletingNoteId(noteId)}
+                    disabled={archiveNoteMutation.isPending && deletingNoteId === noteId}
+                    className="w-6 h-6 bg-[#FF0000] rounded-[4px] flex items-center justify-center text-white hover:bg-red-600 transition-colors flex-shrink-0 disabled:opacity-50"
+                    title="Delete Note"
+                  >
+                    {archiveNoteMutation.isPending && deletingNoteId === noteId ? (
+                      <Loader className="w-3.5 h-3.5 text-white" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5 text-white" />
+                    )}
+                  </button>
                 )}
-              </button>
-            </div>
-          ))
+              </div>
+            );
+          })
         )}
       </div>
 

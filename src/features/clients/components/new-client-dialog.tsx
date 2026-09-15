@@ -29,19 +29,24 @@ const newClientSchema = z.object({
     .string()
     .trim()
     .min(1, "First Name is required")
-    .max(50, "First Name cannot exceed 50 characters"),
+    .max(50, "First Name cannot exceed 50 characters")
+    .regex(/^[a-zA-Z\s\-']+$/, "First Name must contain only English letters"),
   lastName: z
     .string()
     .trim()
     .min(1, "Last Name is required")
-    .max(50, "Last Name cannot exceed 50 characters"),
+    .max(50, "Last Name cannot exceed 50 characters")
+    .regex(/^[a-zA-Z\s\-']+$/, "Last Name must contain only English letters"),
   email: z
     .string()
+    .trim()
     .min(1, "Email is required")
     .email("Invalid email address")
-    .max(100, "Email cannot exceed 100 characters"),
+    .max(100, "Email cannot exceed 100 characters")
+    .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Email must contain only English characters"),
   phone: z
     .string()
+    .trim()
     .regex(/^\+?[\d\s\-\(\)]+$/, "Invalid phone number format")
     .min(10, "Phone number too short")
     .max(20, "Phone number too long")
@@ -49,15 +54,19 @@ const newClientSchema = z.object({
     .or(z.literal("")),
   address: z
     .string()
+    .trim()
     .min(1, "Address is required")
-    .max(200, "Address cannot exceed 200 characters"),
+    .max(200, "Address cannot exceed 200 characters")
+    .regex(/^[\x20-\x7E]+$/, "Address must contain only English characters and standard symbols"),
   status: z.enum(["Active", "Inactive", "Prospect"], {
     message: "Please select a valid status",
   }),
   dateOfBirth: z.string().optional().or(z.literal("")),
   notes: z
     .string()
+    .trim()
     .max(500, "Notes cannot exceed 500 characters")
+    .regex(/^[\x20-\x7E\r\n\t]*$/, "Notes must contain only English characters")
     .optional()
     .or(z.literal("")),
 });
@@ -200,7 +209,7 @@ export default function NewClientDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Date Select */}
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Date</Label>
+              <Label className="text-xs font-medium text-white">Date of Birth</Label>
               <Input
                 type="date"
                 {...register("dateOfBirth")}
