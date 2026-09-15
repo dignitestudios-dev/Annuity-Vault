@@ -85,9 +85,9 @@ export default function DashboardHeader() {
 
             {/* Notifications List */}
             <div className="flex flex-col max-h-[380px] overflow-y-auto divide-y divide-white/10">
-              {notifications.map((item) => (
+              {notifications.map((item, i) => (
                 <div
-                  key={item.id}
+                  key={item.id || item._id || `header-notification-${i}`}
                   onClick={handleViewAll}
                   className="p-4 hover:bg-white/5 transition-colors cursor-pointer flex flex-col gap-1.5"
                 >

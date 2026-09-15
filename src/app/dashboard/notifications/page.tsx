@@ -82,9 +82,10 @@ function NotificationsContent() {
   };
 
   const handleNotificationClick = async (notification: NotificationItem) => {
-    if (!notification.isRead) {
+    const notificationId = notification.id || notification._id;
+    if (!notification.isRead && notificationId && notificationId !== "undefined") {
       try {
-        await markAsReadMutation.mutateAsync(notification.id);
+        await markAsReadMutation.mutateAsync(notificationId);
       } catch (error) {
         console.error("Failed to mark as read:", error);
       }
@@ -92,8 +93,9 @@ function NotificationsContent() {
     
     // Optionally navigate based on relatedEntity
     if (notification.relatedEntity) {
-      if (notification.relatedEntity.type === "Contract") {
-        router.push(`/dashboard/contracts/${notification.relatedEntity.id}`);
+      const entityId = notification.relatedEntity.id || notification.relatedEntity._id;
+      if (notification.relatedEntity.type === "Contract" && entityId) {
+        router.push(`/dashboard/contracts/${entityId}`);
       } else if (notification.relatedEntity.type === "Task") {
         router.push(`/dashboard/tasks`);
       }
@@ -173,9 +175,9 @@ function NotificationsContent() {
             className="py-12"
           />
         ) : (
-          notifications.map((item) => (
+          notifications.map((item, i) => (
             <div
-              key={item.id}
+              key={item.id || item._id || `notification-${i}`}
               onClick={() => handleNotificationClick(item)}
               className={cn(
                 "w-full bg-[#141C24] border rounded-xl p-4 sm:p-5 flex items-start gap-4 shadow-sm relative transition-all cursor-pointer",
