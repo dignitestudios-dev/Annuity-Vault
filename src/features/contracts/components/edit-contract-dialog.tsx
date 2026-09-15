@@ -328,6 +328,11 @@ export default function EditContractDialog({
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
+                        defaultMonth={field.value || new Date()}
+                        captionLayout="dropdown"
+                        startMonth={new Date(1950, 0)}
+                        endMonth={new Date(2050, 11)}
+                        className="p-3 bg-[#141C24] text-white [color-scheme:dark]"
                       />
                     </PopoverContent>
                   </Popover>
@@ -361,6 +366,11 @@ export default function EditContractDialog({
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
+                        defaultMonth={field.value || new Date()}
+                        captionLayout="dropdown"
+                        startMonth={new Date(1950, 0)}
+                        endMonth={new Date(2050, 11)}
+                        className="p-3 bg-[#141C24] text-white [color-scheme:dark]"
                       />
                     </PopoverContent>
                   </Popover>

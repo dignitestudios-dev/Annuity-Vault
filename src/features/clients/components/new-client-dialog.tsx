@@ -1,5 +1,7 @@
 "use client";
 
+import { Calendar as CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectTrigger,
@@ -68,20 +76,19 @@ const newClientSchema = z.object({
     message: "Please select a valid status",
   }),
   dateOfBirth: z
-    .string()
-    .min(1, "Date of Birth is required")
+    .date({
+      message: "Date of Birth is required",
+    })
     .refine(
       (val) => {
         if (!val) return false;
-        const dob = new Date(val);
-        if (isNaN(dob.getTime())) return false;
         const today = new Date();
         const minAgeDate = new Date(
           today.getFullYear() - 18,
           today.getMonth(),
           today.getDate()
         );
-        return dob <= minAgeDate;
+        return val <= minAgeDate;
       },
       {
         message: "Client must be at least 18 years old",
@@ -125,7 +132,7 @@ export default function NewClientDialog({
       phone: "",
       address: "",
       status: "Active",
-      dateOfBirth: "",
+      dateOfBirth: undefined,
       notes: "",
     },
   });
@@ -141,7 +148,7 @@ export default function NewClientDialog({
         phone: data.phone,
         address: data.address,
         status: data.status,
-        dateOfBirth: data.dateOfBirth ? data.dateOfBirth : undefined,
+        dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
         notes: data.notes,
       },
       {
@@ -233,16 +240,52 @@ export default function NewClientDialog({
 
           {/* Row 4: Date & Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {/* Date Select */}
+            {/* Date Select using Shadcn Calendar + Popover */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-white">Date of Birth <span className="text-destructive">*</span></Label>
-              <Input
-                type="date"
-                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
-                {...register("dateOfBirth")}
-                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] px-3.5 focus-visible:ring-1 focus-visible:ring-[#6887A0] [color-scheme:dark] ${
-                  errors.dateOfBirth ? "ring-1 ring-[#FF3E46]" : ""
-                }`}
+              <Controller
+                name="dateOfBirth"
+                control={control}
+                render={({ field }) => {
+                  const today = new Date();
+                  const maxDobDate = new Date(
+                    today.getFullYear() - 18,
+                    today.getMonth(),
+                    today.getDate()
+                  );
+                  return (
+                    <Popover>
+                      <PopoverTrigger
+                        render={
+                          <button
+                            type="button"
+                            className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
+                          >
+                            <span className={field.value ? "text-white" : "text-[#919191]"}>
+                              {field.value ? format(field.value, "MM/dd/yyyy") : "mm/dd/yyyy"}
+                            </span>
+                            <CalendarIcon className="w-4 h-4 text-[#919191]" />
+                          </button>
+                        }
+                      />
+                      <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          defaultMonth={field.value || maxDobDate}
+                          captionLayout="dropdown"
+                          startMonth={new Date(1920, 0)}
+                          endMonth={maxDobDate}
+                          disabled={(date) => {
+                            return date > maxDobDate || date < new Date("1900-01-01");
+                          }}
+                          className="p-3 bg-[#141C24] text-white [color-scheme:dark]"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  );
+                }}
               />
               {errors.dateOfBirth && (
                 <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">

@@ -104,7 +104,7 @@ export default function SettingsDataManagementPage() {
               Reset All Data
             </h3>
             <p className="text-[#919191] text-sm font-normal leading-relaxed max-w-[440px]">
-              This will permanently delete all your accounts, transactions, budgets, goals, and settings.
+             This will permanently delete all your clients, contracts, notes, documents, audit logs, tasks and settings. This action cannot be undone.
             </p>
           </div>
 
@@ -124,7 +124,7 @@ export default function SettingsDataManagementPage() {
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleConfirmWarning}
         title="Reset All Data?"
-        description="This will permanently delete all your clients, contracts, notes, documents, and tasks. This action cannot be undone."
+        description="This will permanently delete all your clients, contracts, notes, documents, audit logs, tasks and settings. This action cannot be undone."
         confirmText="Yes, Continue"
         cancelText="Cancel"
       />
