@@ -18,6 +18,7 @@ const resetPasswordSchema = z
   .object({
     password: z
       .string()
+      .trim()
       .min(8, "Password must be at least 8 characters")
       .max(50, "Password must be less than 50 characters")
       .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
@@ -26,6 +27,7 @@ const resetPasswordSchema = z
       .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
     confirmPassword: z
       .string()
+      .trim()
       .min(1, "Please confirm your password")
       .max(50, "Password must be less than 50 characters"),
   })
@@ -43,6 +45,8 @@ export default function ResetPasswordForm() {
 
   const { register, handleSubmit, formState: { errors } } = useForm<ResetPasswordData>({
     resolver: zodResolver(resetPasswordSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: { password: "", confirmPassword: "" }
   });
   const [showPassword, setShowPassword] = useState(false);

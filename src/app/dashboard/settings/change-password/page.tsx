@@ -10,16 +10,29 @@ import { useUpdatePassword } from "@/features/settings/api/settings.service";
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(6, "Current password must be at least 6 characters").max(50, "Password must be less than 50 characters"),
+    currentPassword: z
+      .string()
+      .trim()
+      .min(6, "Current password must be at least 6 characters")
+      .max(50, "Password must be less than 50 characters"),
     newPassword: z
       .string()
+      .trim()
       .min(8, "New password must be at least 8 characters")
       .max(50, "Password must be less than 50 characters")
       .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
       .regex(/[a-z]/, "Password must contain at least one lowercase letter")
       .regex(/[0-9]/, "Password must contain at least one number")
       .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
-    confirmPassword: z.string().min(1, "Please confirm your new password").max(50, "Password must be less than 50 characters"),
+    confirmPassword: z
+      .string()
+      .trim()
+      .min(1, "Please confirm your new password")
+      .max(50, "Password must be less than 50 characters"),
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: "New password must be different from current password",
+    path: ["newPassword"],
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords do not match",
@@ -42,6 +55,8 @@ export default function SettingsChangePasswordPage() {
     formState: { errors, isSubmitting },
   } = useForm<ChangePasswordValues>({
     resolver: zodResolver(changePasswordSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: {
       currentPassword: "",
       newPassword: "",
