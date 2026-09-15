@@ -47,11 +47,17 @@ const newClientSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^\+?[\d\s\-\(\)]+$/, "Invalid phone number format")
-    .min(10, "Phone number too short")
-    .max(20, "Phone number too long")
     .optional()
-    .or(z.literal("")),
+    .or(z.literal(""))
+    .refine(
+      (val) => {
+        if (!val) return true;
+        return val.length >= 10 && val.length <= 20 && /^\+?[\d\s\-()]+$/.test(val);
+      },
+      {
+        message: "Phone number must be between 10 and 20 characters (e.g. +1 (555) 000-0000)",
+      }
+    ),
   address: z
     .string()
     .trim()
@@ -61,7 +67,26 @@ const newClientSchema = z.object({
   status: z.enum(["Active", "Inactive", "Prospect"], {
     message: "Please select a valid status",
   }),
-  dateOfBirth: z.string().optional().or(z.literal("")),
+  dateOfBirth: z
+    .string()
+    .min(1, "Date of Birth is required")
+    .refine(
+      (val) => {
+        if (!val) return false;
+        const dob = new Date(val);
+        if (isNaN(dob.getTime())) return false;
+        const today = new Date();
+        const minAgeDate = new Date(
+          today.getFullYear() - 18,
+          today.getMonth(),
+          today.getDate()
+        );
+        return dob <= minAgeDate;
+      },
+      {
+        message: "Client must be at least 18 years old",
+      }
+    ),
   notes: z
     .string()
     .trim()
@@ -185,6 +210,7 @@ export default function NewClientDialog({
               <Label className="text-xs font-medium text-white">Phone</Label>
               <Input
                 type="tel"
+                maxLength={20}
                 {...register("phone")}
                 placeholder="e.g. +1 (555) 000-0000"
                 className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.phone ? "ring-1 ring-[#FF3E46]" : ""}`}
@@ -209,9 +235,10 @@ export default function NewClientDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Date Select */}
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Date of Birth</Label>
+              <Label className="text-xs font-medium text-white">Date of Birth <span className="text-destructive">*</span></Label>
               <Input
                 type="date"
+                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
                 {...register("dateOfBirth")}
                 className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] px-3.5 focus-visible:ring-1 focus-visible:ring-[#6887A0] [color-scheme:dark] ${
                   errors.dateOfBirth ? "ring-1 ring-[#FF3E46]" : ""

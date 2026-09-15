@@ -57,11 +57,17 @@ const editClientSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^\+?[\d\s\-\(\)]+$/, "Invalid phone number format")
-    .min(10, "Phone number too short")
-    .max(20, "Phone number too long")
     .optional()
-    .or(z.literal("")),
+    .or(z.literal(""))
+    .refine(
+      (val) => {
+        if (!val) return true;
+        return val.length >= 10 && val.length <= 20 && /^\+?[\d\s\-()]+$/.test(val);
+      },
+      {
+        message: "Phone number must be between 10 and 20 characters (e.g. +1 (555) 000-0000)",
+      }
+    ),
   address: z
     .string()
     .trim()
@@ -71,7 +77,25 @@ const editClientSchema = z.object({
   status: z.enum(["Active", "Inactive", "Prospect"], {
     message: "Please select a valid status",
   }),
-  dateOfBirth: z.date().optional(),
+  dateOfBirth: z
+    .date({
+      message: "Date of Birth is required",
+    })
+    .refine(
+      (val) => {
+        if (!val) return false;
+        const today = new Date();
+        const minAgeDate = new Date(
+          today.getFullYear() - 18,
+          today.getMonth(),
+          today.getDate()
+        );
+        return val <= minAgeDate;
+      },
+      {
+        message: "Client must be at least 18 years old",
+      }
+    ),
   notes: z
     .string()
     .trim()
@@ -233,6 +257,7 @@ export default function EditClientDialog({
               <Label className="text-xs font-medium text-white">Phone</Label>
               <Input
                 type="tel"
+                maxLength={20}
                 {...register("phone")}
                 placeholder="Enter Phone No."
                 className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.phone ? "ring-1 ring-[#FF3E46]" : ""}`}
@@ -257,7 +282,7 @@ export default function EditClientDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Date Select using Shadcn Calendar + Popover */}
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Date of Birth</Label>
+              <Label className="text-xs font-medium text-white">Date of Birth <span className="text-destructive">*</span></Label>
               <Controller
                 name="dateOfBirth"
                 control={control}
@@ -281,11 +306,25 @@ export default function EditClientDialog({
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
+                        disabled={(date) => {
+                          const today = new Date();
+                          const minAgeDate = new Date(
+                            today.getFullYear() - 18,
+                            today.getMonth(),
+                            today.getDate()
+                          );
+                          return date > minAgeDate || date < new Date("1900-01-01");
+                        }}
                       />
                     </PopoverContent>
                   </Popover>
                 )}
               />
+              {errors.dateOfBirth && (
+                <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
+                  {errors.dateOfBirth.message}
+                </p>
+              )}
             </div>
 
             {/* Status Select */}
