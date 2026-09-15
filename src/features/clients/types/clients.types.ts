@@ -16,6 +16,7 @@ export interface Client {
   createdAt: string;
   updatedAt: string;
   contractsCount?: number;
+  notes?: string | ClientNote[];
   clientNotes?: ClientNote[];
   documents?: ClientDocument[];
 }

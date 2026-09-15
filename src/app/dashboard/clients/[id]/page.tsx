@@ -231,13 +231,50 @@ function ClientDetailsContent() {
     };
   });
 
+  // Normalize backend client notes (supports clientNotes array, notes array, or initial string note)
+  const arrayNotes = Array.isArray(client?.clientNotes)
+    ? client.clientNotes
+    : Array.isArray(client?.notes)
+    ? client.notes
+    : [];
+
+  const stringNote =
+    typeof client?.notes === "string" && client.notes.trim()
+      ? [
+          {
+            _id: "initial-note",
+            id: "initial-note",
+            body: client.notes.trim(),
+            createdAt: client.createdAt || new Date().toISOString(),
+            isDeleted: false,
+          },
+        ]
+      : [];
+
+  const mappedNotes = [...arrayNotes, ...stringNote]
+    .map((n: any, idx: number) => ({
+      _id: n._id || n.id || `note-${idx}`,
+      id: n.id || n._id || `note-${idx}`,
+      body:
+        n.body ||
+        n.text ||
+        n.content ||
+        n.note ||
+        n.description ||
+        (typeof n === "string" ? n : ""),
+      createdAt:
+        n.createdAt || n.date || n.updatedAt || client.createdAt || new Date().toISOString(),
+      isDeleted: Boolean(n.isDeleted || n.isArchived),
+    }))
+    .filter((n) => n.body && !n.isDeleted);
+
   const TABS = TABS_CONFIG.map((t) => {
     if (t.id === "contracts")
       return { ...t, label: `Contracts (${contractsData?.total || 0})` };
     if (t.id === "tasks")
       return { ...t, label: `Tasks (${tasksData?.pagination?.totalItems || 0})` };
     if (t.id === "notes")
-      return { ...t, label: `Notes (${client?.clientNotes?.length || 0})` };
+      return { ...t, label: `Notes (${mappedNotes.length})` };
     if (t.id === "documents")
       return { ...t, label: `Documents (${client?.documents?.length || 0})` };
     return t;
@@ -319,7 +356,12 @@ function ClientDetailsContent() {
           isLoading={isLoadingContracts}
         />
       )}
-      {activeTab === "notes" && <NotesTab clientId={clientId || client?.id || client?._id || ""} notes={client?.clientNotes || []} />}
+      {activeTab === "notes" && (
+        <NotesTab
+          clientId={clientId || client?.id || client?._id || ""}
+          notes={mappedNotes}
+        />
+      )}
       {activeTab === "documents" && <DocumentsTab clientId={clientId || client?.id || client?._id || ""} documents={client?.documents || []} />}
       {activeTab === "tasks" && (
         <TasksTab
