@@ -286,39 +286,46 @@ export default function EditClientDialog({
               <Controller
                 name="dateOfBirth"
                 control={control}
-                render={({ field }) => (
-                  <Popover>
-                    <PopoverTrigger
-                      render={
-                        <button
-                          type="button"
-                          className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
-                        >
-                          <span className={field.value ? "text-white" : "text-[#919191]"}>
-                            {field.value ? format(field.value, "MM/dd/yyyy") : "mm/dd/yyyy"}
-                          </span>
-                          <CalendarIcon className="w-4 h-4 text-[#919191]" />
-                        </button>
-                      }
-                    />
-                    <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => {
-                          const today = new Date();
-                          const minAgeDate = new Date(
-                            today.getFullYear() - 18,
-                            today.getMonth(),
-                            today.getDate()
-                          );
-                          return date > minAgeDate || date < new Date("1900-01-01");
-                        }}
+                render={({ field }) => {
+                  const today = new Date();
+                  const maxDobDate = new Date(
+                    today.getFullYear() - 18,
+                    today.getMonth(),
+                    today.getDate()
+                  );
+                  return (
+                    <Popover>
+                      <PopoverTrigger
+                        render={
+                          <button
+                            type="button"
+                            className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
+                          >
+                            <span className={field.value ? "text-white" : "text-[#919191]"}>
+                              {field.value ? format(field.value, "MM/dd/yyyy") : "mm/dd/yyyy"}
+                            </span>
+                            <CalendarIcon className="w-4 h-4 text-[#919191]" />
+                          </button>
+                        }
                       />
-                    </PopoverContent>
-                  </Popover>
-                )}
+                      <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          defaultMonth={field.value || maxDobDate}
+                          captionLayout="dropdown"
+                          startMonth={new Date(1920, 0)}
+                          endMonth={maxDobDate}
+                          disabled={(date) => {
+                            return date > maxDobDate || date < new Date("1900-01-01");
+                          }}
+                          className="p-3 bg-[#141C24] text-white [color-scheme:dark]"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  );
+                }}
               />
               {errors.dateOfBirth && (
                 <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
