@@ -12,6 +12,22 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Annuity Vault",
   description: "A secure, centralized platform for managing your clients' annuity contracts — from purchase to annuitization.",
+  icons: {
+    icon: [
+      {
+        // White logo — visible on dark browser tabs
+        url: "/icon-white.png",
+        media: "(prefers-color-scheme: dark)",
+        type: "image/png",
+      },
+      {
+        // Black logo (same shape) — visible on light browser tabs
+        url: "/icon-black.png",
+        media: "(prefers-color-scheme: light)",
+        type: "image/png",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -24,7 +40,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
         <Providers>
           {children}
-          <Toaster 
+          <Toaster
             position="bottom-right"
             toastOptions={{
               style: {
