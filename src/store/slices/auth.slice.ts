@@ -29,6 +29,8 @@ const authSlice = createSlice({
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
+      } else {
+        state.user = action.payload as User;
       }
     },
     logout: (state) => {

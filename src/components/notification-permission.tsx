@@ -4,10 +4,26 @@ import { requestNotificationPermission } from "@/config/request-notification-per
 import { messaging, onMessage } from "@/config/firebase";
 import { useAppSelector } from "@/store";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { notificationsKeys } from "@/features/notifications/api/notifications.service";
-import toast from "react-hot-toast";
+
+// Module-level SW registration cache to avoid repeated lookups
+let swRegistrationCache: ServiceWorkerRegistration | null = null;
+
+/**
+ * Resolves a potentially relative URL path to a full absolute URL for OS notification bridges.
+ */
+function toAbsoluteUrl(path: string): string {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) {
+    return path;
+  }
+  if (typeof window !== "undefined") {
+    return new URL(path, window.location.origin).href;
+  }
+  return path;
+}
 
 export async function showBrowserNotification(
   title: string,
@@ -15,77 +31,96 @@ export async function showBrowserNotification(
   icon: string = "/images/logo.png",
   targetUrl: string = "/dashboard"
 ): Promise<boolean> {
-  if (!("Notification" in window)) {
+  if (typeof window === "undefined" || !("Notification" in window)) {
     console.warn("[FCM] This browser does not support notifications.");
     return false;
   }
 
-  if (Notification.permission !== "granted") {
-    console.warn("[FCM] Notification permission not granted:", Notification.permission);
+  // Ensure permission is granted or request it if default
+  let currentPermission = Notification.permission;
+  if (currentPermission === "default") {
+    currentPermission = await Notification.requestPermission();
+  }
+
+  if (currentPermission !== "granted") {
+    console.warn("[FCM] Notification permission is not granted:", currentPermission);
     return false;
   }
 
-  // ── Strategy 1: Direct Notification API ────────────────────────────────────
-  // Always works when the page is in the foreground (user just clicked a button).
-  // This is the most reliable path and should be tried first.
-  try {
-    const n = new Notification(title, { body, icon });
-    n.onclick = () => {
-      window.focus();
-      window.location.href = targetUrl;
-    };
-    console.log("[FCM] ✅ Native notification shown via Notification API");
-    return true;
-  } catch (directErr) {
-    // Some browsers (e.g. Chrome on Android) don't allow new Notification() without SW
-    console.warn("[FCM] Direct Notification() failed, trying SW:", directErr);
+  const absoluteIcon = toAbsoluteUrl(icon || "/images/logo.png");
+  const absoluteBadge = toAbsoluteUrl("/images/logo.png");
+  const resolvedUrl = toAbsoluteUrl(targetUrl || "/dashboard");
+
+  // ── Strategy 1: Service Worker showNotification (Primary & Standard) ───────────
+  if ("serviceWorker" in navigator) {
+    try {
+      let reg = swRegistrationCache;
+
+      if (!reg || !reg.active) {
+        reg = (await navigator.serviceWorker.getRegistration()) || null;
+      }
+
+      if (!reg) {
+        await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+        reg = await navigator.serviceWorker.ready;
+      }
+
+      if (reg) {
+        swRegistrationCache = reg;
+        await reg.showNotification(title, {
+          body,
+          icon: absoluteIcon,
+          badge: absoluteBadge,
+          tag: `annuity-vault-${Date.now()}`,
+          renotify: true,
+          requireInteraction: false,
+          data: { url: resolvedUrl },
+        } as any);
+
+        console.log("[FCM] ✅ Native notification displayed via Service Worker");
+        return true;
+      }
+    } catch (swErr) {
+      console.warn("[FCM] SW showNotification failed, trying fallback:", swErr);
+    }
   }
 
-  // ── Strategy 2: Service Worker showNotification ─────────────────────────────
-  // Required on mobile Chrome; also works for background notifications.
-  // getRegistration() takes the *scope* the SW covers, which defaults to "/".
-  if (!("serviceWorker" in navigator)) return false;
-
+  // ── Strategy 2: Direct Notification constructor (Fallback) ───────────────────
   try {
-    // Use scope "/" — that is the default scope for a SW registered from root
-    const registration =
-      swRegistrationCache ||
-      (await navigator.serviceWorker.getRegistration("/")) ||
-      (await navigator.serviceWorker.ready);
-
-    if (!registration) throw new Error("No SW registration found");
-
-    swRegistrationCache = registration;
-
-    await registration.showNotification(title, {
+    const notification = new Notification(title, {
       body,
-      icon,
-      badge: "/images/logo.png",
-      data: { url: targetUrl },
-      requireInteraction: false,
+      icon: absoluteIcon,
+      tag: `annuity-vault-${Date.now()}`,
     });
 
-    console.log("[FCM] ✅ Native notification shown via Service Worker");
+    notification.onclick = (event) => {
+      event.preventDefault();
+      window.focus();
+      window.location.href = resolvedUrl;
+      notification.close();
+    };
+
+    console.log("[FCM] ✅ Native notification displayed via Notification constructor fallback");
     return true;
-  } catch (swErr) {
-    console.error("[FCM] ❌ Both notification strategies failed:", swErr);
+  } catch (directErr) {
+    console.error("[FCM] ❌ Direct Notification API failed:", directErr);
     return false;
   }
 }
 
-// Module-level SW registration cache to avoid repeated lookups
-let swRegistrationCache: ServiceWorkerRegistration | null = null;
-
 const NotificationPermission = () => {
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const pathname = usePathname();
-  const hasRequested = useRef(false);
   const queryClient = useQueryClient();
 
-  // 1. Ask for permission & register FCM token when entering the dashboard
+  // 1. Ask for permission & register FCM token whenever visiting the dashboard
   useEffect(() => {
-    if (isAuthenticated && pathname.startsWith("/dashboard") && !hasRequested.current) {
-      hasRequested.current = true;
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+
+    const isDashboard = pathname.startsWith("/dashboard");
+    const hasToken = typeof window !== "undefined" && !!localStorage.getItem("auth-token");
+
+    if (isDashboard && (isAuthenticated || hasToken)) {
       requestNotificationPermission();
     }
   }, [isAuthenticated, pathname]);
@@ -128,9 +163,6 @@ const NotificationPermission = () => {
         payload.fcmOptions?.link ||
         (payload.data?.url as string) ||
         "/dashboard";
-
-      // In-app toast (always shown)
-      toast(`${title}${body ? `: ${body}` : ""}`, { icon: "🔔" });
 
       // Native browser notification (shown even when tab is in foreground)
       await showBrowserNotification(title, body, icon, targetUrl);
