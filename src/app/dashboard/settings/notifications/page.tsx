@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import SuccessModal from "@/components/shared/success-modal";
 import { cn } from "@/lib/utils";
 import { useNotificationPreferences, useUpdateNotificationPreferences } from "@/features/settings/api/settings.service";
-import { Loader2 } from "lucide-react";
+import { Loader2, Bell, BellOff, BellRing } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { showBrowserNotification } from "@/components/notification-permission";
+import toast from "react-hot-toast";
 
 interface NotificationSettingItem {
   id: "days30" | "days60" | "days90" | "days180" | "taskDueDates" | "systemAlerts";
@@ -67,9 +69,39 @@ export default function SettingsNotificationsPage() {
     title: "",
     desc: "",
   });
+  const [permissionStatus, setPermissionStatus] = useState<NotificationPermission | "unsupported">("default");
+  const [isTesting, setIsTesting] = useState(false);
   
   const { data: preferences, isLoading, error } = useNotificationPreferences();
   const updateMutation = useUpdateNotificationPreferences();
+
+  // Check real-time browser permission status
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setPermissionStatus("unsupported");
+      return;
+    }
+    setPermissionStatus(Notification.permission);
+  }, []);
+
+  const handleTestNotification = async () => {
+    if (permissionStatus !== "granted") {
+      toast.error("Notifications are not enabled. Please allow notifications in your browser settings.");
+      return;
+    }
+    setIsTesting(true);
+    try {
+      const ok = await showBrowserNotification(
+        "🔔 Test Notification",
+        "Browser notifications are working correctly for Annuity Vault!",
+        "/images/logo.png",
+        "/dashboard"
+      );
+      if (!ok) toast.error("Could not send notification. Check browser permissions.");
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   useEffect(() => {
     if (preferences) {
@@ -156,7 +188,61 @@ export default function SettingsNotificationsPage() {
         </button>
       </div>
 
-      {/* Toggles Container List */}
+      {/* Test Browser Notification Card */}
+      <div className="w-full bg-[#141C24] border border-white/5 rounded-xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-start gap-3.5">
+          <div className={cn(
+            "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center",
+            permissionStatus === "granted" ? "bg-[#34C759]/15" :
+            permissionStatus === "denied"  ? "bg-[#FF3E46]/15" :
+                                             "bg-[#66859E]/15"
+          )}>
+            {permissionStatus === "granted" ? (
+              <BellRing className="w-5 h-5 text-[#34C759]" />
+            ) : permissionStatus === "denied" ? (
+              <BellOff className="w-5 h-5 text-[#FF3E46]" />
+            ) : (
+              <Bell className="w-5 h-5 text-[#66859E]" />
+            )}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <h3 className="text-white font-semibold text-sm sm:text-base tracking-tight">Browser Notifications</h3>
+              <span className={cn(
+                "text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide",
+                permissionStatus === "granted" ? "bg-[#34C759]/15 text-[#34C759]" :
+                permissionStatus === "denied"  ? "bg-[#FF3E46]/15 text-[#FF3E46]" :
+                permissionStatus === "unsupported" ? "bg-white/10 text-[#919191]" :
+                                                     "bg-[#66859E]/15 text-[#66859E]"
+              )}>
+                {permissionStatus === "granted"     ? "Granted" :
+                 permissionStatus === "denied"      ? "Denied" :
+                 permissionStatus === "unsupported" ? "Not Supported" :
+                                                      "Not Set"}
+              </span>
+            </div>
+            <p className="text-[#919191] text-xs sm:text-sm font-normal leading-relaxed">
+              {permissionStatus === "granted"
+                ? "Click \"Send Test\" to verify browser notifications appear on your OS."
+                : permissionStatus === "denied"
+                ? "Notifications are blocked. Allow them in your browser site settings and reload."
+                : permissionStatus === "unsupported"
+                ? "Your browser does not support notifications."
+                : "Notifications permission hasn't been set yet. Navigate to the dashboard to trigger the prompt."}
+            </p>
+          </div>
+        </div>
+
+        <button
+          id="test-notification-btn"
+          onClick={handleTestNotification}
+          disabled={isTesting || permissionStatus !== "granted"}
+          className="flex-shrink-0 flex items-center justify-center gap-2 h-9 px-5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer bg-[#192430] border border-white/10 text-white hover:bg-[#1f2e3d] disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BellRing className="w-3.5 h-3.5" />}
+          {isTesting ? "Sending…" : "Send Test"}
+        </button>
+      </div>
       <div className="flex flex-col gap-3.5 w-full">
         {settings.map((item) => (
           <div
