@@ -91,9 +91,61 @@ export const useUpdateTask = () => {
 
   return useMutation({
     mutationFn: updateTask,
-    onSuccess: (_, variables) => {
+    onMutate: async (newVariable) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: tasksKeys.all });
+
+      // Snapshot previous queries data
+      const previousData = queryClient.getQueriesData({ queryKey: tasksKeys.lists() });
+
+      // Optimistically update all tasks lists in cache
+      queryClient.setQueriesData(
+        { queryKey: tasksKeys.lists() },
+        (old: any) => {
+          if (!old) return old;
+          // For infinite queries
+          if (old.pages) {
+            return {
+              ...old,
+              pages: old.pages.map((page: any) => ({
+                ...page,
+                data: page.data.map((task: Task) =>
+                  task._id === newVariable.id || task.id === newVariable.id
+                    ? { ...task, ...newVariable.data }
+                    : task
+                ),
+              })),
+            };
+          }
+          // For standard queries
+          if (Array.isArray(old.data)) {
+            return {
+              ...old,
+              data: old.data.map((task: Task) =>
+                task._id === newVariable.id || task.id === newVariable.id
+                  ? { ...task, ...newVariable.data }
+                  : task
+              ),
+            };
+          }
+          return old;
+        }
+      );
+
+      return { previousData };
+    },
+    onError: (_err, _newVariable, context) => {
+      // Rollback to previous state on error
+      if (context?.previousData) {
+        context.previousData.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSettled: (_, __, variables) => {
       queryClient.invalidateQueries({ queryKey: tasksKeys.lists() });
       queryClient.invalidateQueries({ queryKey: tasksKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 };

@@ -28,10 +28,12 @@ import { format, parseISO } from "date-fns";
 import EditTaskDialog from "@/features/tasks/components/edit-task-dialog";
 import TaskDetailsDialog from "@/features/tasks/components/task-details-dialog";
 import DateTasksDialog from "@/features/tasks/components/date-tasks-dialog";
+import KanbanView from "@/features/tasks/components/kanban-view";
 import SuccessModal from "@/components/shared/success-modal";
 import DeleteModal from "@/components/shared/delete-modal";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/empty-state";
+import toast from "react-hot-toast";
 
 // Seed initial task items matching the Figma design screenshot accurately
 
@@ -149,12 +151,14 @@ function TasksContent() {
     }
   };
 
-  // Task Status Transition Handler
+  // Task Status Transition Handler (with optimistic updates via useUpdateTask)
   const handleMoveStatus = (id: string, newStatus: "To Do" | "In Progress" | "Done") => {
     updateTaskMutation.mutate(
       { id, data: { status: newStatus } },
       {
-        onSuccess: () => refetch(),
+        onError: (err: any) => {
+          toast.error(err?.message || "Failed to update task status");
+        },
       }
     );
   };
@@ -206,11 +210,6 @@ function TasksContent() {
       statusFilter === "all" || task.status === statusFilter;
     return matchesSearch && matchesPriority && matchesStatus;
   });
-
-  // Column arrays for Kanban
-  const todoTasks = filteredTasks.filter((t) => t.status === "To Do");
-  const inProgressTasks = filteredTasks.filter((t) => t.status === "In Progress");
-  const doneTasks = filteredTasks.filter((t) => t.status === "Done");
 
   // Helper for priority badge rendering
   const renderPriorityBadge = (priority: Task["priority"]) => {
@@ -448,258 +447,14 @@ function TasksContent() {
       {/* 4. Tab Content Area */}
       {/* KANBAN VIEW TAB */}
       {activeTab === "kanban" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full mt-1">
-          {/* Column 1: To do */}
-          <div className="bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-3.5 flex flex-col gap-3 h-[640px]">
-            <div className="flex items-center justify-between pb-1 flex-shrink-0">
-              <h2 className="text-sm sm:text-base font-semibold text-white">To do</h2>
-              <span className="text-xs text-[#919191] font-normal">{todoTasks.length}</span>
-            </div>
-
-            <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
-              {todoTasks.map((task) => (
-                <div
-                  key={task._id}
-                  className="bg-[#0C1116] rounded-[8px] p-3 border border-white/5 hover:border-[#66859E]/40 transition-all flex flex-col justify-between cursor-pointer group flex-shrink-0"
-                  onClick={() => setSelectedDetailsTask(task)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-xs sm:text-[13px] font-medium text-white leading-tight flex-1">
-                      {task.title}
-                    </h3>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {renderPriorityBadge(task.priority)}
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTask(task);
-                        }}
-                        title="Edit task"
-                        className="p-1 rounded text-[#919191] hover:text-white hover:bg-white/10 transition-colors"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingTaskId(task._id!);
-                        }}
-                        title="Delete task"
-                        className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] text-[#919191] font-normal mt-1.5 line-clamp-1">
-                    {task.description || "No description provided."}
-                  </p>
-
-                  <p className="text-[11px] text-[#919191] font-normal mt-2">
-                    Due {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
-                  </p>
-
-                  <div
-                    className="flex items-center gap-2 mt-3 pt-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => handleMoveStatus(task._id!, "In Progress")}
-                      className="bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF9D00]/20 transition-all cursor-pointer"
-                    >
-                      In Progress
-                    </button>
-                    <button
-                      onClick={() => handleMoveStatus(task._id!, "Done")}
-                      className="bg-[#42CD7F]/10 border border-[#42CD7F] text-[#42CD7F] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#42CD7F]/20 transition-all cursor-pointer"
-                    >
-                      Done →
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {todoTasks.length === 0 && (
-                <EmptyState 
-                  icon={CheckSquare}
-                  title="No tasks in To Do"
-                  className="py-12 border-0 bg-transparent min-h-0"
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Column 2: In progress */}
-          <div className="bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-3.5 flex flex-col gap-3 h-[640px]">
-            <div className="flex items-center justify-between pb-1 flex-shrink-0">
-              <h2 className="text-sm sm:text-base font-semibold text-white">In progress</h2>
-              <span className="text-xs text-[#919191] font-normal">{inProgressTasks.length}</span>
-            </div>
-
-            <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
-              {inProgressTasks.map((task) => (
-                <div
-                  key={task._id}
-                  className="bg-[#0C1116] rounded-[8px] p-3 border border-white/5 hover:border-[#66859E]/40 transition-all flex flex-col justify-between cursor-pointer group flex-shrink-0"
-                  onClick={() => setSelectedDetailsTask(task)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-xs sm:text-[13px] font-medium text-white leading-tight flex-1">
-                      {task.title}
-                    </h3>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {renderPriorityBadge(task.priority)}
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTask(task);
-                        }}
-                        title="Edit task"
-                        className="p-1 rounded text-[#919191] hover:text-white hover:bg-white/10 transition-colors"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingTaskId(task._id!);
-                        }}
-                        title="Delete task"
-                        className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] text-[#919191] font-normal mt-1.5 line-clamp-1">
-                    {task.description || "No description provided."}
-                  </p>
-
-                  <p className="text-[11px] text-[#919191] font-normal mt-2">
-                    Due {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
-                  </p>
-
-                  <div
-                    className="flex items-center gap-2 mt-3 pt-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => handleMoveStatus(task._id!, "To Do")}
-                      className="bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF3E46]/20 transition-all cursor-pointer"
-                    >
-                      ← To Do
-                    </button>
-                    <button
-                      onClick={() => handleMoveStatus(task._id!, "Done")}
-                      className="bg-[#42CD7F]/10 border border-[#42CD7F] text-[#42CD7F] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#42CD7F]/20 transition-all cursor-pointer"
-                    >
-                      Done →
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {inProgressTasks.length === 0 && (
-                <EmptyState 
-                  icon={CheckSquare}
-                  title="No tasks in progress"
-                  className="py-12 border-0 bg-transparent min-h-0"
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Column 3: Done */}
-          <div className="bg-[#141C24] border border-[#0F1F3D]/20 rounded-xl p-3.5 flex flex-col gap-3 h-[640px]">
-            <div className="flex items-center justify-between pb-1 flex-shrink-0">
-              <h2 className="text-sm sm:text-base font-semibold text-white">Done</h2>
-              <span className="text-xs text-[#919191] font-normal">{doneTasks.length}</span>
-            </div>
-
-            <div className="flex flex-col gap-3 overflow-y-auto pr-1.5 flex-1">
-              {doneTasks.map((task) => (
-                <div
-                  key={task._id}
-                  className="bg-[#0C1116] rounded-[8px] p-3 border border-white/5 hover:border-[#66859E]/40 transition-all flex flex-col justify-between cursor-pointer group flex-shrink-0"
-                  onClick={() => setSelectedDetailsTask(task)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-xs sm:text-[13px] font-medium text-white leading-tight flex-1">
-                      {task.title}
-                    </h3>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {renderPriorityBadge(task.priority)}
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTask(task);
-                        }}
-                        title="Edit task"
-                        className="p-1 rounded text-[#919191] hover:text-white hover:bg-white/10 transition-colors"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingTaskId(task._id!);
-                        }}
-                        title="Delete task"
-                        className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] text-[#919191] font-normal mt-1.5 line-clamp-1">
-                    {task.description || "No description provided."}
-                  </p>
-
-                  <p className="text-[11px] text-[#919191] font-normal mt-2">
-                    Due {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
-                  </p>
-
-                  <div
-                    className="flex items-center gap-2 mt-3 pt-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => handleMoveStatus(task._id!, "To Do")}
-                      className="bg-[#FF3E46]/10 border border-[#FF3E46] text-[#FF3E46] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF3E46]/20 transition-all cursor-pointer"
-                    >
-                      ← To Do
-                    </button>
-                    <button
-                      onClick={() => handleMoveStatus(task._id!, "In Progress")}
-                      className="bg-[#FF9D00]/10 border border-[#FF9D00] text-[#FF9D00] text-[11px] font-medium px-2.5 py-1 rounded-[8px] hover:bg-[#FF9D00]/20 transition-all cursor-pointer"
-                    >
-                      In Progress
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {doneTasks.length === 0 && (
-                <EmptyState 
-                  icon={CheckSquare}
-                  title="No completed tasks yet"
-                  className="py-12 border-0 bg-transparent min-h-0"
-                />
-              )}
-            </div>
-          </div>
+        <div className="w-full flex flex-col gap-4">
+          <KanbanView
+            tasks={filteredTasks}
+            onMoveStatus={handleMoveStatus}
+            onEditTask={setEditingTask}
+            onDeleteTask={setDeletingTaskId}
+            onSelectTask={setSelectedDetailsTask}
+          />
 
           {/* Scroll / Load More trigger for Kanban */}
           {hasNextPage && (
