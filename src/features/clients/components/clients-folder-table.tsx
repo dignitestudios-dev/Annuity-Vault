@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ChevronRight, Users } from "lucide-react";
+import { Search, ChevronRight, Users, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Input } from "@/components/ui/input";
@@ -80,8 +80,21 @@ export default function ClientsFolderTable() {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full h-10 pl-10 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-sm focus-visible:ring-0 focus-visible:border-white/20 font-sans"
+            className="w-full h-10 pl-10 pr-9 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-sm focus-visible:ring-0 focus-visible:border-white/20 font-sans"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setCurrentPage(1);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C8C8C] hover:text-white transition-colors cursor-pointer p-0.5"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Status Dropdown Filter */}

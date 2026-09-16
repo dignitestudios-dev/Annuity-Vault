@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Plus, Search, FileText, Download, Calendar as CalendarIcon, List as ListIcon, LayoutGrid, Pencil, Trash2, ChevronLeft, ChevronRight, CheckSquare } from "lucide-react";
+import { Plus, Search, FileText, Download, Calendar as CalendarIcon, List as ListIcon, LayoutGrid, Pencil, Trash2, ChevronLeft, ChevronRight, CheckSquare, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -54,6 +54,10 @@ function TasksContent() {
   const [activeTab, setActiveTab] = useState<"kanban" | "list" | "calendar">(
     tabParam && ["kanban", "list", "calendar"].includes(tabParam) ? tabParam : "kanban"
   );
+  const [updatingButtonInfo, setUpdatingButtonInfo] = useState<{
+    taskId: string;
+    targetStatus: "To Do" | "In Progress" | "Done";
+  } | null>(null);
 
   // Month Navigation State
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
@@ -152,12 +156,20 @@ function TasksContent() {
   };
 
   // Task Status Transition Handler (with optimistic updates via useUpdateTask)
-  const handleMoveStatus = (id: string, newStatus: "To Do" | "In Progress" | "Done") => {
+  const handleMoveStatus = (id: string, newStatus: "To Do" | "In Progress" | "Done", fromButton?: boolean) => {
+    if (fromButton) {
+      setUpdatingButtonInfo({ taskId: id, targetStatus: newStatus });
+    }
     updateTaskMutation.mutate(
       { id, data: { status: newStatus } },
       {
         onError: (err: any) => {
           toast.error(err?.message || "Failed to update task status");
+        },
+        onSettled: () => {
+          if (fromButton) {
+            setUpdatingButtonInfo(null);
+          }
         },
       }
     );
@@ -321,6 +333,16 @@ function TasksContent() {
             placeholder="Search"
             className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-[#919191] outline-none"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm("")}
+              className="text-[#919191] hover:text-white transition-colors cursor-pointer p-0.5"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Filter Dropdowns */}
@@ -454,6 +476,8 @@ function TasksContent() {
             onEditTask={setEditingTask}
             onDeleteTask={setDeletingTaskId}
             onSelectTask={setSelectedDetailsTask}
+            isLoading={isLoading}
+            updatingButtonInfo={updatingButtonInfo}
           />
 
           {/* Scroll / Load More trigger for Kanban */}
@@ -505,7 +529,33 @@ function TasksContent() {
               </TableHeader>
 
               <TableBody>
-                {filteredTasks.map((task) => (
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <TableRow key={`task-skeleton-${idx}`} className="border-b border-white/[0.08] h-[66px]">
+                      <TableCell className="px-6 py-2.5">
+                        <div className="flex flex-col gap-1.5">
+                          <Skeleton className="h-4 w-48 bg-white/10" />
+                          <Skeleton className="h-3 w-64 bg-white/5" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-2.5">
+                        <Skeleton className="h-4 w-24 bg-white/10" />
+                      </TableCell>
+                      <TableCell className="px-6 py-2.5">
+                        <Skeleton className="h-5 w-16 rounded-[8px] bg-white/10" />
+                      </TableCell>
+                      <TableCell className="px-6 py-2.5">
+                        <Skeleton className="h-5 w-20 rounded-[8px] bg-white/10" />
+                      </TableCell>
+                      <TableCell className="px-6 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Skeleton className="w-9 h-9 rounded-[6px] bg-white/10" />
+                          <Skeleton className="w-9 h-9 rounded-[6px] bg-white/10" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredTasks.map((task) => (
                   <TableRow
                     key={task._id}
                     className="border-b border-white/[0.08] hover:bg-white/[0.02] transition-colors h-[66px] cursor-pointer"
@@ -570,7 +620,7 @@ function TasksContent() {
                   </TableRow>
                 ))}
 
-                {filteredTasks.length === 0 && (
+                {!isLoading && filteredTasks.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="py-12">
                       <EmptyState 

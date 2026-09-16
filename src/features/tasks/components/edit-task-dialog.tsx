@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -65,6 +65,7 @@ export default function EditTaskDialog({
   onClose,
   onSuccess,
 }: EditTaskDialogProps) {
+  const [isDueOpen, setIsDueOpen] = useState(false);
   const {
     register,
     handleSubmit,
@@ -244,11 +245,12 @@ export default function EditTaskDialog({
                 name="due"
                 control={control}
                 render={({ field }) => (
-                  <Popover>
+                  <Popover open={isDueOpen} onOpenChange={setIsDueOpen}>
                     <PopoverTrigger
                       render={
                         <button
                           type="button"
+                          onClick={() => setIsDueOpen(true)}
                           className={`h-10 w-full bg-[#141C24] border-0 text-white text-xs sm:text-sm rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0] ${
                             errors.due ? "ring-1 ring-[#FF3E46]" : ""
                           }`}
@@ -263,8 +265,14 @@ export default function EditTaskDialog({
                     <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
                       <Calendar
                         mode="single"
+                        required
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(date);
+                            setIsDueOpen(false);
+                          }
+                        }}
                         defaultMonth={field.value || new Date()}
                         captionLayout="dropdown"
                         startMonth={new Date(1950, 0)}

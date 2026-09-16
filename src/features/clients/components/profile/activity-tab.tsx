@@ -14,7 +14,8 @@ import {
   Folder,
   FileText,
   Search,
-  ArrowRight
+  ArrowRight,
+  X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/ui/loader";
@@ -327,6 +328,19 @@ export default function ActivityTab({ clientId, clientName }: ActivityTabProps) 
             placeholder="Search activity..."
             className="w-full bg-transparent text-xs text-white placeholder-[#919191] outline-none"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setCurrentPage(1);
+              }}
+              className="text-[#919191] hover:text-white transition-colors cursor-pointer p-0.5"
+              title="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

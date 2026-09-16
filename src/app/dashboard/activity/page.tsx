@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useRouter } from "next/navigation";
-import { Search, FileText, Download } from "lucide-react";
+import { Search, FileText, Download, X } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
+import { cn } from "@/lib/utils";
 
 import { useAuditLogs, exportAuditLogs, AuditLogItem } from "@/features/activity/api/activity.service";
 
@@ -94,7 +95,7 @@ export default function ActivityAuditPage() {
   };
 
   const handleRowClick = (log: AuditLogItem) => {
-    if (!log.recordId) return;
+    if (!log.recordId || log.action === "Delete" || log.action === "Archive") return;
     const mod = log.module.toLowerCase();
     
     switch (mod) {
@@ -162,8 +163,21 @@ export default function ActivityAuditPage() {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full h-10 pl-10 pr-4 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-xs sm:text-sm focus:outline-none focus:border-white/20 font-sans"
+            className="w-full h-10 pl-10 pr-9 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-xs sm:text-sm focus:outline-none focus:border-white/20 font-sans"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setCurrentPage(1);
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C8C8C] hover:text-white transition-colors cursor-pointer p-0.5"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Dropdown Filters */}
@@ -268,32 +282,38 @@ export default function ActivityAuditPage() {
                   </TableRow>
                 ))
               ) : logs.length > 0 ? (
-                logs.map((log) => (
-                  <TableRow
-                    key={log._id}
-                    onClick={() => handleRowClick(log)}
-                    className="border-b border-white/[0.08] hover:bg-white/[0.02] transition-colors h-[51px] cursor-pointer"
-                  >
-                    <TableCell className="px-6 py-2.5 text-xs sm:text-sm font-medium text-white whitespace-nowrap">
-                      {new Date(log.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
-                    </TableCell>
-                    <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
-                      {log.performedBy ? (log.performedBy.name || `${log.performedBy.firstName || ''} ${log.performedBy.lastName || ''}`.trim()) : "System"}
-                    </TableCell>
-                    <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
-                      {log.action}
-                    </TableCell>
-                    <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
-                      {log.module}
-                    </TableCell>
-                    <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
-                      {log.recordLabel}
-                    </TableCell>
-                    <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
-                      {log.change}
-                    </TableCell>
-                  </TableRow>
-                ))
+                logs.map((log) => {
+                  const isClickable = Boolean(log.recordId && log.action !== "Delete" && log.action !== "Archive");
+                  return (
+                    <TableRow
+                      key={log._id}
+                      onClick={() => handleRowClick(log)}
+                      className={cn(
+                        "border-b border-white/[0.08] hover:bg-white/[0.02] transition-colors h-[51px]",
+                        isClickable ? "cursor-pointer" : "cursor-default"
+                      )}
+                    >
+                      <TableCell className="px-6 py-2.5 text-xs sm:text-sm font-medium text-white whitespace-nowrap">
+                        {new Date(log.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                      </TableCell>
+                      <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
+                        {log.performedBy ? (log.performedBy.name || `${log.performedBy.firstName || ''} ${log.performedBy.lastName || ''}`.trim()) : "System"}
+                      </TableCell>
+                      <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
+                        {log.action}
+                      </TableCell>
+                      <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
+                        {log.module}
+                      </TableCell>
+                      <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
+                        {log.recordLabel}
+                      </TableCell>
+                      <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal capitalize whitespace-nowrap">
+                        {log.change}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="py-12 text-center text-xs text-[#919191]">

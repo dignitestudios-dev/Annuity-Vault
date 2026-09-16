@@ -211,7 +211,30 @@ export default function ContractDetailsPage() {
     );
   }
 
-  if (!contract) return null;
+  if (!contract) {
+    return (
+      <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans p-6">
+        <div className="bg-[#141C24] border border-white/10 rounded-2xl p-12 flex flex-col items-center justify-center text-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-[#919191]">
+            <FileText className="w-7 h-7" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-semibold text-white">Contract Not Found</h2>
+            <p className="text-sm text-[#919191] max-w-md">
+              This contract may have been deleted, archived, or is no longer available.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/contracts")}
+            className="mt-2 h-10 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-xl text-sm font-medium transition-all shadow-sm cursor-pointer"
+          >
+            Back to Contracts
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const activeDocuments = (contract.documents || []).filter(
     (doc) => !doc.isArchived && !doc.isDeleted

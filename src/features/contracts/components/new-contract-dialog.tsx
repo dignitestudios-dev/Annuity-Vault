@@ -64,6 +64,8 @@ export default function NewContractDialog({
   onSubmitSuccess,
   defaultClient,
 }: NewContractDialogProps) {
+  const [isStartDateOpen, setIsStartDateOpen] = useState(false);
+  const [isAnniversaryDateOpen, setIsAnniversaryDateOpen] = useState(false);
   const { data: clientsData } = useClients({ limit: 100 });
   const clientOptions = clientsData?.data?.map(client => ({
     label: `${client.firstName} ${client.lastName}`,
@@ -315,11 +317,12 @@ export default function NewContractDialog({
                 name="startDate"
                 control={control}
                 render={({ field }) => (
-                  <Popover>
+                  <Popover open={isStartDateOpen} onOpenChange={setIsStartDateOpen}>
                     <PopoverTrigger
                       render={
                         <button
                           type="button"
+                          onClick={() => setIsStartDateOpen(true)}
                           className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
                         >
                           <span className={field.value ? "text-white" : "text-[#919191]"}>
@@ -332,8 +335,14 @@ export default function NewContractDialog({
                     <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
                       <Calendar
                         mode="single"
+                        required
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(date);
+                            setIsStartDateOpen(false);
+                          }
+                        }}
                         defaultMonth={field.value || new Date()}
                         captionLayout="dropdown"
                         startMonth={new Date(1950, 0)}
@@ -354,11 +363,12 @@ export default function NewContractDialog({
                 name="anniversaryDate"
                 control={control}
                 render={({ field }) => (
-                  <Popover>
+                  <Popover open={isAnniversaryDateOpen} onOpenChange={setIsAnniversaryDateOpen}>
                     <PopoverTrigger
                       render={
                         <button
                           type="button"
+                          onClick={() => setIsAnniversaryDateOpen(true)}
                           className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
                         >
                           <span className={field.value ? "text-white" : "text-[#919191]"}>
@@ -371,8 +381,14 @@ export default function NewContractDialog({
                     <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
                       <Calendar
                         mode="single"
+                        required
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          if (date) {
+                            field.onChange(date);
+                            setIsAnniversaryDateOpen(false);
+                          }
+                        }}
                         defaultMonth={field.value || new Date()}
                         captionLayout="dropdown"
                         startMonth={new Date(1950, 0)}

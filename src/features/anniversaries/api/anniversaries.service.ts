@@ -77,7 +77,7 @@ export const exportAnniversaries = async (format: "pdf" | "csv", search?: string
         a.contractNumber || "N/A",
         a.provider || "N/A",
         a.anniversaryDate ? new Date(a.anniversaryDate).toLocaleDateString() : "N/A",
-        a.daysUntil
+        a.daysUntil === 0 ? "Today" : a.daysUntil
       ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(","))
     ].join("\n");
 
@@ -103,7 +103,7 @@ export const exportAnniversaries = async (format: "pdf" | "csv", search?: string
       a.contractNumber || "N/A",
       a.provider || "N/A",
       a.anniversaryDate ? new Date(a.anniversaryDate).toLocaleDateString() : "N/A",
-      a.daysUntil.toString()
+      a.daysUntil === 0 ? "Today" : a.daysUntil.toString()
     ]);
 
     autoTable(doc, {

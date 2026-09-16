@@ -33,6 +33,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import { useEffect } from "react";
+import { formatUSPhoneNumber } from "@/lib/utils";
+
+const US_PHONE_REGEX = /^(?:\+?1[-.\s]?)?\(?([2-9][0-9]{2})\)?[-.\s]?([2-9][0-9]{2})[-.\s]?([0-9]{4})$/;
 
 const editClientSchema = z.object({
   firstName: z
@@ -62,10 +65,10 @@ const editClientSchema = z.object({
     .refine(
       (val) => {
         if (!val) return true;
-        return val.length >= 10 && val.length <= 20 && /^\+?[\d\s\-()]+$/.test(val);
+        return US_PHONE_REGEX.test(val);
       },
       {
-        message: "Phone number must be between 10 and 20 characters (e.g. +1 (555) 000-0000)",
+        message: "Please enter a valid US phone number (e.g. (555) 000-0000 or +1 (555) 000-0000)",
       }
     ),
   address: z
@@ -142,6 +145,7 @@ export default function EditClientDialog({
   client,
   onUpdateSuccess,
 }: EditClientDialogProps) {
+  const [isDobOpen, setIsDobOpen] = useState(false);
   const defaultNotes = getInitialNotesValue(client);
 
   const {
@@ -255,12 +259,19 @@ export default function EditClientDialog({
             </div>
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-white">Phone</Label>
-              <Input
-                type="tel"
-                maxLength={20}
-                {...register("phone")}
-                placeholder="Enter Phone No."
-                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.phone ? "ring-1 ring-[#FF3E46]" : ""}`}
+              <Controller
+                name="phone"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    type="tel"
+                    maxLength={20}
+                    value={field.value || ""}
+                    onChange={(e) => field.onChange(formatUSPhoneNumber(e.target.value))}
+                    placeholder="e.g. (555) 000-0000"
+                    className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.phone ? "ring-1 ring-[#FF3E46]" : ""}`}
+                  />
+                )}
               />
               {errors.phone && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.phone.message}</p>}
             </div>
@@ -294,11 +305,12 @@ export default function EditClientDialog({
                     today.getDate()
                   );
                   return (
-                    <Popover>
+                    <Popover open={isDobOpen} onOpenChange={setIsDobOpen}>
                       <PopoverTrigger
                         render={
                           <button
                             type="button"
+                            onClick={() => setIsDobOpen(true)}
                             className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
                           >
                             <span className={field.value ? "text-white" : "text-[#919191]"}>
@@ -311,8 +323,14 @@ export default function EditClientDialog({
                       <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
                         <Calendar
                           mode="single"
+                          required
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(date);
+                              setIsDobOpen(false);
+                            }
+                          }}
                           defaultMonth={field.value || maxDobDate}
                           captionLayout="dropdown"
                           startMonth={new Date(1920, 0)}

@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Search, RotateCcw, Trash2, User, FileText, FileCode, Folder, Archive } from "lucide-react";
+import { Search, RotateCcw, Trash2, User, FileText, FileCode, Folder, Archive, X } from "lucide-react";
 import DeleteModal from "@/components/shared/delete-modal";
 import RestoreModal from "@/components/shared/restore-modal";
 import SuccessModal from "@/components/shared/success-modal";
@@ -130,6 +130,19 @@ function ArchivedContent() {
             placeholder="Search"
             className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-[#919191] outline-none font-sans"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setCurrentPage(1);
+              }}
+              className="text-[#919191] hover:text-white transition-colors cursor-pointer p-0.5"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Navigation Category Tabs */}

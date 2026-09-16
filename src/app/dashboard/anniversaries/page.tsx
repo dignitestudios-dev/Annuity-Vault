@@ -3,7 +3,7 @@ import { Loader } from "@/components/ui/loader";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useState } from "react";
-import { Search, FileText, Download, CalendarDays } from "lucide-react";
+import { Search, FileText, Download, CalendarDays, X } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -22,7 +22,7 @@ import { useAnniversaries, exportAnniversaries } from "@/features/anniversaries/
 
 export default function AnniversariesPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDaysFilter, setSelectedDaysFilter] = useState<30 | 60 | 90 | 120 | "all">("all");
+  const [selectedDaysFilter, setSelectedDaysFilter] = useState<30 | 60 | 90 | 120>(120);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -30,7 +30,7 @@ export default function AnniversariesPage() {
     page: currentPage,
     limit: itemsPerPage,
     search: searchTerm || undefined,
-    window: selectedDaysFilter !== "all" ? selectedDaysFilter : 120, // Backend default is 90, so we specify explicitly if possible
+    window: selectedDaysFilter,
   });
 
   const anniversariesData = data?.data;
@@ -54,7 +54,7 @@ export default function AnniversariesPage() {
       await exportAnniversaries(
         "pdf",
         searchTerm || undefined,
-        selectedDaysFilter !== "all" ? selectedDaysFilter : 120
+        selectedDaysFilter
       );
       setFeedbackModal({
         isOpen: true,
@@ -71,7 +71,7 @@ export default function AnniversariesPage() {
       await exportAnniversaries(
         "csv",
         searchTerm || undefined,
-        selectedDaysFilter !== "all" ? selectedDaysFilter : 120
+        selectedDaysFilter
       );
       setFeedbackModal({
         isOpen: true,
@@ -189,6 +189,19 @@ export default function AnniversariesPage() {
             placeholder="Search"
             className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-[#919191] outline-none"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setCurrentPage(1);
+              }}
+              className="text-[#919191] hover:text-white transition-colors cursor-pointer p-0.5"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Time Horizon Preset Buttons (30d, 60d, 90d, 120d) */}
@@ -199,7 +212,7 @@ export default function AnniversariesPage() {
               <button
                 key={daysVal}
                 onClick={() => {
-                  setSelectedDaysFilter(isActive ? "all" : daysVal);
+                  setSelectedDaysFilter(daysVal);
                   setCurrentPage(1);
                 }}
                 className={cn(
@@ -279,7 +292,13 @@ export default function AnniversariesPage() {
 
                     {/* Days Countdown */}
                     <TableCell className="px-6 py-3.5 text-xs sm:text-sm text-white font-medium whitespace-nowrap">
-                      {row.daysUntil} days
+                      {row.daysUntil === 0 ? (
+                        <span className="px-2.5 py-0.5 rounded-[8px] text-[12px] font-semibold bg-[#42CD7F]/10 border border-[#42CD7F] text-[#42CD7F] inline-block">
+                          Today
+                        </span>
+                      ) : (
+                        `${row.daysUntil} ${row.daysUntil === 1 ? "day" : "days"}`
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
