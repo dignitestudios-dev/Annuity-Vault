@@ -33,6 +33,7 @@ export default function AnniversariesPage() {
     window: selectedDaysFilter,
   });
 
+  
   const anniversariesData = data?.data;
   const stats = anniversariesData?.stats;
   const rows = anniversariesData?.rows || [];
