@@ -33,6 +33,7 @@ export default function AnniversariesPage() {
     window: selectedDaysFilter !== "all" ? selectedDaysFilter : 120, // Backend default is 90, so we specify explicitly if possible
   });
 
+  
   const anniversariesData = data?.data;
   const stats = anniversariesData?.stats;
   const rows = anniversariesData?.rows || [];
