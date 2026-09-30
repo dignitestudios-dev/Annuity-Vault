@@ -27,6 +27,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import SearchableSelect from "@/components/ui/searchable-select";
+import InsuranceCompanyCombobox from "./insurance-company-combobox";
 
 import { useCreateContract } from "@/features/contracts/api/contracts.service";
 import { useClients } from "@/features/clients/api/clients.service";
@@ -86,7 +87,7 @@ export default function NewContractDialog({
     defaultValues: {
       client: defaultClient || "",
       policyNumber: "",
-      insuranceCompany: "Nationwide",
+      insuranceCompany: "",
       contractType: "Fixed",
       status: "Active",
       premiumAmount: "",
@@ -115,7 +116,7 @@ export default function NewContractDialog({
       reset({
         client: defaultClient || "",
         policyNumber: "",
-        insuranceCompany: "Nationwide",
+        insuranceCompany: "",
         contractType: "Fixed",
         status: "Active",
         premiumAmount: "",
@@ -208,31 +209,11 @@ export default function NewContractDialog({
                 name="insuranceCompany"
                 control={control}
                 render={({ field }) => (
-                  <Select
+                  <InsuranceCompanyCombobox
                     value={field.value}
-                    onValueChange={field.onChange}
-                  >
-                    <SelectTrigger className={`h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none focus:ring-1 focus:ring-[#6887A0] ${errors.insuranceCompany ? "ring-1 ring-[#FF3E46]" : ""}`}>
-                      <SelectValue placeholder="Nationwide" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      <SelectItem value="Nationwide" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Nationwide
-                      </SelectItem>
-                      <SelectItem value="Equitable" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Equitable
-                      </SelectItem>
-                      <SelectItem value="Jackson National" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Jackson National
-                      </SelectItem>
-                      <SelectItem value="Symetra" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Symetra
-                      </SelectItem>
-                      <SelectItem value="Athene" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Athene
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                    onChange={field.onChange}
+                    error={!!errors.insuranceCompany}
+                  />
                 )}
               />
               {errors.insuranceCompany && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.insuranceCompany.message}</p>}
@@ -258,14 +239,20 @@ export default function NewContractDialog({
                       <SelectItem value="Fixed" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Fixed
                       </SelectItem>
+                      <SelectItem value="Variable" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Variable
+                      </SelectItem>
+                      <SelectItem value="Indexed" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Indexed
+                      </SelectItem>
+                      <SelectItem value="Fixed Indexed" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Fixed Indexed
+                      </SelectItem>
                       <SelectItem value="Immediate" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Immediate
                       </SelectItem>
                       <SelectItem value="Deferred" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Deferred
-                      </SelectItem>
-                      <SelectItem value="Variable" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Variable
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -294,11 +281,14 @@ export default function NewContractDialog({
                       <SelectItem value="Pending" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Pending
                       </SelectItem>
+                      <SelectItem value="Matured" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Matured
+                      </SelectItem>
                       <SelectItem value="Surrendered" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Surrendered
                       </SelectItem>
-                      <SelectItem value="Matured" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Matured
+                      <SelectItem value="Out of Surrender" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Out of Surrender
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -404,42 +394,79 @@ export default function NewContractDialog({
           </div>
 
           {/* Row 5: Premium Amount & Contract Value */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Premium Amount <span className="text-destructive">*</span></Label>
-              <Input
-                type="number"
-                {...register("premiumAmount")}
-                placeholder="100000"
-                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.premiumAmount ? "ring-1 ring-[#FF3E46]" : isHighPremium ? "ring-1 ring-[#F59E0B]" : ""}`}
-              />
-              {errors.premiumAmount ? (
-                <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.premiumAmount.message}</p>
-              ) : isHighPremium ? (
-                <p className="text-[11px] font-medium text-[#F59E0B] flex items-center gap-1 mt-0.5 leading-snug">
-                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-[#F59E0B]" />
-                  Value exceeds standard limit. Please confirm this amount.
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs font-medium text-white">Contract Value <span className="text-destructive">*</span></Label>
-              <Input
-                type="number"
-                {...register("contractValue")}
-                placeholder="100000"
-                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.contractValue ? "ring-1 ring-[#FF3E46]" : isHighContractValue ? "ring-1 ring-[#F59E0B]" : ""}`}
-              />
-              {errors.contractValue ? (
-                <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.contractValue.message}</p>
-              ) : isHighContractValue ? (
-                <p className="text-[11px] font-medium text-[#F59E0B] flex items-center gap-1 mt-0.5 leading-snug">
-                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-[#F59E0B]" />
-                  Value exceeds standard limit. Please confirm this amount.
-                </p>
-              ) : null}
-            </div>
-          </div>
+         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+  <div className="flex flex-col gap-1.5">
+    <Label className="text-xs font-medium text-white">
+      Premium Amount <span className="text-destructive">*</span>
+    </Label>
+
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white text-xs pointer-events-none">
+        $
+      </span>
+
+      <Input
+        type="number"
+        {...register("premiumAmount")}
+        placeholder="100000"
+        className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] pl-7 focus-visible:ring-1 focus-visible:ring-[#6887A0] ${
+          errors.premiumAmount
+            ? "ring-1 ring-[#FF3E46]"
+            : isHighPremium
+              ? "ring-1 ring-[#F59E0B]"
+              : ""
+        }`}
+      />
+    </div>
+
+    {errors.premiumAmount ? (
+      <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
+        {errors.premiumAmount.message}
+      </p>
+    ) : isHighPremium ? (
+      <p className="text-[11px] font-medium text-[#F59E0B] flex items-center gap-1 mt-0.5 leading-snug">
+        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-[#F59E0B]" />
+        Value exceeds standard limit. Please confirm this amount.
+      </p>
+    ) : null}
+  </div>
+
+  <div className="flex flex-col gap-1.5">
+    <Label className="text-xs font-medium text-white">
+      Contract Value <span className="text-destructive">*</span>
+    </Label>
+
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white text-xs pointer-events-none">
+        $
+      </span>
+
+      <Input
+        type="number"
+        {...register("contractValue")}
+        placeholder="100000"
+        className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] pl-7 focus-visible:ring-1 focus-visible:ring-[#6887A0] ${
+          errors.contractValue
+            ? "ring-1 ring-[#FF3E46]"
+            : isHighContractValue
+              ? "ring-1 ring-[#F59E0B]"
+              : ""
+        }`}
+      />
+    </div>
+
+    {errors.contractValue ? (
+      <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
+        {errors.contractValue.message}
+      </p>
+    ) : isHighContractValue ? (
+      <p className="text-[11px] font-medium text-[#F59E0B] flex items-center gap-1 mt-0.5 leading-snug">
+        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-[#F59E0B]" />
+        Value exceeds standard limit. Please confirm this amount.
+      </p>
+    ) : null}
+  </div>
+</div>
 
           {/* Row 6: Beneficiary Information */}
           <div className="flex flex-col gap-1.5">

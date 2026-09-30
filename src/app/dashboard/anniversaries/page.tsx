@@ -17,10 +17,12 @@ import TablePagination from "@/components/shared/table-pagination";
 import { cn } from "@/lib/utils";
 
 import { useAnniversaries, exportAnniversaries } from "@/features/anniversaries/api/anniversaries.service";
+import { useRouter } from "next/navigation";
 
 
 
 export default function AnniversariesPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDaysFilter, setSelectedDaysFilter] = useState<30 | 60 | 90 | 120>(120);
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,7 +35,7 @@ export default function AnniversariesPage() {
     window: selectedDaysFilter,
   });
 
-  
+
   const anniversariesData = data?.data;
   const stats = anniversariesData?.stats;
   const rows = anniversariesData?.rows || [];
@@ -269,6 +271,8 @@ export default function AnniversariesPage() {
                 rows.map((row) => (
                   <TableRow
                     key={row.contractId}
+                    onClick={() => router.push(`/dashboard/contracts/${row.contractId}`)}
+
                     className="border-b border-white/[0.08] hover:bg-white/[0.02] transition-colors h-[62px] cursor-pointer"
                   >
                     {/* Client */}

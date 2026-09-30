@@ -98,7 +98,7 @@ export default function SettingsDataManagementPage() {
         </div>
 
         {/* Card 2: Reset All Data */}
-        <div className="w-full bg-[#141C24] border border-white/5 rounded-xl p-4 sm:p-5 flex items-center justify-between gap-4 shadow-sm">
+        {/* <div className="w-full bg-[#141C24] border border-white/5 rounded-xl p-4 sm:p-5 flex items-center justify-between gap-4 shadow-sm">
           <div className="flex flex-col gap-1 pr-4">
             <h3 className="text-white font-semibold text-base capitalize">
               Reset All Data
@@ -115,7 +115,7 @@ export default function SettingsDataManagementPage() {
           >
             Reset
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Delete Confirmation Modal for Reset All Data */}

@@ -35,6 +35,8 @@ const getStatusStyle = (status: string) => {
       return "bg-[#42CD7F] text-white border-0";
     case "surrendered":
       return "bg-[#FF3E46] text-white border-0";
+    case "out of surrender":
+      return "bg-[#A78BFA] text-black border-0 font-medium";
     case "matured":
       return "bg-[#39BDF6] text-white border-0";
     case "pending":
@@ -202,9 +204,11 @@ export default function ContractsPage() {
               >
                 <SelectItem value="All Types">All Types</SelectItem>
                 <SelectItem value="Fixed">Fixed</SelectItem>
+                <SelectItem value="Variable">Variable</SelectItem>
+                <SelectItem value="Indexed">Indexed</SelectItem>
+                <SelectItem value="Fixed Indexed">Fixed Indexed</SelectItem>
                 <SelectItem value="Immediate">Immediate</SelectItem>
                 <SelectItem value="Deferred">Deferred</SelectItem>
-                <SelectItem value="Variable">Variable</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -229,8 +233,9 @@ export default function ContractsPage() {
                 <SelectItem value="All Statuses">All Statuses</SelectItem>
                 <SelectItem value="Active">Active</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Surrendered">Surrendered</SelectItem>
                 <SelectItem value="Matured">Matured</SelectItem>
+                <SelectItem value="Surrendered">Surrendered</SelectItem>
+                <SelectItem value="Out of Surrender">Out of Surrender</SelectItem>
               </SelectContent>
             </Select>
           </div>

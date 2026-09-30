@@ -41,8 +41,12 @@ const getStatusStyle = (status: string) => {
       return "bg-[#42CD7F] text-white border-0";
     case "surrendered":
       return "bg-[#FF3E46] text-white border-0";
+    case "out of surrender":
+      return "bg-[#A78BFA] text-black border-0 font-medium";
     case "matured":
       return "bg-[#39BDF6] text-white border-0";
+    case "pending":
+      return "bg-[#FFE600] text-black border-0 font-medium";
     default:
       return "bg-[#66859E] text-white border-0";
   }

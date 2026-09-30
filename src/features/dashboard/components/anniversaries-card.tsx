@@ -55,17 +55,16 @@ export default function AnniversariesCard() {
             const daysDisplay = diffDays > 0 ? `${diffDays}d` : diffDays === 0 ? "Today" : `${Math.abs(diffDays)}d ago`;
             const countdown = diffDays > 0 ? `in ${diffDays} days` : diffDays === 0 ? "Today" : `${Math.abs(diffDays)} days ago`;
 
-            return (
+            const content = (
               <div
-                key={item.contractId || item.id || Math.random().toString()}
-                className="px-5 py-3.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+                className="px-5 py-3.5 flex items-center justify-between hover:bg-white/[0.04] transition-colors cursor-pointer group"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-[38px] h-[38px] rounded-[8px] bg-white/10 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 font-sans">
+                  <div className="w-[38px] h-[38px] rounded-[8px] bg-white/10 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 font-sans group-hover:bg-[#6887A0]/20 transition-colors">
                     {daysDisplay}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-white font-sans leading-tight">
+                    <span className="text-sm font-medium text-white font-sans leading-tight group-hover:text-[#8bb4d4] transition-colors">
                       {item.client?.firstName ? `${item.client.firstName} ${item.client.lastName}` : item.clientName || "Unknown Client"}
                     </span>
                     <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5">
@@ -81,6 +80,24 @@ export default function AnniversariesCard() {
                     {countdown}
                   </span>
                 </div>
+              </div>
+            );
+
+            if (item.contractId) {
+              return (
+                <Link
+                  key={item.contractId || item.id}
+                  href={`/dashboard/contracts/${item.contractId}`}
+                  className="block no-underline"
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <div key={item.id || Math.random().toString()}>
+                {content}
               </div>
             );
           })

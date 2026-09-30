@@ -27,6 +27,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import SearchableSelect from "@/components/ui/searchable-select";
+import InsuranceCompanyCombobox from "./insurance-company-combobox";
 
 import { useUpdateContract } from "@/features/contracts/api/contracts.service";
 import { useClients } from "@/features/clients/api/clients.service";
@@ -93,7 +94,7 @@ export default function EditContractDialog({
     defaultValues: {
       client: getClientId(),
       policyNumber: contract?.policyNumber || "",
-      insuranceCompany: contract?.provider || "Equitable",
+      insuranceCompany: contract?.provider || "",
       contractType: contract?.contractType || "Immediate",
       status: contract?.status || "Surrendered",
       premiumAmount: contract?.premiumAmount !== undefined ? String(contract.premiumAmount) : "",
@@ -110,7 +111,7 @@ export default function EditContractDialog({
       reset({
         client: getClientId(),
         policyNumber: contract.policyNumber || "",
-        insuranceCompany: contract.provider || "Equitable",
+        insuranceCompany: contract.provider || "",
         contractType: contract.contractType || "Immediate",
         status: contract.status || "Surrendered",
         premiumAmount: contract.premiumAmount !== undefined ? String(contract.premiumAmount) : "",
@@ -203,31 +204,11 @@ export default function EditContractDialog({
                 name="insuranceCompany"
                 control={control}
                 render={({ field }) => (
-                  <Select
+                  <InsuranceCompanyCombobox
                     value={field.value}
-                    onValueChange={field.onChange}
-                  >
-                    <SelectTrigger className={`h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none focus:ring-1 focus:ring-[#6887A0] ${errors.insuranceCompany ? "ring-1 ring-[#FF3E46]" : ""}`}>
-                      <SelectValue placeholder="Equitable" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      <SelectItem value="Equitable" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Equitable
-                      </SelectItem>
-                      <SelectItem value="Nationwide" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Nationwide
-                      </SelectItem>
-                      <SelectItem value="Jackson National" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Jackson National
-                      </SelectItem>
-                      <SelectItem value="Symetra" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Symetra
-                      </SelectItem>
-                      <SelectItem value="Athene" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Athene
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                    onChange={field.onChange}
+                    error={!!errors.insuranceCompany}
+                  />
                 )}
               />
               {errors.insuranceCompany && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.insuranceCompany.message}</p>}
@@ -250,17 +231,23 @@ export default function EditContractDialog({
                       <SelectValue placeholder="Immediate" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      <SelectItem value="Immediate" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Immediate
-                      </SelectItem>
                       <SelectItem value="Fixed" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Fixed
                       </SelectItem>
-                      <SelectItem value="Deferred" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Deferred
-                      </SelectItem>
                       <SelectItem value="Variable" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Variable
+                      </SelectItem>
+                      <SelectItem value="Indexed" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Indexed
+                      </SelectItem>
+                      <SelectItem value="Fixed Indexed" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Fixed Indexed
+                      </SelectItem>
+                      <SelectItem value="Immediate" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Immediate
+                      </SelectItem>
+                      <SelectItem value="Deferred" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Deferred
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -283,9 +270,6 @@ export default function EditContractDialog({
                       <SelectValue placeholder="Surrendered" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      <SelectItem value="Surrendered" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Surrendered
-                      </SelectItem>
                       <SelectItem value="Active" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Active
                       </SelectItem>
@@ -294,6 +278,12 @@ export default function EditContractDialog({
                       </SelectItem>
                       <SelectItem value="Matured" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Matured
+                      </SelectItem>
+                      <SelectItem value="Surrendered" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Surrendered
+                      </SelectItem>
+                      <SelectItem value="Out of Surrender" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Out of Surrender
                       </SelectItem>
                     </SelectContent>
                   </Select>

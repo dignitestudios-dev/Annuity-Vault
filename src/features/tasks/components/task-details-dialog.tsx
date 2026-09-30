@@ -77,8 +77,7 @@ export default function TaskDetailsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-[#0C1116] border border-white/10 text-white sm:max-w-[525px] p-7 rounded-[12px] shadow-2xl">
-        <DialogHeader className="pb-2 space-y-3">
+<DialogContent className="bg-[#0C1116] border border-white/10 text-white sm:max-w-[525px] p-6 rounded-[12px] shadow-2xl">        <DialogHeader className="pb-2 space-y-3">
           <div className="flex items-center gap-2">
             {renderPriorityBadge(task.priority)}
             {renderStatusBadge(task.status)}
@@ -126,40 +125,35 @@ export default function TaskDetailsDialog({
         </div>
 
         {/* Footer Actions */}
-        <DialogFooter className="pt-3 flex flex-row items-center justify-between gap-3 w-full border-t border-white/10 sm:justify-between">
-          <Button
-            type="button"
-            onClick={() => {
-              onClose();
-              if (task._id) onDelete(task._id);
-            }}
-            className="h-10 px-4 bg-[#FF0000] hover:bg-red-600 text-white rounded-[12px] text-xs font-medium border-0 flex items-center gap-2 cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-white" />
-            <span>Delete</span>
-          </Button>
+      {/* Footer Actions */}
+{/* Footer Actions */}
+<div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between w-full">
+  {/* Delete */}
+  <Button
+    type="button"
+    onClick={() => {
+      onClose();
+      if (task._id) onDelete(task._id);
+    }}
+    className="h-10 px-4 bg-transparent hover:bg-[#FF3E46]/10 text-[#FF5C63] hover:text-[#FF3E46] border border-[#FF3E46]/40 hover:border-[#FF3E46]/70 rounded-[10px] text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 shadow-none"
+  >
+    <Trash2 className="w-3.5 h-3.5" />
+    <span>Delete</span>
+  </Button>
 
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              onClick={onClose}
-              className="h-10 px-4 bg-[#2B343D] hover:bg-[#394551] text-white rounded-[12px] text-xs font-medium border-0 cursor-pointer"
-            >
-              Close
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                onClose();
-                onEdit(task);
-              }}
-              className="h-10 px-4 bg-gradient-to-r from-[#66859E] to-[#849EB2] hover:opacity-95 text-white rounded-[12px] text-xs font-medium border-0 flex items-center gap-2 cursor-pointer"
-            >
-              <Pencil className="w-3.5 h-3.5 text-white" />
-              <span>Edit Task</span>
-            </Button>
-          </div>
-        </DialogFooter>
+  {/* Edit */}
+  <Button
+    type="button"
+    onClick={() => {
+      onClose();
+      onEdit(task);
+    }}
+    className="h-10 px-5 bg-[#849EB2] hover:bg-[#91A9BA] text-white rounded-[10px] text-xs font-medium border-0 flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 shadow-none"
+  >
+    <Pencil className="w-3.5 h-3.5" />
+    <span>Edit Task</span>
+  </Button>
+</div>
       </DialogContent>
     </Dialog>
   );

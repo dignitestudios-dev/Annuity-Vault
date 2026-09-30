@@ -293,9 +293,25 @@ export default function ActivityAuditPage() {
                         isClickable ? "cursor-pointer" : "cursor-default"
                       )}
                     >
-                      <TableCell className="px-6 py-2.5 text-xs sm:text-sm font-medium text-white whitespace-nowrap">
-                        {new Date(log.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
-                      </TableCell>
+                      <TableCell className="px-6 py-2.5 whitespace-nowrap">
+  <div className="flex flex-col gap-0.5">
+    <span className="text-xs sm:text-sm font-medium text-white">
+      {new Date(log.createdAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })}
+    </span>
+
+    <span className="text-[11px] text-[#919191]">
+      {new Date(log.createdAt).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })}
+    </span>
+  </div>
+</TableCell>
                       <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
                         {log.performedBy ? (log.performedBy.name || `${log.performedBy.firstName || ''} ${log.performedBy.lastName || ''}`.trim()) : "System"}
                       </TableCell>

@@ -223,17 +223,6 @@ export default function KanbanView({
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteTask(taskId);
-                              }}
-                              title="Delete task"
-                              className="p-1 rounded text-[#919191] hover:text-[#FF3E46] hover:bg-white/10 transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
                           </div>
                         </div>
 
@@ -243,9 +232,15 @@ export default function KanbanView({
                         </p>
 
                         {/* Due Date */}
+                        {/* Due Date */}
                         <p className="text-[11px] text-[#919191] font-normal mt-2">
-                          Due {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
+                          Due{" "}
+                          {task.dueDate
+                            ? format(new Date(task.dueDate), "MMM dd, yyyy")
+                            : "N/A"}
                         </p>
+
+                        {/* Delete Action - Visually separated from Edit */}
 
                         {/* Quick Move Buttons based on column */}
                         <div
@@ -332,6 +327,20 @@ export default function KanbanView({
                               </button>
                             </>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => onDeleteTask(taskId)}
+                            title="Delete task"
+                            className="ml-auto w-8 h-8 flex items-center justify-center rounded-md
+      text-[#FF5C63]
+      bg-[#FF3E46]/5
+      border border-[#FF3E46]/30
+      hover:bg-[#FF3E46]/10
+      hover:border-[#FF3E46]/50
+      transition-all duration-200 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     );
