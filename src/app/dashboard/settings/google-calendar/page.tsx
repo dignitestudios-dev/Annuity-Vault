@@ -1,5 +1,5 @@
-import MicrosoftCalendarView from "@/features/settings/components/microsoft-calendar-view";
+import GoogleCalendarView from "@/features/settings/components/google-calendar-view";
 
 export default function SettingsGoogleCalendarPage() {
-  return <MicrosoftCalendarView />;
+  return <GoogleCalendarView />;
 }

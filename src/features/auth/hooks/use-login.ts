@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/store";
 import { setCredentials } from "@/store/slices/auth.slice";
@@ -12,10 +13,11 @@ import { DEFAULT_REDIRECT } from "@/config/routes";
 export function useLogin() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const [showSplash, setShowSplash] = useState(false);
 
   const form = useForm<LoginCredentials>({
     resolver: zodResolver(loginSchema),
-    mode: "onChange",
+    mode: "onTouched",
     reValidateMode: "onChange",
     defaultValues: { email: "", password: "" },
   });
@@ -30,7 +32,9 @@ export function useLogin() {
         localStorage.setItem("auth-user", JSON.stringify(account));
         document.cookie = `auth-token=${token}; path=/; max-age=86400`; // Adjust as needed
         dispatch(setCredentials({ user: account, accessToken: token }));
-        router.push(DEFAULT_REDIRECT);
+        // setShowSplash(true);
+              router.push(DEFAULT_REDIRECT);
+
       },
       onError: (err) => {
         // Form error handling can be done here or in the UI
@@ -39,5 +43,16 @@ export function useLogin() {
     });
   }
 
-  return { form, onSubmit: form.handleSubmit(onSubmit), isPending, error };
+  const handleSplashComplete = () => {
+    router.push(DEFAULT_REDIRECT);
+  };
+
+  return {
+    form,
+    onSubmit: form.handleSubmit(onSubmit),
+    isPending,
+    error,
+    showSplash,
+    handleSplashComplete,
+  };
 }

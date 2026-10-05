@@ -117,7 +117,7 @@ export default function TaskDetailsDialog({
               Full Description
             </h4>
             <div className="bg-[#141C24] p-3.5 rounded-[12px] border border-white/5 min-h-[90px]">
-              <p className="text-xs sm:text-sm text-white/90 leading-relaxed whitespace-pre-wrap">
+              <p className="text-xs sm:text-sm text-white/90 leading-relaxed whitespace-pre-wrap break-words break-all [overflow-wrap:anywhere]">
                 {task.description || "No description provided."}
               </p>
             </div>

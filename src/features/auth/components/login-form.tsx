@@ -8,35 +8,39 @@ import { useLogin } from "@/features/auth/hooks/use-login";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import AnimatedLogo from "@/components/shared/animated-logo";
+import SplashScreen from "@/components/shared/splash-screen";
 
 export default function LoginForm() {
-  const { form, onSubmit, isPending } = useLogin();
-  const { formState: { errors } } = form;
+  const { form, onSubmit, isPending, showSplash, handleSplashComplete } = useLogin();
+  const { 
+    formState: { errors, touchedFields, isSubmitted } 
+  } = form;
   const [showPassword, setShowPassword] = useState(false);
 
+  const showEmailError = Boolean((touchedFields.email || isSubmitted) && errors.email);
+  const showPasswordError = Boolean((touchedFields.password || isSubmitted) && errors.password);
+
   return (
-    <div className="relative z-10 w-full ml-auto max-w-[580px] lg:max-w-[620px] h-full bg-[#0C1116]/60 backdrop-blur-[8px] rounded-[20px] p-6 lg:p-10 border border-white/5 shadow-2xl flex flex-col items-center justify-center overflow-hidden transition-all duration-300">
-      {/* Background Ellipse Image matching Figma design */}
-      <Image
-        src="/images/auth-ellipse.png"
-        alt=""
-        fill
-        className="object-cover pointer-events-none z-0"
-      />
+    <>
+      {/* {showSplash && (
+        <SplashScreen onComplete={handleSplashComplete} />
+      )} */}
+      <div className="relative z-10 w-full ml-auto max-w-[580px] lg:max-w-[620px] h-full bg-[#0C1116]/60 backdrop-blur-[8px] rounded-[20px] p-6 lg:p-10 border border-white/5 shadow-2xl flex flex-col items-center justify-center overflow-hidden transition-all duration-300">
+        {/* Background Ellipse Image matching Figma design */}
+        <Image
+          src="/images/auth-ellipse.png"
+          alt=""
+          fill
+          className="object-cover pointer-events-none z-0"
+        />
 
         {/* Form Container */}
         <div className="relative z-10 w-full max-w-[340px] flex flex-col items-center gap-6">
           
           {/* Brand Logo */}
-          <div className="flex justify-center w-[170px]">
-            <Image
-              src="/images/logo.png"
-              alt="Annuity Vault Logo"
-              width={170}
-              height={130}
-              priority
-              className="w-[170px] h-auto object-contain"
-            />
+          <div className="flex justify-center items-center w-[170px] min-h-[95px]">
+            <AnimatedLogo className="w-[170px] h-auto object-contain" />
           </div>
 
           {/* Heading Section */}
@@ -65,11 +69,11 @@ export default function LoginForm() {
                 type="email"
                 placeholder="Enter email address"
                 {...form.register("email")}
-                className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] px-3 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.email ? "ring-1 ring-[#FF3E46]" : ""}`}
+                className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] px-3 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${showEmailError ? "ring-1 ring-[#FF3E46]" : ""}`}
               />
-              {errors.email && (
+              {showEmailError && (
                 <p className="text-[11px] font-medium text-[#FF3E46]">
-                  {errors.email.message as string}
+                  {errors.email?.message as string}
                 </p>
               )}
             </div>
@@ -86,7 +90,7 @@ export default function LoginForm() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter password here"
                   {...form.register("password")}
-                  className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${errors.password ? "ring-1 ring-[#FF3E46]" : ""}`}
+                  className={`h-[38px] w-full bg-[#141C24] border-0 rounded-[10px] pl-3 pr-10 text-xs text-white placeholder:text-[#919191] placeholder:text-xs focus-visible:ring-1 focus-visible:ring-[#66859E] ${showPasswordError ? "ring-1 ring-[#FF3E46]" : ""}`}
                 />
                 <button
                   type="button"
@@ -101,9 +105,9 @@ export default function LoginForm() {
                   )}
                 </button>
               </div>
-              {errors.password && (
+              {showPasswordError && (
                 <p className="text-[11px] font-medium text-[#FF3E46]">
-                  {errors.password.message as string}
+                  {errors.password?.message as string}
                 </p>
               )}
 
@@ -127,8 +131,8 @@ export default function LoginForm() {
               Log In
             </Button>
           </form>
-
+        </div>
       </div>
-    </div>
+    </>
   );
 }

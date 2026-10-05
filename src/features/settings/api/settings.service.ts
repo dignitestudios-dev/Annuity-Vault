@@ -49,8 +49,17 @@ export interface MicrosoftCalendarSyncResult {
   anniversariesCount: number;
 }
 
-export type GoogleCalendarStatus = MicrosoftCalendarStatus;
-export type GoogleCalendarConnect = MicrosoftCalendarConnect;
+export interface GoogleCalendarStatus {
+  connected: boolean;
+}
+
+export interface GoogleCalendarConnect {
+  authUrl: string;
+}
+
+export interface GoogleCalendarSyncResult {
+  status: string;
+}
 
 export const settingsKeys = {
   all: ["settings"] as const,
@@ -58,7 +67,7 @@ export const settingsKeys = {
   notificationPreferences: () => [...settingsKeys.all, "notification-preferences"] as const,
   security: () => [...settingsKeys.all, "security"] as const,
   microsoftCalendar: () => [...settingsKeys.all, "microsoft-calendar"] as const,
-  googleCalendar: () => [...settingsKeys.all, "microsoft-calendar"] as const,
+  googleCalendar: () => [...settingsKeys.all, "google-calendar"] as const,
 };
 
 // =======================
@@ -179,7 +188,9 @@ export const useMicrosoftCalendarStatus = () => {
 };
 
 export const connectMicrosoftCalendar = async (): Promise<MicrosoftCalendarConnect> => {
-  const { data } = await axiosInstance.get<{ data: MicrosoftCalendarConnect }>("/settings/microsoft-calendar/connect");
+  const { data } = await axiosInstance.get<{ data: MicrosoftCalendarConnect }>("/settings/microsoft-calendar/connect", {
+    skipToast: true,
+  } as any);
   return data.data;
 };
 
@@ -209,10 +220,55 @@ export const useSyncMicrosoftCalendar = () => {
   });
 };
 
-// Aliases for backwards compatibility
-export const useGoogleCalendarStatus = useMicrosoftCalendarStatus;
-export const connectGoogleCalendar = connectMicrosoftCalendar;
-export const useDisconnectGoogleCalendar = useDisconnectMicrosoftCalendar;
+// =======================
+// Google Calendar
+// =======================
+export const useGoogleCalendarStatus = () => {
+  return useQuery({
+    queryKey: settingsKeys.googleCalendar(),
+    queryFn: async () => {
+      const { data } = await axiosInstance.get<{ data: GoogleCalendarStatus }>("/settings/google-calendar/status");
+      return data.data;
+    },
+  });
+};
+
+export const connectGoogleCalendar = async (): Promise<GoogleCalendarConnect> => {
+  const { data } = await axiosInstance.get<{ data: GoogleCalendarConnect }>("/settings/google-calendar/connect", {
+    skipToast: true,
+  } as any);
+  return data.data;
+};
+
+export const useDisconnectGoogleCalendar = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await axiosInstance.delete<{ message: string; data: null }>("/settings/google-calendar/disconnect");
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: settingsKeys.googleCalendar() });
+    },
+  });
+};
+
+export const useSyncGoogleCalendar = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await axiosInstance.post<{
+        success: boolean;
+        message: string;
+        data: GoogleCalendarSyncResult;
+      }>("/settings/google-calendar/sync");
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: settingsKeys.googleCalendar() });
+    },
+  });
+};
 
 // =======================
 // Data Management

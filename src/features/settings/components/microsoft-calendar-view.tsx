@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import SuccessModal from "@/components/shared/success-modal";
 import DeleteModal from "@/components/shared/delete-modal";
-import { CheckCircle2, Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, AlertCircle, ShieldAlert } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import toast from "react-hot-toast";
 import {
@@ -36,6 +36,7 @@ export default function MicrosoftCalendarView() {
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState({ title: "", description: "" });
   const [errorMessage, setErrorMessage] = useState("");
+  const [isServiceUnavailable, setIsServiceUnavailable] = useState(false);
 
   // Refetch connection status when user returns to tab after completing OAuth in new tab
   useEffect(() => {
@@ -57,14 +58,18 @@ export default function MicrosoftCalendarView() {
         setErrorMessage("Invalid authorization URL received.");
       }
     } catch (err: any) {
-      if (err?.response?.status === 503) {
-        setErrorMessage(
-          err?.response?.data?.message ||
-            "Microsoft Calendar is currently not configured on this environment."
-        );
+      const statusCode = err?.response?.status || err?.status;
+      const is503 =
+        statusCode === 503 ||
+        err?.message?.includes("not configured") ||
+        err?.message?.includes("MICROSOFT_CLIENT_ID");
+
+      if (is503) {
+        setIsServiceUnavailable(true);
+        setErrorMessage("");
       } else {
         setErrorMessage(
-          err?.response?.data?.message || "Failed to initiate Microsoft Calendar connection."
+          err?.response?.data?.message || err?.message || "Failed to initiate Microsoft Calendar connection."
         );
       }
     } finally {
@@ -117,7 +122,34 @@ export default function MicrosoftCalendarView() {
     );
   }
 
-  const isConfigured = !error || (error as any)?.response?.status !== 503;
+  const userRole = typeof user?.role === "object" ? (user?.role as any)?.name : user?.role;
+  const isAdmin = userRole === "Admin";
+
+  if (isAdmin) {
+    return (
+      <div className="w-full flex flex-col font-sans">
+        <h2 className="text-2xl font-semibold text-white tracking-tight pb-4 border-b border-[#333333] mb-6">
+          Microsoft Calendar
+        </h2>
+        <div className="bg-[#141C24] border border-[#FF3E46]/20 rounded-xl p-5 flex items-start gap-3.5">
+          <ShieldAlert className="w-5 h-5 text-[#FF3E46] flex-shrink-0 mt-0.5" />
+          <div className="flex flex-col gap-1">
+            <h3 className="text-white font-medium text-sm">Advisor Accounts Only</h3>
+            <p className="text-[#919191] text-xs sm:text-sm">
+              Microsoft Calendar integration is only available for Advisor accounts. Administrator accounts cannot connect or sync personal calendars.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const is503FromStatus =
+    (error as any)?.response?.status === 503 ||
+    (error as any)?.status === 503 ||
+    (error as any)?.message?.includes("not configured");
+
+  const isConfigured = !isServiceUnavailable && !is503FromStatus;
 
   return (
     <div className="w-full flex flex-col font-sans">
@@ -185,18 +217,18 @@ export default function MicrosoftCalendarView() {
               ) : (
                 <MicrosoftLogo className="w-4 h-4" />
               )}
-              Connect Microsoft Calendar
+              {isConfigured ? "Connect Microsoft Calendar" : "Microsoft Calendar isn't available yet"}
             </button>
           )}
 
           {!isConfigured && (
-            <span className="flex items-center gap-1.5 text-[#FF3E46] text-xs text-left sm:text-right max-w-[260px]">
+            <span className="flex items-center gap-1.5 text-amber-400 text-xs text-left sm:text-right max-w-[260px]">
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-              Microsoft Calendar is currently not configured on this environment.
+              Microsoft Calendar isn&apos;t available yet on this server.
             </span>
           )}
 
-          {errorMessage && (
+          {isConfigured && errorMessage && (
             <span className="flex items-center gap-1.5 text-[#FF3E46] text-xs text-left sm:text-right max-w-[260px]">
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
               {errorMessage}

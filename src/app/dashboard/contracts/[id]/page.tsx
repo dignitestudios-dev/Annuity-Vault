@@ -19,6 +19,7 @@ import EditContractDialog from "@/features/contracts/components/edit-contract-di
 import SuccessModal from "@/components/shared/success-modal";
 import DeleteModal from "@/components/shared/delete-modal";
 import ArchiveModal from "@/components/shared/archive-modal";
+import TablePagination from "@/components/shared/table-pagination";
 import toast from "react-hot-toast";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -91,6 +92,8 @@ export default function ContractDetailsPage() {
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<{ id: string; type: "note" | "document" | "contract" } | null>(null);
   const [newNote, setNewNote] = useState("");
+  const [notesPage, setNotesPage] = useState(1);
+  const NOTES_PER_PAGE = 5;
   const [isContractDeleted, setIsContractDeleted] = useState(false);
   const [cachedContract, setCachedContract] = useState<Contract | null>(null);
 
@@ -201,11 +204,32 @@ export default function ContractDetailsPage() {
     try {
       await addNote.mutateAsync(newNote.trim());
       setNewNote("");
+      setNotesPage(1);
       toast.success("Note added successfully!");
     } catch (err: any) {
       toast.error(err?.message || "Failed to add note");
     }
   };
+
+  const activeDocuments = (contract?.documents || []).filter(
+    (doc) => !doc.isArchived && !doc.isDeleted
+  );
+  const activeNotes = (contract?.contractNotes || []).filter(
+    (note) => !note.isArchived && !note.isDeleted
+  );
+
+  const totalNotesPages = Math.ceil(activeNotes.length / NOTES_PER_PAGE) || 1;
+  const paginatedNotes = activeNotes.slice(
+    (notesPage - 1) * NOTES_PER_PAGE,
+    notesPage * NOTES_PER_PAGE
+  );
+
+  // Auto-adjust page if current page exceeds total pages after deletion
+  useEffect(() => {
+    if (notesPage > totalNotesPages && totalNotesPages > 0) {
+      setNotesPage(totalNotesPages);
+    }
+  }, [totalNotesPages, notesPage]);
 
   if (isLoading) {
     return (
@@ -240,13 +264,6 @@ export default function ContractDetailsPage() {
     );
   }
 
-  const activeDocuments = (contract.documents || []).filter(
-    (doc) => !doc.isArchived && !doc.isDeleted
-  );
-  const activeNotes = (contract.contractNotes || []).filter(
-    (note) => !note.isArchived && !note.isDeleted
-  );
-
   return (
     <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans">
       {/* Top Header Navigation Row */}
@@ -269,10 +286,17 @@ export default function ContractDetailsPage() {
               {contract.status}
             </Badge>
           </div>
-          <span className="text-sm font-normal text-[#919191]">
-            {contract.provider} • {contract.contractType}
-            {contract.policyNumber ? ` • Policy #${contract.policyNumber}` : ""}
-          </span>
+        <span className="text-sm font-normal text-[#919191] block max-w-[700px] break-words leading-6">
+  {contract.provider}
+  {" • "}
+  {contract.contractType}
+  {contract.policyNumber && (
+    <>
+      {" • "}
+      Policy #{contract.policyNumber}
+    </>
+  )}
+</span>
         </div>
 
         {/* Right Side: Action Buttons */}
@@ -329,7 +353,7 @@ export default function ContractDetailsPage() {
               <span className="text-xs uppercase tracking-wider text-[#919191]">
                 Provider
               </span>
-              <span className="text-white font-normal">
+              <span className="text-white font-normal break-words">
                 {contract.provider}
               </span>
             </div>
@@ -533,27 +557,27 @@ export default function ContractDetailsPage() {
               onChange={(e) => setNewNote(e.target.value)}
               placeholder="Add a note to this contract…"
               disabled={addNote.isPending}
-              className="flex-1 bg-[#0C1116] border-0 text-white placeholder-[#919191] text-xs sm:text-sm rounded-[12px] px-4 h-10 outline-none focus:ring-1 focus:ring-[#6887A0] disabled:opacity-60"
+              className="flex-1 min-w-0 bg-[#0C1116] border-0 text-white placeholder-[#919191] text-xs sm:text-sm rounded-[12px] px-4 h-10 outline-none focus:ring-1 focus:ring-[#6887A0] disabled:opacity-60"
             />
             <button
               type="submit"
               disabled={addNote.isPending || !newNote.trim()}
-              className="h-9 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-xs sm:text-sm font-medium transition-all shadow-sm flex items-center justify-center min-w-[70px] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="h-9 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-xs sm:text-sm font-medium transition-all shadow-sm flex items-center justify-center min-w-[70px] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex-shrink-0"
             >
               {addNote.isPending ? <Loader className="w-4 h-4 text-white" /> : "Add"}
             </button>
           </form>
 
           {/* Notes List */}
-          <div className="w-full flex flex-col">
-            {activeNotes.length > 0 ? (
-              activeNotes.map((note) => (
+          <div className="w-full flex flex-col gap-2.5">
+            {paginatedNotes.length > 0 ? (
+              paginatedNotes.map((note) => (
                 <div
                   key={note._id}
                   className="w-full bg-[#0C1116] rounded-[8px] p-3.5 flex items-center justify-between gap-4 border border-white/5"
                 >
-                  <div className="flex flex-col gap-1">
-                    <p className="text-xs sm:text-sm text-white font-normal">
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-white font-normal break-words break-all [overflow-wrap:anywhere] whitespace-pre-wrap">
                       {note.body}
                     </p>
                     <span className="text-[11px] text-[#919191]">{format(new Date(note.createdAt), "MMM d, yyyy h:mm a")}</span>
@@ -582,6 +606,19 @@ export default function ContractDetailsPage() {
               />
             )}
           </div>
+
+          {/* Notes Pagination */}
+          {activeNotes.length > NOTES_PER_PAGE && (
+            <TablePagination
+              currentPage={notesPage}
+              totalPages={totalNotesPages}
+              onPageChange={setNotesPage}
+              totalItems={activeNotes.length}
+              itemsPerPage={NOTES_PER_PAGE}
+              itemLabel="notes"
+              className="mt-2"
+            />
+          )}
         </div>
       </div>
 

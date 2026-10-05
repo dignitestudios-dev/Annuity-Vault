@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import AnimatedLogo from "@/components/shared/animated-logo";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -72,15 +73,8 @@ export default function Sidebar() {
         <div className="relative z-10 flex-1 flex flex-col justify-between overflow-y-auto custom-scrollbar p-4 min-h-0">
           <div className="flex flex-col items-center gap-6 w-full">
             {/* Logo */}
-            <Link href="/dashboard" className="flex justify-center pt-2">
-              <Image
-                src="/images/logo.png"
-                alt="Annuity Vault"
-                width={140}
-                height={100}
-                priority
-                className="w-[140px] h-auto object-contain"
-              />
+            <Link href="/dashboard" className="flex justify-center items-center min-h-[80px] pt-2">
+              <AnimatedLogo className="w-[140px] h-auto object-contain" />
             </Link>
 
             {/* User Card */}

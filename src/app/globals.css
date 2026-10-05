@@ -206,3 +206,17 @@ body {
   }
 }
 
+/* Universal text wrapping rules for inputs, textareas, and content fields */
+input,
+textarea {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+textarea {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+

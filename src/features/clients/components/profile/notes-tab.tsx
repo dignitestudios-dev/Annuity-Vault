@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Pin, Trash2 } from "lucide-react";
 import DeleteModal from "@/components/shared/delete-modal";
 import ArchiveModal from "@/components/shared/archive-modal";
 import { EmptyState } from "@/components/shared/empty-state";
+import TablePagination from "@/components/shared/table-pagination";
 import { useAddClientNote, useArchiveClientNote } from "../../api/clients.service";
 import { ClientNote } from "../../types/clients.types";
 import { Loader } from "@/components/ui/loader";
@@ -20,6 +21,8 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
   const [newNote, setNewNote] = useState("");
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const NOTES_PER_PAGE = 5;
 
   const addNoteMutation = useAddClientNote();
   const archiveNoteMutation = useArchiveClientNote();
@@ -32,6 +35,7 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
       {
         onSuccess: () => {
           setNewNote("");
+          setCurrentPage(1);
         },
       }
     );
@@ -57,6 +61,17 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
   };
 
   const activeNotes = (notes || []).filter((note) => !note.isDeleted && !note.isArchived);
+  const totalPages = Math.ceil(activeNotes.length / NOTES_PER_PAGE) || 1;
+  const paginatedNotes = activeNotes.slice(
+    (currentPage - 1) * NOTES_PER_PAGE,
+    currentPage * NOTES_PER_PAGE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   return (
     <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] p-6 flex flex-col gap-6 shadow-sm">
@@ -67,19 +82,19 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
           value={newNote}
           onChange={(e) => setNewNote(e.target.value)}
           placeholder="Add a note about this client..."
-          className="flex-1 bg-[#0C1116] border-0 text-white placeholder-[#576574] text-sm rounded-[12px] px-4 h-[60px] outline-none focus:ring-1 focus:ring-[#6887A0]"
+          className="flex-1 min-w-0 bg-[#0C1116] border-0 text-white placeholder-[#576574] text-sm rounded-[12px] px-4 h-[60px] outline-none focus:ring-1 focus:ring-[#6887A0]"
         />
         <button
           type="submit"
           disabled={addNoteMutation.isPending || !newNote.trim()}
-          className="h-9 px-5 flex items-center justify-center bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-sm font-medium transition-all shadow-sm disabled:opacity-50"
+          className="h-9 px-5 flex items-center justify-center bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[12px] text-sm font-medium transition-all shadow-sm disabled:opacity-50 flex-shrink-0"
         >
           {addNoteMutation.isPending ? <Loader className="w-5 h-5 text-white" /> : "Add"}
         </button>
       </form>
 
       {/* Notes List */}
-      <div className="w-full flex flex-col">
+      <div className="w-full flex flex-col gap-2.5">
         {activeNotes.length === 0 ? (
           <EmptyState
             icon={Pin}
@@ -87,7 +102,7 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
             className="py-12 border-0 bg-transparent min-h-0"
           />
         ) : (
-          activeNotes.map((note, index) => {
+          paginatedNotes.map((note, index) => {
             const noteId = note._id || note.id || `note-${index}`;
             const noteText =
               note.body ||
@@ -103,10 +118,10 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
                 key={noteId}
                 className="w-full border-b border-white/10 py-4 flex items-center justify-between gap-4"
               >
-                <div className="flex items-start gap-3 flex-1">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
                   <Pin className="w-4 h-4 text-[#576574] flex-shrink-0 mt-0.5" />
-                  <div className="flex flex-col gap-1">
-                    <p className="text-sm text-white font-normal leading-snug whitespace-pre-wrap">
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <p className="text-sm text-white font-normal leading-snug whitespace-pre-wrap break-words break-all [overflow-wrap:anywhere]">
                       {noteText}
                     </p>
                     <span className="text-xs text-[#919191]">
@@ -140,6 +155,18 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
           })
         )}
       </div>
+
+      {/* Pagination Footer */}
+      {activeNotes.length > NOTES_PER_PAGE && (
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={activeNotes.length}
+          itemsPerPage={NOTES_PER_PAGE}
+          itemLabel="notes"
+        />
+      )}
 
       {/* Delete Note Confirmation Modal */}
       <DeleteModal

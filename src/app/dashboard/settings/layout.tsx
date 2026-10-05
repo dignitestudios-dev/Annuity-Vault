@@ -5,10 +5,13 @@ import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { useAppSelector } from "@/store";
+
 const SETTINGS_NAV_ITEMS = [
   { label: "Profile", href: "/dashboard/settings/profile" },
   { label: "Notification Settings", href: "/dashboard/settings/notifications" },
   { label: "Microsoft Calendar", href: "/dashboard/settings/microsoft-calendar" },
+  { label: "Google Calendar", href: "/dashboard/settings/google-calendar" },
   { label: "Change Password", href: "/dashboard/settings/change-password" },
   // { label: "Security", href: "/dashboard/settings/security" },
   { label: "Data Management", href: "/dashboard/settings/data-management" },
@@ -22,6 +25,21 @@ export default function SettingsLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const user = useAppSelector((state) => state.auth.user);
+  const userRole = typeof user?.role === "object" ? (user?.role as any)?.name : user?.role;
+  const isAdmin = userRole === "Admin";
+
+  const navItems = SETTINGS_NAV_ITEMS.filter((item) => {
+    // Hide Calendar integrations for Admin accounts (Advisor only feature)
+    if (
+      isAdmin &&
+      (item.href === "/dashboard/settings/microsoft-calendar" ||
+        item.href === "/dashboard/settings/google-calendar")
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-12 font-sans">
@@ -35,11 +53,10 @@ export default function SettingsLayout({
         {/* Left Sidebar Navigation Menu */}
         <aside className="w-full md:w-[320px] flex-shrink-0 flex flex-col">
           <nav className="flex flex-col">
-            {SETTINGS_NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const isActive =
                 pathname === item.href ||
-                (item.href === "/dashboard/settings/profile" && pathname === "/dashboard/settings") ||
-                (item.href === "/dashboard/settings/microsoft-calendar" && pathname === "/dashboard/settings/google-calendar");
+                (item.href === "/dashboard/settings/profile" && pathname === "/dashboard/settings");
               return (
                 <Link
                   key={item.href}

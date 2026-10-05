@@ -1,11 +1,12 @@
 "use client";
 
-import { Calendar as CalendarIcon, Plus, Pencil, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Pencil, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,8 +67,8 @@ export default function DateTasksDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-[#0C1116] border border-white/10 text-white sm:max-w-[550px] p-7 rounded-[12px] shadow-2xl">
-        <DialogHeader className="flex flex-row items-center justify-between pb-2 border-b border-white/10">
+      <DialogContent showCloseButton={false} className="bg-[#0C1116] border border-white/10 text-white sm:max-w-[550px] p-6 rounded-[12px] shadow-2xl">
+        <DialogHeader className="flex flex-row items-center justify-between pb-3 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             <CalendarIcon className="w-5 h-5 text-[#6887A0]" />
             <DialogTitle className="text-xl font-bold text-white tracking-tight font-sans">
@@ -75,17 +76,32 @@ export default function DateTasksDialog({
             </DialogTitle>
           </div>
 
-          <Button
-            type="button"
-            onClick={() => {
-              onClose();
-              onAddNewTaskForDate(dateString);
-            }}
-            className="h-8 px-3 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Task</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              onClick={() => {
+                onClose();
+                onAddNewTaskForDate(dateString);
+              }}
+              className="h-8 px-3 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-sm hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Task</span>
+            </Button>
+
+            <DialogClose
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="h-8 w-8 text-[#919191] hover:text-white hover:bg-white/10 rounded-lg cursor-pointer"
+                />
+              }
+            >
+              <X className="w-4 h-4" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
+          </div>
         </DialogHeader>
 
         <div className="space-y-3 py-3 max-h-[420px] overflow-y-auto pr-1">

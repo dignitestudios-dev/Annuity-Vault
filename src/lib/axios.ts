@@ -40,8 +40,14 @@ axiosInstance.interceptors.response.use(
       message = data.error.map((err: any) => err.message).join("\n");
     }
 
-    toast.error(message);
-    return Promise.reject(new Error(message));
+    if (!(error.config as any)?.skipToast) {
+      toast.error(message);
+    }
+
+    const enhancedError: any = new Error(message);
+    enhancedError.response = error.response;
+    enhancedError.status = error.response?.status;
+    return Promise.reject(enhancedError);
   },
 );
 

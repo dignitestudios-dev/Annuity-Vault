@@ -353,7 +353,9 @@ function TasksContent() {
             onValueChange={(val: string | null) => setStatusFilter(val || "all")}
           >
             <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-xl text-xs sm:text-sm font-normal min-w-[140px] justify-between shadow-none focus:ring-0">
-              <SelectValue placeholder="All Statuses" />
+              <SelectValue>
+                {statusFilter === "all" ? "All Statuses" : statusFilter}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-xl">
               <SelectItem value="all" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
@@ -377,7 +379,9 @@ function TasksContent() {
             onValueChange={(val: string | null) => setPriorityFilter(val || "all")}
           >
             <SelectTrigger className="h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-xl text-xs sm:text-sm font-normal min-w-[140px] justify-between shadow-none focus:ring-0">
-              <SelectValue placeholder="All Priorities" />
+              <SelectValue>
+                {priorityFilter === "all" ? "All Priorities" : priorityFilter}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-xl">
               <SelectItem value="all" className="text-white hover:bg-white/10 cursor-pointer text-xs sm:text-sm">
@@ -623,7 +627,7 @@ function TasksContent() {
                 {!isLoading && filteredTasks.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="py-12">
-                      <EmptyState 
+                      <EmptyState
                         icon={CheckSquare}
                         title="No tasks found matching your filter criteria"
                         className="py-6 border-0 bg-transparent min-h-0"
@@ -758,19 +762,19 @@ function TasksContent() {
                         t.priority === "Urgent"
                           ? "border-[#FF0000]"
                           : t.priority === "High"
-                          ? "border-[#FFB302]"
-                          : t.priority === "Medium"
-                          ? "border-[#33BBFF]"
-                          : "border-[#CACACA]";
+                            ? "border-[#FFB302]"
+                            : t.priority === "Medium"
+                              ? "border-[#33BBFF]"
+                              : "border-[#CACACA]";
 
                       const dotColor =
                         t.priority === "Urgent"
                           ? "bg-[#FF0000]"
                           : t.priority === "High"
-                          ? "bg-[#FFB302]"
-                          : t.priority === "Medium"
-                          ? "bg-[#33BBFF]"
-                          : "bg-[#CACACA]";
+                            ? "bg-[#FFB302]"
+                            : t.priority === "Medium"
+                              ? "bg-[#33BBFF]"
+                              : "bg-[#CACACA]";
 
                       return (
                         <div
