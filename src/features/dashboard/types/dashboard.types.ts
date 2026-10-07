@@ -4,6 +4,7 @@ export interface DashboardKPIs {
   assetsUnderManagement: number;
   anniversariesNext30Days: number;
   openTasks: number;
+  totalActiveClients:number
 }
 
 export interface UpcomingAnniversary {

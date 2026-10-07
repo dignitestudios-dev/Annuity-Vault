@@ -13,8 +13,8 @@ import SplashScreen from "@/components/shared/splash-screen";
 
 export default function LoginForm() {
   const { form, onSubmit, isPending, showSplash, handleSplashComplete } = useLogin();
-  const { 
-    formState: { errors, touchedFields, isSubmitted } 
+  const {
+    formState: { errors, touchedFields, isSubmitted }
   } = form;
   const [showPassword, setShowPassword] = useState(false);
 
@@ -37,11 +37,11 @@ export default function LoginForm() {
 
         {/* Form Container */}
         <div className="relative z-10 w-full max-w-[340px] flex flex-col items-center gap-6">
-          
+
           {/* Brand Logo */}
-          <div className="flex justify-center items-center w-[170px] min-h-[95px]">
-            <AnimatedLogo className="w-[170px] h-auto object-contain" />
-          </div>
+       <div className="flex items-center justify-center  w-[160px] h-[100px] overflow-hidden">
+  <AnimatedLogo className="w-full h-full object-contain scale-[1.8]" />
+</div>
 
           {/* Heading Section */}
           <div className="flex flex-col items-center text-center gap-1.5 w-full">
@@ -55,11 +55,11 @@ export default function LoginForm() {
 
           {/* Form */}
           <form onSubmit={onSubmit} className="w-full flex flex-col gap-5">
-            
+
             {/* Email Address Field */}
             <div className="flex flex-col gap-1.5 w-full">
-              <Label 
-                htmlFor="email" 
+              <Label
+                htmlFor="email"
                 className="text-xs font-medium text-white capitalize leading-[15px]"
               >
                 Email Address <span className="text-destructive">*</span>
@@ -80,8 +80,8 @@ export default function LoginForm() {
 
             {/* Password Field */}
             <div className="flex flex-col gap-1.5 w-full">
-              <Label 
-                htmlFor="password" 
+              <Label
+                htmlFor="password"
                 className="text-xs font-medium text-white capitalize leading-[15px]"
               >Password <span className="text-destructive">*</span></Label>
               <div className="relative w-full">

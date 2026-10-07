@@ -19,6 +19,12 @@ export default function MetricCards() {
       icon: Users,
     },
     {
+      title: "Active Clients",
+      value: kpis?.totalActiveClients?.toString() || "0",
+      subtext: "Active",
+      icon: Users,
+    },
+    {
       title: "Active Contracts",
       value: kpis?.activeContracts?.toString() || "0",
       subtext: "Across all Clients",
@@ -55,7 +61,7 @@ export default function MetricCards() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 w-full">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 w-full">
       {METRICS.map((metric) => {
         const Icon = metric.icon;
         return (

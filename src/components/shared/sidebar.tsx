@@ -73,8 +73,8 @@ export default function Sidebar() {
         <div className="relative z-10 flex-1 flex flex-col justify-between overflow-y-auto custom-scrollbar p-4 min-h-0">
           <div className="flex flex-col items-center gap-6 w-full">
             {/* Logo */}
-            <Link href="/dashboard" className="flex justify-center items-center min-h-[80px] pt-2">
-              <AnimatedLogo className="w-[140px] h-auto object-contain" />
+            <Link href="/dashboard" className="flex items-center justify-center w-[160px] h-[100px] overflow-hidden">
+              <AnimatedLogo className="w-full h-full object-contain scale-[1.8]" />
             </Link>
 
             {/* User Card */}

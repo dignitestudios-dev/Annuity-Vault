@@ -246,8 +246,8 @@ export default function EditContractDialog({
                       <SelectItem value="Immediate" className="text-white hover:bg-white/10 cursor-pointer text-xs">
                         Immediate
                       </SelectItem>
-                      <SelectItem value="Deferred" className="text-white hover:bg-white/10 cursor-pointer text-xs">
-                        Deferred
+                      <SelectItem value="Other" className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                        Other
                       </SelectItem>
                     </SelectContent>
                   </Select>

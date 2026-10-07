@@ -67,7 +67,7 @@ export default function AnniversariesCard() {
                     <span className="text-sm font-medium text-white font-sans leading-tight group-hover:text-[#8bb4d4] transition-colors">
                       {item.client?.firstName ? `${item.client.firstName} ${item.client.lastName}` : item.clientName || "Unknown Client"}
                     </span>
-                    <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5">
+                    <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5 break-all">
                       {item.provider || item.contractNumber || item.contractType}
                     </span>
                   </div>
