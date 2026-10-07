@@ -3,7 +3,7 @@
 import { useState } from "react";
 import DeleteModal from "@/components/shared/delete-modal";
 import SuccessModal from "@/components/shared/success-modal";
-import { exportAllData, useResetData } from "@/features/settings/api/settings.service";
+import { exportAllData, exportAllPDFData, useResetData } from "@/features/settings/api/settings.service";
 import { Loader2, X, Eye, EyeOff } from "lucide-react";
 
 export default function SettingsDataManagementPage() {
@@ -12,7 +12,8 @@ export default function SettingsDataManagementPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const resetDataMutation = useResetData();
 
@@ -23,7 +24,7 @@ export default function SettingsDataManagementPage() {
   });
 
   const handleDownloadCSV = async () => {
-    setIsExporting(true);
+    setIsExportingCsv(true);
     try {
       await exportAllData();
       setSuccessModal({
@@ -32,9 +33,25 @@ export default function SettingsDataManagementPage() {
         desc: "Your data has been exported to CSV successfully.",
       });
     } catch (error) {
-      console.error("Export failed:", error);
+      console.error("Export CSV failed:", error);
     } finally {
-      setIsExporting(false);
+      setIsExportingCsv(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setIsExportingPdf(true);
+    try {
+      await exportAllPDFData();
+      setSuccessModal({
+        isOpen: true,
+        title: "Export Completed!",
+        desc: "Your data has been exported to PDF successfully.",
+      });
+    } catch (error) {
+      console.error("Export PDF failed:", error);
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
@@ -89,10 +106,30 @@ export default function SettingsDataManagementPage() {
           <button
             type="button"
             onClick={handleDownloadCSV}
-            disabled={isExporting}
+            disabled={isExportingCsv}
             className="bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-semibold text-xs sm:text-sm h-11 px-7 rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm flex-shrink-0 flex items-center justify-center gap-2 disabled:opacity-70"
           >
-            {isExporting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isExportingCsv && <Loader2 className="w-4 h-4 animate-spin" />}
+            Download
+          </button>
+        </div>
+        <div className="w-full bg-[#141C24] border border-white/5 rounded-xl p-4 sm:p-5 flex items-center justify-between gap-4 shadow-sm">
+          <div className="flex flex-col gap-1 pr-4">
+            <h3 className="text-white font-semibold text-base capitalize">
+              Export As PDF
+            </h3>
+            <p className="text-[#919191] text-sm font-normal">
+              Export All Data
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={isExportingPdf}
+            className="bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-semibold text-xs sm:text-sm h-11 px-7 rounded-xl hover:opacity-90 transition-all cursor-pointer shadow-sm flex-shrink-0 flex items-center justify-center gap-2 disabled:opacity-70"
+          >
+            {isExportingPdf && <Loader2 className="w-4 h-4 animate-spin" />}
             Download
           </button>
         </div>

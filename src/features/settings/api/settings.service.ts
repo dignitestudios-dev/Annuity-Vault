@@ -296,3 +296,29 @@ export const exportAllData = async (): Promise<void> => {
   a.remove();
   window.URL.revokeObjectURL(url);
 };
+export const exportAllPDFData = async (): Promise<void> => {
+  const response = await axiosInstance.get("/settings/data/export", {
+    params: {
+      format: "pdf",
+    },
+    responseType: "blob",
+  });
+
+  const blob = new Blob([response.data], {
+    type: "application/pdf",
+  });
+
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `AnnuityVault_Export_${
+    new Date().toISOString().split("T")[0]
+  }.pdf`;
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  window.URL.revokeObjectURL(url);
+};
