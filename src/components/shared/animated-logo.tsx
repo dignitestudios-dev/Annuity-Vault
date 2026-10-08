@@ -32,7 +32,7 @@ export default function AnimatedLogo({
 }: AnimatedLogoProps) {
   return (
     <video
-      src="/annuity-vault.webm"
+      src="/Annuity_Vault_white_lightblue.webm"
       autoPlay
       loop
       muted

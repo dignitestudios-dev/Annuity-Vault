@@ -39,7 +39,7 @@ export default function LoginForm() {
         <div className="relative z-10 w-full max-w-[340px] flex flex-col items-center gap-6">
 
           {/* Brand Logo */}
-       <div className="flex items-center justify-center  w-[160px] h-[100px] overflow-hidden">
+       <div className="flex items-center justify-center  w-[280px] h-[120px] overflow-hidden">
   <AnimatedLogo className="w-full h-full object-contain scale-[1.8]" />
 </div>
 
