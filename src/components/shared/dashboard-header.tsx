@@ -7,13 +7,14 @@ import { useRouter } from "next/navigation";
 
 import { useNotifications } from "@/features/notifications/api/notifications.service";
 import { useAppSelector } from "@/store";
+import { getGreeting } from "@/lib/utils";
 
 export default function DashboardHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const user = useAppSelector((state) => state.auth.user);
-
+  const greeting = getGreeting();
   // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -36,16 +37,21 @@ export default function DashboardHeader() {
 
   const notifications = data?.data?.notifications || [];
   const unreadCount = data?.data?.unreadCount || 0;
-
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
   return (
     <header className="relative w-full h-20 bg-[#141C24] px-6 lg:px-8 flex items-center justify-between border-b border-white/5 flex-shrink-0 z-40">
       {/* Greeting Title & Subtitle */}
       <div className="flex flex-col gap-1">
         <h1 className="text-xl lg:text-[20px] font-semibold text-white leading-tight font-sans">
-          Good morning, {user?.name || "Advisor"}
+          {greeting}, {user?.name || "Advisor"}
         </h1>
         <p className="text-xs lg:text-sm font-normal text-[#919191] font-sans">
-          Wednesday, January 15, 2025 &mdash; {unreadCount} unread notifications
+          {today} — {unreadCount} unread notifications
         </p>
       </div>
 

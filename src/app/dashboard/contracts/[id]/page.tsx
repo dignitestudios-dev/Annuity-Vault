@@ -53,18 +53,20 @@ const getStatusStyle = (status: string) => {
   }
 };
 
-const formatCurrency = (value: number) => {
+const formatMoneyOrNA = (value?: number | null) => {
+  if (value === null || value === undefined || isNaN(value)) return "N/A";
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value || 0);
+    maximumFractionDigits: 2
+  }).format(value);
 };
 
-const formatAnniversary = (anniversaryDate?: string) => {
+const formatAnniversary = (anniversaryDate?: string | null) => {
   if (!anniversaryDate) return "N/A";
   const date = new Date(anniversaryDate);
+  if (isNaN(date.getTime())) return "N/A";
   const now = new Date();
   const currentYear = now.getFullYear();
   const anniversaryMonth = date.getMonth();
@@ -287,16 +289,22 @@ export default function ContractDetailsPage() {
             </Badge>
           </div>
         <span className="text-sm font-normal text-[#919191] block max-w-[700px] break-words leading-6">
-  {contract.provider}
-  {" • "}
-  {contract.contractType}
-  {contract.policyNumber && (
-    <>
-      {" • "}
-      Policy #{contract.policyNumber}
-    </>
-  )}
-</span>
+          {contract.provider}
+          {" • "}
+          {contract.contractType}
+          {contract.productName && (
+            <>
+              {" • "}
+              {contract.productName}
+            </>
+          )}
+          {contract.policyNumber && (
+            <>
+              {" • "}
+              Contract #{contract.policyNumber}
+            </>
+          )}
+        </span>
         </div>
 
         {/* Right Side: Action Buttons */}
@@ -331,15 +339,27 @@ export default function ContractDetailsPage() {
             </h3>
           </div>
           <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8 text-sm">
+            {/* Contract Number */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
-                Policy number
+                Contract number
               </span>
               <span className="text-white font-normal">
                 {contract.policyNumber || "N/A"}
               </span>
             </div>
 
+            {/* Product Name */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Product name
+              </span>
+              <span className="text-white font-normal">
+                {contract.productName || "N/A"}
+              </span>
+            </div>
+
+            {/* Client */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
                 Client
@@ -349,24 +369,27 @@ export default function ContractDetailsPage() {
               </span>
             </div>
 
+            {/* Provider */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
-                Provider
+                Company / Carrier
               </span>
               <span className="text-white font-normal break-words">
-                {contract.provider}
+                {contract.provider || "N/A"}
               </span>
             </div>
 
+            {/* Type */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
                 Type
               </span>
               <span className="text-white font-normal">
-                {contract.contractType}
+                {contract.contractType || "N/A"}
               </span>
             </div>
 
+            {/* Status */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
                 Status
@@ -378,42 +401,177 @@ export default function ContractDetailsPage() {
               </div>
             </div>
 
+            {/* Accumulated Value */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
-                Start date
+                Accumulated value
+              </span>
+              <span className="text-white font-normal">
+                {formatMoneyOrNA(contract.contractValue)}
+              </span>
+            </div>
+
+            {/* Initial Premium */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Initial Premium
+              </span>
+              <span className="text-white font-normal">
+                {formatMoneyOrNA(contract.premiumAmount)}
+              </span>
+            </div>
+
+            {/* Death Benefit */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Death benefit
+              </span>
+              <span className="text-white font-normal">
+                {formatMoneyOrNA(contract.deathBenefit)}
+              </span>
+            </div>
+
+            {/* Current Surrender Value */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Current surrender value
+              </span>
+              <span className="text-white font-normal">
+                {formatMoneyOrNA(contract.currentSurrenderValue)}
+              </span>
+            </div>
+
+            {/* Penalty Free Amount */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Penalty free amount
+              </span>
+              <span className="text-white font-normal">
+                {formatMoneyOrNA(contract.penaltyFreeAmount)}
+              </span>
+            </div>
+
+            {/* Market Value Adjustment */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Market value adjustment
+              </span>
+              <span className="text-white font-normal">
+                {formatMoneyOrNA(contract.marketValueAdjustment)}
+              </span>
+            </div>
+
+            {/* Income */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Income
+              </span>
+              <span className="text-white font-normal">
+                {formatMoneyOrNA(contract.income)}
+              </span>
+            </div>
+
+            {/* Income Mode */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Income mode
+              </span>
+              <span className="text-white font-normal">
+                {contract.incomeMode || "N/A"}
+              </span>
+            </div>
+
+            {/* Qualified */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Qualified
+              </span>
+              <span className="text-white font-normal">
+                {contract.qualified ? "Yes" : "No"}
+              </span>
+            </div>
+
+            {/* RMD */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                RMD
+              </span>
+              <span className="text-white font-normal">
+                {formatMoneyOrNA(contract.rmd)}
+              </span>
+            </div>
+
+            {/* Liquidity Feature */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Liquidity feature
+              </span>
+              <span className="text-white font-normal">
+                {contract.liquidityFeature != null ? `${contract.liquidityFeature}%` : "N/A"}
+              </span>
+            </div>
+
+            {/* Issue Date */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Issue date
               </span>
               <span className="text-white font-normal">
                 {contract.startDate ? format(new Date(contract.startDate), "yyyy-MM-dd") : "N/A"}
               </span>
             </div>
 
+            {/* Anniversary Date */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
-                Anniversary
+                Next anniversary date
               </span>
               <span className="text-white font-normal">
                 {formatAnniversary(contract.anniversaryDate)}
               </span>
             </div>
 
+            {/* Out of Surrender Date */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
-                Premium
+                Out of surrender / Maturity
               </span>
               <span className="text-white font-normal">
-                {formatCurrency(contract.premiumAmount)}
+                {contract.outOfSurrenderDate ? format(new Date(contract.outOfSurrenderDate), "yyyy-MM-dd") : "N/A"}
               </span>
             </div>
 
+            {/* Annuitant Not Owner */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
-                Current value
+                Annuitant not owner
               </span>
               <span className="text-white font-normal">
-                {formatCurrency(contract.contractValue)}
+                {contract.annuitantNotOwner ? "Yes" : "No"}
               </span>
             </div>
 
+            {/* Annuitant DOB */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Annuitant DOB
+              </span>
+              <span className="text-white font-normal">
+                {contract.annuitantDob ? format(new Date(contract.annuitantDob), "yyyy-MM-dd") : "N/A"}
+              </span>
+            </div>
+
+            {/* Riders or Features */}
+            <div className="sm:col-span-2 flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Riders or features
+              </span>
+              <span className="text-white font-normal">
+                {contract.ridersOrFeatures || "N/A"}
+              </span>
+            </div>
+
+            {/* Beneficiary Information */}
             <div className="sm:col-span-2 flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
                 Beneficiary
@@ -423,6 +581,7 @@ export default function ContractDetailsPage() {
               </span>
             </div>
 
+            {/* Notes */}
             <div className="sm:col-span-2 flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
                 Notes

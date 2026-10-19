@@ -8,7 +8,7 @@ import {
   UpdateContractDTO,
 } from "../types/contracts.types";
 
-interface GetContractsParams {
+export interface GetContractsParams {
   page?: number;
   limit?: number;
   search?: string;
@@ -17,14 +17,35 @@ interface GetContractsParams {
   contractType?: string;
   status?: string;
   isArchived?: boolean;
+  lastName?: string;
+  productName?: string;
+  anniversaryFrom?: string;
+  anniversaryTo?: string;
+  qualified?: boolean | string;
+  outOfSurrenderFrom?: string;
+  outOfSurrenderTo?: string;
+  incomeMode?: string;
+  annuitantNotOwner?: boolean | string;
+  annuitantDobFrom?: string;
+  annuitantDobTo?: string;
+  ridersOrFeatures?: string;
+  [key: string]: any;
 }
 
 export const useContracts = (params?: GetContractsParams) => {
   return useQuery({
     queryKey: ["contracts", params],
     queryFn: async () => {
+      const cleanParams: Record<string, any> = {};
+      if (params) {
+        for (const [key, val] of Object.entries(params)) {
+          if (val !== "" && val !== null && val !== undefined) {
+            cleanParams[key] = val;
+          }
+        }
+      }
       const response = await axiosInstance.get<GetContractsResponse>("/contracts", {
-        params,
+        params: cleanParams,
       });
       return {
         data: response.data.data.map(c => ({...c, id: c._id})),
@@ -174,63 +195,47 @@ export const useDeleteContractNote = (contractId: string) => {
   });
 };
 
-export const exportContracts = async (format: "pdf" | "csv", search?: string, contractType?: string, status?: string) => {
-  const response = await axiosInstance.get<GetContractsResponse>("/contracts", {
-    params: { search, contractType, status, limit: 100 },
-  });
-  
-  const contracts = response.data.data;
-  
-  if (format === "csv") {
-    const headers = ["Contract Number", "Policy Number", "Client Name", "Provider", "Type", "Status", "Premium Amount", "Contract Value", "Start Date"];
-    const csvContent = [
-      headers.join(","),
-      ...contracts.map(c => [
-        c.contractNumber || "N/A",
-        c.policyNumber || "N/A",
-        c.client ? `${c.client.firstName} ${c.client.lastName}` : "N/A",
-        c.provider || "N/A",
-        c.contractType || "N/A",
-        c.status || "N/A",
-        c.premiumAmount || 0,
-        c.contractValue || 0,
-        c.startDate ? new Date(c.startDate).toLocaleDateString() : "N/A"
-      ].map(field => `"${field}"`).join(","))
-    ].join("\n");
+export const exportContracts = async (
+  format: "pdf" | "csv",
+  filters?: Record<string, any>
+) => {
+  const cleanParams: Record<string, any> = { format };
+  if (filters) {
+    for (const [key, val] of Object.entries(filters)) {
+      if (val !== "" && val !== null && val !== undefined) {
+        cleanParams[key] = val;
+      }
+    }
+  }
 
-    const BOM = "\uFEFF";
-    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
+  try {
+    const response = await axiosInstance.get("/contracts/export", {
+      params: cleanParams,
+      responseType: "blob",
+    });
+
+    const mimeType = format === "pdf" ? "application/pdf" : "text/csv;charset=utf-8;";
+    const extension = format === "pdf" ? "pdf" : "csv";
+    const blob = new Blob([response.data], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Contracts_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.href = url;
+    link.download = `Contracts_Export_${new Date().toISOString().split("T")[0]}.${extension}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } else if (format === "pdf") {
-    const jsPDF = (await import("jspdf")).default;
-    const autoTable = (await import("jspdf-autotable")).default;
-    
-    const doc = new jsPDF();
-    doc.text("Contracts Export", 14, 15);
-    
-    const tableData = contracts.map(c => [
-      c.contractNumber || "N/A",
-      c.client ? `${c.client.firstName} ${c.client.lastName}` : "N/A",
-      c.provider || "N/A",
-      c.contractType || "N/A",
-      c.status || "N/A",
-      `$${(c.contractValue || 0).toLocaleString()}`,
-      c.startDate ? new Date(c.startDate).toLocaleDateString() : "N/A"
-    ]);
-
-    autoTable(doc, {
-      head: [["Contract No.", "Client", "Provider", "Type", "Status", "Value", "Start Date"]],
-      body: tableData,
-      startY: 20,
-    });
-    
-    doc.save(`Contracts_Export_${new Date().toISOString().split('T')[0]}.pdf`);
+    window.URL.revokeObjectURL(url);
+  } catch (err: any) {
+    if (err.response?.data instanceof Blob) {
+      try {
+        const text = await err.response.data.text();
+        const json = JSON.parse(text);
+        throw new Error(json.message || "Export failed");
+      } catch (e: any) {
+        throw new Error(e.message || "Export failed");
+      }
+    }
+    throw err;
   }
 };
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -19,6 +19,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import DatePickerInput, { parseDateSafe } from "@/components/ui/date-picker-input";
 import {
   Select,
   SelectTrigger,
@@ -145,7 +146,6 @@ export default function EditClientDialog({
   client,
   onUpdateSuccess,
 }: EditClientDialogProps) {
-  const [isDobOpen, setIsDobOpen] = useState(false);
   const defaultNotes = getInitialNotesValue(client);
 
   const {
@@ -153,6 +153,8 @@ export default function EditClientDialog({
     handleSubmit,
     control,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<EditClientFormData>({
     resolver: zodResolver(editClientSchema),
@@ -164,7 +166,7 @@ export default function EditClientDialog({
       phone: client.phone || "",
       address: client.address || "",
       status: (client.status as any) || "Active",
-      dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth) : undefined,
+      dateOfBirth: parseDateSafe(client.dateOfBirth) || undefined,
       notes: defaultNotes,
     },
   });
@@ -178,15 +180,38 @@ export default function EditClientDialog({
         phone: client.phone || "",
         address: client.address || "",
         status: (client.status as any) || "Active",
-        dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth) : undefined,
+        dateOfBirth: parseDateSafe(client.dateOfBirth) || undefined,
         notes: getInitialNotesValue(client),
       });
     }
   }, [client, isOpen, reset]);
 
   const updateClientMutation = useUpdateClient();
+  const dateErrorsRef = useRef<Record<string, string | null>>({});
+
+  const handleDateValidationError = useCallback(
+    (fieldName: keyof EditClientFormData, err: string | null) => {
+      dateErrorsRef.current[fieldName] = err;
+      if (err) {
+        setError(fieldName, { type: "manual", message: err });
+      } else {
+        clearErrors(fieldName);
+      }
+    },
+    [setError, clearErrors]
+  );
 
   const onSubmit = (data: EditClientFormData) => {
+    const activeDateErrors = Object.entries(dateErrorsRef.current).filter(([_, err]) => Boolean(err));
+    if (activeDateErrors.length > 0) {
+      activeDateErrors.forEach(([fieldName, err]) => {
+        if (err) {
+          setError(fieldName as any, { type: "manual", message: err });
+        }
+      });
+      return;
+    }
+
     updateClientMutation.mutate(
       {
         id: client.id,
@@ -297,59 +322,20 @@ export default function EditClientDialog({
               <Controller
                 name="dateOfBirth"
                 control={control}
-                render={({ field }) => {
-                  const today = new Date();
-                  const maxDobDate = new Date(
-                    today.getFullYear() - 18,
-                    today.getMonth(),
-                    today.getDate()
-                  );
-                  return (
-                    <Popover open={isDobOpen} onOpenChange={setIsDobOpen}>
-                      <PopoverTrigger
-                        render={
-                          <button
-                            type="button"
-                            onClick={() => setIsDobOpen(true)}
-                            className="h-10 w-full bg-[#141C24] border-0 text-white text-xs rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0]"
-                          >
-                            <span className={field.value ? "text-white" : "text-[#919191]"}>
-                              {field.value ? format(field.value, "MM/dd/yyyy") : "mm/dd/yyyy"}
-                            </span>
-                            <CalendarIcon className="w-4 h-4 text-[#919191]" />
-                          </button>
-                        }
-                      />
-                      <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                        <Calendar
-                          mode="single"
-                          required
-                          selected={field.value}
-                          onSelect={(date) => {
-                            if (date) {
-                              field.onChange(date);
-                              setIsDobOpen(false);
-                            }
-                          }}
-                          defaultMonth={field.value || maxDobDate}
-                          captionLayout="dropdown"
-                          startMonth={new Date(1920, 0)}
-                          endMonth={maxDobDate}
-                          disabled={(date) => {
-                            return date > maxDobDate || date < new Date("1900-01-01");
-                          }}
-                          className="p-3 bg-[#141C24] text-white [color-scheme:dark]"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  );
-                }}
+                render={({ field, fieldState }) => (
+                  <DatePickerInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    onValidationError={(err) => handleDateValidationError("dateOfBirth", err)}
+                    error={fieldState.error?.message}
+                    isDob
+                    label="Date of Birth"
+                    placeholder="MM/DD/YYYY"
+                    required
+                  />
+                )}
               />
-              {errors.dateOfBirth && (
-                <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">
-                  {errors.dateOfBirth.message}
-                </p>
-              )}
             </div>
 
             {/* Status Select */}

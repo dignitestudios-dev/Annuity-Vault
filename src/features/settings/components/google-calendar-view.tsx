@@ -343,7 +343,7 @@ export default function GoogleCalendarView() {
               Contract Anniversaries
             </div>
             <p className="text-xs text-[#919191] leading-relaxed">
-              Every contract anniversary syncs as a yearly recurring all-day event with client, provider, policy, and contract details.
+              Every contract anniversary syncs as a yearly recurring all-day event with client, provider, and contract details.
             </p>
           </div>
 

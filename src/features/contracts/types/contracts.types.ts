@@ -32,21 +32,36 @@ export interface Contract {
   id: string; // React query might map _id to id or just use _id
   _id: string;
   contractNumber: string;
-  policyNumber: string;
+  policyNumber?: string | null;
   client: ContractClient;
   provider: string;
   contractType: string;
+  productName?: string | null;
   status: string;
-  startDate: string;
-  anniversaryDate: string;
-  premiumAmount: number;
-  contractValue: number;
-  beneficiaryInformation?: string;
-  notes?: string;
+  startDate?: string | null;
+  anniversaryDate?: string | null;
+  premiumAmount?: number | null;
+  contractValue?: number | null;
+  deathBenefit?: number | null;
+  income?: number | null;
+  incomeMode?: string | null;
+  qualified?: boolean | null;
+  rmd?: number | null;
+  liquidityFeature?: number | null;
+  outOfSurrenderDate?: string | null;
+  penaltyFreeAmount?: number | null;
+  marketValueAdjustment?: number | null;
+  currentSurrenderValue?: number | null;
+  ridersOrFeatures?: string | null;
+  annuitantNotOwner?: boolean | null;
+  annuitantDob?: string | null;
+  beneficiaryInformation?: string | null;
+  notes?: string | null;
   isArchived: boolean;
   archivedAt: string | null;
   createdBy: string;
   createdAt?: string;
+  updatedAt?: string;
   
   documents?: ContractDocument[];
   contractNotes?: ContractNote[];
@@ -72,16 +87,31 @@ export interface GetContractResponse {
 
 export interface CreateContractDTO {
   client: string;
-  policyNumber: string;
   provider: string;
   contractType: string;
-  status: string;
-  startDate?: string;
-  anniversaryDate?: string;
-  premiumAmount: number;
-  contractValue: number;
-  beneficiaryInformation?: string;
-  notes?: string;
+  status?: string;
+  policyNumber?: string | null;
+  productName?: string | null;
+  startDate?: string | null;
+  anniversaryDate?: string | null;
+  premiumAmount?: number | null;
+  contractValue?: number | null;
+  deathBenefit?: number | null;
+  income?: number | null;
+  incomeMode?: string | null;
+  qualified?: boolean | null;
+  rmd?: number | null;
+  liquidityFeature?: number | null;
+  outOfSurrenderDate?: string | null;
+  penaltyFreeAmount?: number | null;
+  marketValueAdjustment?: number | null;
+  currentSurrenderValue?: number | null;
+  ridersOrFeatures?: string | null;
+  annuitantNotOwner?: boolean | null;
+  annuitantDob?: string | null;
+  beneficiaryInformation?: string | null;
+  notes?: string | null;
 }
 
 export type UpdateContractDTO = Partial<CreateContractDTO>;
+

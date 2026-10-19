@@ -104,7 +104,7 @@ export default function ContractsTab({ clientId, contracts = [], isLoading = fal
                 Type
               </TableHead>
               <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6 font-sans">
-                Value
+                Accumulated Value
               </TableHead>
               <TableHead className="text-[#8C8C8C] font-medium text-xs sm:text-sm h-10 px-6 font-sans">
                 Anniversary

@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useDebounce } from "@/hooks/use-debounce";
-import { Plus, Search, FileText, Download, X } from "lucide-react";
+import {
+  Plus,
+  Search,
+  FileText,
+  Download,
+  X,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -20,6 +30,9 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import DatePickerInput from "@/components/ui/date-picker-input";
 import NewContractDialog from "@/features/contracts/components/new-contract-dialog";
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
@@ -28,6 +41,56 @@ import { cn } from "@/lib/utils";
 import { useContracts, exportContracts } from "@/features/contracts/api/contracts.service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, differenceInDays } from "date-fns";
+import toast from "react-hot-toast";
+
+const ALL_CONTRACT_TYPES = [
+  "All Types",
+  "FIA",
+  "MYGA",
+  "VA",
+  "RILA",
+  "SPIA",
+  "Fixed",
+  "Private Note",
+  "Other",
+  "Fixed Indexed",
+  "Variable",
+  "Indexed",
+  "Immediate",
+  "Deferred",
+];
+
+const ALL_STATUSES = [
+  "All Statuses",
+  "Active",
+  "Pending",
+  "Matured",
+  "Surrendered",
+  "Out of Surrender",
+];
+
+const OPERATORS = [
+  { label: "≥", value: "≥" },
+  { label: ">", value: ">" },
+  { label: "≤", value: "≤" },
+  { label: "<", value: "<" },
+  { label: "=", value: "=" },
+];
+
+const OPERATOR_SUFFIX: Record<string, string> = {
+  ">": "Gt",
+  "≥": "Gte",
+  ">=": "Gte",
+  "<": "Lt",
+  "≤": "Lte",
+  "<=": "Lte",
+  "=": "Eq",
+};
+
+interface NumericFilter {
+  op: string;
+  value: string;
+}
 
 const getStatusStyle = (status: string) => {
   switch (status?.toLowerCase()) {
@@ -48,53 +111,315 @@ const getStatusStyle = (status: string) => {
   }
 };
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+const formatCurrency = (value?: number | null) => {
+  if (value === null || value === undefined || isNaN(value)) return "N/A";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value || 0);
+    maximumFractionDigits: 0,
+  }).format(value);
 };
 
-const formatAnniversary = (dateString?: string) => {
+const formatAnniversary = (dateString?: string | null) => {
   if (!dateString) return "N/A";
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "N/A";
   const now = new Date();
-  
-  // Create a date for this year's anniversary
+
   const thisYearAnniversary = new Date(date);
   thisYearAnniversary.setFullYear(now.getFullYear());
-  
-  // If anniversary already passed this year, look at next year's
+
   if (thisYearAnniversary < now) {
     thisYearAnniversary.setFullYear(now.getFullYear() + 1);
   }
-  
+
   const daysDiff = differenceInDays(thisYearAnniversary, now);
   const formattedDate = format(thisYearAnniversary, "yyyy-MM-dd");
-  
+
   return `${formattedDate} (${daysDiff}d)`;
 };
 
 export default function ContractsPage() {
   const router = useRouter();
+
+  // Top Bar Search & Quick Filters
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [selectedType, setSelectedType] = useState("All Types");
   const [selectedStatus, setSelectedStatus] = useState("All Statuses");
+
+  // Filter panel open state - COLLAPSED BY DEFAULT
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+
+  // Collapsible section states inside the panel
+  const [openSections, setOpenSections] = useState({
+    basic: true,
+    details: true,
+    dates: true,
+    financial: true,
+  });
+
+  const toggleSection = (section: keyof typeof openSections) => {
+    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  // Draft Filter States
+  const [lastName, setLastName] = useState("");
+  const [provider, setProvider] = useState("");
+  const [productName, setProductName] = useState("");
+  const [qualified, setQualified] = useState<"all" | "yes" | "no">("all");
+  const [annuitantNotOwner, setAnnuitantNotOwner] = useState<"all" | "yes" | "no">("all");
+  const [incomeMode, setIncomeMode] = useState("all");
+  const [ridersOrFeatures, setRidersOrFeatures] = useState("");
+
+  // Dates
+  const [anniversaryFrom, setAnniversaryFrom] = useState("");
+  const [anniversaryTo, setAnniversaryTo] = useState("");
+  const [outOfSurrenderFrom, setOutOfSurrenderFrom] = useState("");
+  const [outOfSurrenderTo, setOutOfSurrenderTo] = useState("");
+  const [annuitantDobFrom, setAnnuitantDobFrom] = useState("");
+  const [annuitantDobTo, setAnnuitantDobTo] = useState("");
+
+  // Numeric filters
+  const [contractValueFilter, setContractValueFilter] = useState<NumericFilter>({ op: ">", value: "" });
+  const [deathBenefitFilter, setDeathBenefitFilter] = useState<NumericFilter>({ op: "≥", value: "" });
+  const [incomeFilter, setIncomeFilter] = useState<NumericFilter>({ op: "≥", value: "" });
+  const [rmdFilter, setRmdFilter] = useState<NumericFilter>({ op: "≥", value: "" });
+  const [liquidityFilter, setLiquidityFilter] = useState<NumericFilter>({ op: "=", value: "" });
+  const [penaltyFreeFilter, setPenaltyFreeFilter] = useState<NumericFilter>({ op: "≥", value: "" });
+  const [surrenderValueFilter, setSurrenderValueFilter] = useState<NumericFilter>({ op: "≥", value: "" });
+  const [mvaFilter, setMvaFilter] = useState<NumericFilter>({ op: "≤", value: "" });
+
+  // Applied Advanced Filters snapshot
+  const [appliedAdvanced, setAppliedAdvanced] = useState({
+    lastName: "",
+    provider: "",
+    productName: "",
+    qualified: "all",
+    annuitantNotOwner: "all",
+    incomeMode: "all",
+    ridersOrFeatures: "",
+    anniversaryFrom: "",
+    anniversaryTo: "",
+    outOfSurrenderFrom: "",
+    outOfSurrenderTo: "",
+    annuitantDobFrom: "",
+    annuitantDobTo: "",
+    contractValueFilter: { op: ">", value: "" },
+    deathBenefitFilter: { op: "≥", value: "" },
+    incomeFilter: { op: "≥", value: "" },
+    rmdFilter: { op: "≥", value: "" },
+    liquidityFilter: { op: "=", value: "" },
+    penaltyFreeFilter: { op: "≥", value: "" },
+    surrenderValueFilter: { op: "≥", value: "" },
+    mvaFilter: { op: "≤", value: "" },
+  });
+
   const [isNewContractOpen, setIsNewContractOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("Operation completed successfully.");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  const { data, isLoading } = useContracts({
-    search: debouncedSearch || undefined,
-    contractType: selectedType !== "All Types" ? selectedType : undefined,
-    status: selectedStatus !== "All Statuses" ? selectedStatus : undefined,
+  // Apply filters action
+  const handleApplyFilters = useCallback(() => {
+    setAppliedAdvanced({
+      lastName,
+      provider,
+      productName,
+      qualified,
+      annuitantNotOwner,
+      incomeMode,
+      ridersOrFeatures,
+      anniversaryFrom,
+      anniversaryTo,
+      outOfSurrenderFrom,
+      outOfSurrenderTo,
+      annuitantDobFrom,
+      annuitantDobTo,
+      contractValueFilter: { ...contractValueFilter },
+      deathBenefitFilter: { ...deathBenefitFilter },
+      incomeFilter: { ...incomeFilter },
+      rmdFilter: { ...rmdFilter },
+      liquidityFilter: { ...liquidityFilter },
+      penaltyFreeFilter: { ...penaltyFreeFilter },
+      surrenderValueFilter: { ...surrenderValueFilter },
+      mvaFilter: { ...mvaFilter },
+    });
+    setCurrentPage(1);
+  }, [
+    lastName,
+    provider,
+    productName,
+    qualified,
+    annuitantNotOwner,
+    incomeMode,
+    ridersOrFeatures,
+    anniversaryFrom,
+    anniversaryTo,
+    outOfSurrenderFrom,
+    outOfSurrenderTo,
+    annuitantDobFrom,
+    annuitantDobTo,
+    contractValueFilter,
+    deathBenefitFilter,
+    incomeFilter,
+    rmdFilter,
+    liquidityFilter,
+    penaltyFreeFilter,
+    surrenderValueFilter,
+    mvaFilter,
+  ]);
+
+  // Reset all filters action
+  const handleResetFilters = useCallback(() => {
+    setSearchQuery("");
+    setSelectedType("All Types");
+    setSelectedStatus("All Statuses");
+
+    setLastName("");
+    setProvider("");
+    setProductName("");
+    setQualified("all");
+    setAnnuitantNotOwner("all");
+    setIncomeMode("all");
+    setRidersOrFeatures("");
+
+    setAnniversaryFrom("");
+    setAnniversaryTo("");
+    setOutOfSurrenderFrom("");
+    setOutOfSurrenderTo("");
+    setAnnuitantDobFrom("");
+    setAnnuitantDobTo("");
+
+    setContractValueFilter({ op: ">", value: "" });
+    setDeathBenefitFilter({ op: "≥", value: "" });
+    setIncomeFilter({ op: "≥", value: "" });
+    setRmdFilter({ op: "≥", value: "" });
+    setLiquidityFilter({ op: "=", value: "" });
+    setPenaltyFreeFilter({ op: "≥", value: "" });
+    setSurrenderValueFilter({ op: "≥", value: "" });
+    setMvaFilter({ op: "≤", value: "" });
+
+    setAppliedAdvanced({
+      lastName: "",
+      provider: "",
+      productName: "",
+      qualified: "all",
+      annuitantNotOwner: "all",
+      incomeMode: "all",
+      ridersOrFeatures: "",
+      anniversaryFrom: "",
+      anniversaryTo: "",
+      outOfSurrenderFrom: "",
+      outOfSurrenderTo: "",
+      annuitantDobFrom: "",
+      annuitantDobTo: "",
+      contractValueFilter: { op: ">", value: "" },
+      deathBenefitFilter: { op: "≥", value: "" },
+      incomeFilter: { op: "≥", value: "" },
+      rmdFilter: { op: "≥", value: "" },
+      liquidityFilter: { op: "=", value: "" },
+      penaltyFreeFilter: { op: "≥", value: "" },
+      surrenderValueFilter: { op: "≥", value: "" },
+      mvaFilter: { op: "≤", value: "" },
+    });
+    setCurrentPage(1);
+  }, []);
+
+  // Compute query parameters from currently applied filters
+  const queryParams = useMemo(() => {
+    const params: Record<string, any> = {};
+
+    if (debouncedSearch?.trim()) params.search = debouncedSearch.trim();
+    if (selectedType !== "All Types") params.contractType = selectedType;
+    if (selectedStatus !== "All Statuses") params.status = selectedStatus;
+
+    if (appliedAdvanced.lastName.trim()) params.lastName = appliedAdvanced.lastName.trim();
+    if (appliedAdvanced.provider.trim()) params.provider = appliedAdvanced.provider.trim();
+    if (appliedAdvanced.productName.trim()) params.productName = appliedAdvanced.productName.trim();
+    if (appliedAdvanced.qualified !== "all") params.qualified = appliedAdvanced.qualified === "yes";
+    if (appliedAdvanced.annuitantNotOwner !== "all") params.annuitantNotOwner = appliedAdvanced.annuitantNotOwner === "yes";
+    if (appliedAdvanced.incomeMode !== "all") params.incomeMode = appliedAdvanced.incomeMode;
+    if (appliedAdvanced.ridersOrFeatures.trim()) params.ridersOrFeatures = appliedAdvanced.ridersOrFeatures.trim();
+
+    if (appliedAdvanced.anniversaryFrom) params.anniversaryFrom = appliedAdvanced.anniversaryFrom;
+    if (appliedAdvanced.anniversaryTo) params.anniversaryTo = appliedAdvanced.anniversaryTo;
+    if (appliedAdvanced.outOfSurrenderFrom) params.outOfSurrenderFrom = appliedAdvanced.outOfSurrenderFrom;
+    if (appliedAdvanced.outOfSurrenderTo) params.outOfSurrenderTo = appliedAdvanced.outOfSurrenderTo;
+    if (appliedAdvanced.annuitantDobFrom) params.annuitantDobFrom = appliedAdvanced.annuitantDobFrom;
+    if (appliedAdvanced.annuitantDobTo) params.annuitantDobTo = appliedAdvanced.annuitantDobTo;
+
+    // Numeric operators
+    const numericList: { key: string; filter: NumericFilter }[] = [
+      { key: "contractValue", filter: appliedAdvanced.contractValueFilter },
+      { key: "deathBenefit", filter: appliedAdvanced.deathBenefitFilter },
+      { key: "income", filter: appliedAdvanced.incomeFilter },
+      { key: "rmd", filter: appliedAdvanced.rmdFilter },
+      { key: "liquidityFeature", filter: appliedAdvanced.liquidityFilter },
+      { key: "penaltyFreeAmount", filter: appliedAdvanced.penaltyFreeFilter },
+      { key: "currentSurrenderValue", filter: appliedAdvanced.surrenderValueFilter },
+      { key: "marketValueAdjustment", filter: appliedAdvanced.mvaFilter },
+    ];
+
+    numericList.forEach(({ key, filter }) => {
+      if (filter.value?.trim()) {
+        const valNum = Number(filter.value.trim());
+        if (!isNaN(valNum)) {
+          const suffix = OPERATOR_SUFFIX[filter.op] || "Eq";
+          params[`${key}${suffix}`] = valNum;
+        }
+      }
+    });
+
+    return params;
+  }, [debouncedSearch, selectedType, selectedStatus, appliedAdvanced]);
+
+  // Active filter count for the badge
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (debouncedSearch?.trim()) count++;
+    if (selectedType !== "All Types") count++;
+    if (selectedStatus !== "All Statuses") count++;
+    if (appliedAdvanced.lastName.trim()) count++;
+    if (appliedAdvanced.provider.trim()) count++;
+    if (appliedAdvanced.productName.trim()) count++;
+    if (appliedAdvanced.qualified !== "all") count++;
+    if (appliedAdvanced.annuitantNotOwner !== "all") count++;
+    if (appliedAdvanced.incomeMode !== "all") count++;
+    if (appliedAdvanced.ridersOrFeatures.trim()) count++;
+    if (appliedAdvanced.anniversaryFrom || appliedAdvanced.anniversaryTo) count++;
+    if (appliedAdvanced.outOfSurrenderFrom || appliedAdvanced.outOfSurrenderTo) count++;
+    if (appliedAdvanced.annuitantDobFrom || appliedAdvanced.annuitantDobTo) count++;
+    if (appliedAdvanced.contractValueFilter.value.trim()) count++;
+    if (appliedAdvanced.deathBenefitFilter.value.trim()) count++;
+    if (appliedAdvanced.incomeFilter.value.trim()) count++;
+    if (appliedAdvanced.rmdFilter.value.trim()) count++;
+    if (appliedAdvanced.liquidityFilter.value.trim()) count++;
+    if (appliedAdvanced.penaltyFreeFilter.value.trim()) count++;
+    if (appliedAdvanced.surrenderValueFilter.value.trim()) count++;
+    if (appliedAdvanced.mvaFilter.value.trim()) count++;
+    return count;
+  }, [debouncedSearch, selectedType, selectedStatus, appliedAdvanced]);
+
+  const { data, isLoading, error } = useContracts({
+    ...queryParams,
     page: currentPage,
     limit: itemsPerPage,
   });
+
+  useEffect(() => {
+    if (error) {
+      const errObj = error as any;
+      const backendError = errObj?.response?.data?.error;
+      if (Array.isArray(backendError) && backendError.length > 0) {
+        toast.error(backendError[0].message || "Validation error");
+      } else {
+        toast.error(errObj?.response?.data?.message || errObj?.message || "Failed to load contracts");
+      }
+    }
+  }, [error]);
 
   const contracts = data?.data || [];
   const totalPages = data?.total ? Math.ceil(data.total / itemsPerPage) : 1;
@@ -102,24 +427,26 @@ export default function ContractsPage() {
 
   const handleExportPDF = async () => {
     try {
-      await exportContracts("pdf", debouncedSearch || undefined, selectedType !== "All Types" ? selectedType : undefined, selectedStatus !== "All Statuses" ? selectedStatus : undefined);
+      await exportContracts("pdf", queryParams);
+      setSuccessMessage("PDF export downloaded successfully.");
       setIsSuccessOpen(true);
-    } catch (error) {
-      console.error("Export PDF failed:", error);
+    } catch (err: any) {
+      toast.error(err.message || "Export PDF failed");
     }
   };
 
   const handleExportCSV = async () => {
     try {
-      await exportContracts("csv", debouncedSearch || undefined, selectedType !== "All Types" ? selectedType : undefined, selectedStatus !== "All Statuses" ? selectedStatus : undefined);
+      await exportContracts("csv", queryParams);
+      setSuccessMessage("CSV export downloaded successfully.");
       setIsSuccessOpen(true);
-    } catch (error) {
-      console.error("Export CSV failed:", error);
+    } catch (err: any) {
+      toast.error(err.message || "Export CSV failed");
     }
   };
 
   return (
-    <div className="w-full flex flex-col gap-6 max-w-[1440px] mx-auto pb-8 font-sans">
+    <div className="w-full flex flex-col gap-5 max-w-[1440px] mx-auto pb-8 font-sans">
       {/* Top Header */}
       <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl lg:text-3xl font-semibold text-white tracking-tight">
@@ -153,10 +480,10 @@ export default function ContractsPage() {
         </div>
       </div>
 
-      {/* Filter Bar Container (#394A58) */}
-      <div className="w-full bg-[#394A58] border border-white/5 rounded-[12px] p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* Top Controls Bar: Search, Type, Status, Filters Button */}
+      <div className="w-full bg-[#18232F] border border-white/5 rounded-[12px] p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
         {/* Search Input Box */}
-        <div className="relative w-full sm:w-[320px]">
+        <div className="relative w-full sm:flex-1 sm:max-w-[420px]">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8C8C8C]" />
           <input
             type="text"
@@ -166,7 +493,7 @@ export default function ContractsPage() {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full h-10 pl-10 pr-9 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-sm focus:outline-none focus:border-white/20 font-sans"
+            className="w-full h-10 pl-10 pr-9 bg-[#0F1722] border border-white/10 text-white placeholder:text-[#8C8C8C] rounded-[10px] text-xs sm:text-sm focus:outline-none focus:border-white/20 font-sans"
           />
           {searchQuery && (
             <button
@@ -183,64 +510,713 @@ export default function ContractsPage() {
           )}
         </div>
 
-        {/* Dropdown Filters */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+        {/* Quick Dropdown Filters + Filters Button */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto">
           {/* Type Select Filter */}
-          <div className="w-full sm:w-[180px]">
+          <div className="w-full sm:w-[160px]">
             <Select
               value={selectedType}
               onValueChange={(val: string | null) => {
-                if (val) setSelectedType(val);
-                setCurrentPage(1);
+                if (val) {
+                  setSelectedType(val);
+                  setCurrentPage(1);
+                }
               }}
             >
-              <SelectTrigger className="w-full h-10 bg-[#141C24] border border-white/5 text-white rounded-[12px] text-sm focus:ring-0 font-sans">
+              <SelectTrigger className="w-full h-10 bg-[#0F1722] border border-white/10 text-white rounded-[10px] text-xs focus:ring-0 font-sans">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent
                 side="bottom"
                 alignItemWithTrigger={false}
-                className="bg-[#141C24] border-white/10 text-white font-sans"
+                className="bg-[#0F1722] border-white/10 text-white font-sans max-h-60"
               >
-                <SelectItem value="All Types">All Types</SelectItem>
-                <SelectItem value="Fixed">Fixed</SelectItem>
-                <SelectItem value="Variable">Variable</SelectItem>
-                <SelectItem value="Indexed">Indexed</SelectItem>
-                <SelectItem value="Fixed Indexed">Fixed Indexed</SelectItem>
-                <SelectItem value="Immediate">Immediate</SelectItem>
-                <SelectItem value="Deferred">Deferred</SelectItem>
+                {ALL_CONTRACT_TYPES.map((type) => (
+                  <SelectItem key={type} value={type} className="text-xs">
+                    {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           {/* Status Select Filter */}
-          <div className="w-full sm:w-[180px]">
+          <div className="w-full sm:w-[160px]">
             <Select
               value={selectedStatus}
               onValueChange={(val: string | null) => {
-                if (val) setSelectedStatus(val);
-                setCurrentPage(1);
+                if (val) {
+                  setSelectedStatus(val);
+                  setCurrentPage(1);
+                }
               }}
             >
-              <SelectTrigger className="w-full h-10 bg-[#141C24] border border-white/5 text-white rounded-[12px] text-sm focus:ring-0 font-sans">
+              <SelectTrigger className="w-full h-10 bg-[#0F1722] border border-white/10 text-white rounded-[10px] text-xs focus:ring-0 font-sans">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent
                 side="bottom"
                 alignItemWithTrigger={false}
-                className="bg-[#141C24] border-white/10 text-white font-sans"
+                className="bg-[#0F1722] border-white/10 text-white font-sans"
               >
-                <SelectItem value="All Statuses">All Statuses</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Matured">Matured</SelectItem>
-                <SelectItem value="Surrendered">Surrendered</SelectItem>
-                <SelectItem value="Out of Surrender">Out of Surrender</SelectItem>
+                {ALL_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status} className="text-xs">
+                    {status}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+
+          {/* Filters Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsAdvancedOpen((prev) => !prev)}
+            className={`h-10 px-4 rounded-[10px] text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border cursor-pointer select-none ${
+              isAdvancedOpen
+                ? "bg-[#25384B] text-white border-white/20 shadow-sm"
+                : "bg-[#0F1722] hover:bg-white/10 text-white border-white/10"
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4 text-[#919191]" />
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="min-w-[20px] h-5 px-1 rounded-full bg-[#42CD7F] text-black font-bold text-[11px] flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+            {isAdvancedOpen ? (
+              <ChevronUp className="w-3.5 h-3.5 text-[#919191]" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5 text-[#919191]" />
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Redesigned Collapsible Advanced Filter Panel */}
+      {isAdvancedOpen && (
+        <div className="w-full bg-[#15202B] border border-white/10 rounded-[14px] p-4 sm:p-5 flex flex-col gap-4 shadow-xl font-sans">
+          {/* Header Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+            <div className="flex flex-col">
+              <h2 className="text-base font-semibold text-white tracking-tight">Filter Contracts</h2>
+              <p className="text-xs text-[#919191] mt-0.5">
+                Use the filters below to find specific contracts. All filters are optional and combined with AND logic.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="h-9 px-3.5 bg-white/5 hover:bg-white/10 text-white/90 hover:text-white border border-white/10 rounded-[10px] text-xs font-medium transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-[#919191]" />
+                <span>Reset All</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyFilters}
+                className="h-9 px-5 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-[10px] text-xs font-medium transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Apply Filters</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Group 1: Basic Filters */}
+          <div className="bg-[#0C1116] border border-white/5 rounded-[12px] overflow-hidden transition-all">
+            <button
+              type="button"
+              onClick={() => toggleSection("basic")}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer text-left"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-[#1F2C39] text-[#60A5FA] border border-[#3B82F6]/30 flex items-center justify-center font-bold text-[11px]">
+                  1
+                </span>
+                <span className="text-xs font-semibold text-white tracking-wide">Basic Filters</span>
+              </div>
+              {openSections.basic ? (
+                <ChevronUp className="w-4 h-4 text-[#8C8C8C]" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-[#8C8C8C]" />
+              )}
+            </button>
+
+            {openSections.basic && (
+              <div className="p-4 pt-1 border-t border-white/5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Client Last Name</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. Thompson"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleApplyFilters();
+                      }}
+                      className="h-10 bg-[#141C24] border border-white/10 text-white placeholder-[#8C8C8C] text-xs rounded-[10px] px-3 focus-visible:ring-1 focus-visible:ring-[#3B82F6]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Company / Carrier</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. Athene, Nationwide"
+                      value={provider}
+                      onChange={(e) => setProvider(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleApplyFilters();
+                      }}
+                      className="h-10 bg-[#141C24] border border-white/10 text-white placeholder-[#8C8C8C] text-xs rounded-[10px] px-3 focus-visible:ring-1 focus-visible:ring-[#3B82F6]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Product Name</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. Gold Guard"
+                      value={productName}
+                      onChange={(e) => setProductName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleApplyFilters();
+                      }}
+                      className="h-10 bg-[#141C24] border border-white/10 text-white placeholder-[#8C8C8C] text-xs rounded-[10px] px-3 focus-visible:ring-1 focus-visible:ring-[#3B82F6]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Contract Type</Label>
+                    <Select
+                      value={selectedType}
+                      onValueChange={(val: string | null) => {
+                        if (val) setSelectedType(val);
+                      }}
+                    >
+                      <SelectTrigger className="h-10 bg-[#141C24] border border-white/10 text-white rounded-[10px] text-xs focus:ring-0">
+                        <SelectValue placeholder="All Types" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#141C24] border-white/10 text-white max-h-60">
+                        {ALL_CONTRACT_TYPES.map((type) => (
+                          <SelectItem key={type} value={type} className="text-xs">
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Contract Status</Label>
+                    <Select
+                      value={selectedStatus}
+                      onValueChange={(val: string | null) => {
+                        if (val) setSelectedStatus(val);
+                      }}
+                    >
+                      <SelectTrigger className="h-10 bg-[#141C24] border border-white/10 text-white rounded-[10px] text-xs focus:ring-0">
+                        <SelectValue placeholder="All Statuses" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#141C24] border-white/10 text-white">
+                        {ALL_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status} className="text-xs">
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Group 2: Contract Details */}
+          <div className="bg-[#0C1116] border border-white/5 rounded-[12px] overflow-hidden transition-all">
+            <button
+              type="button"
+              onClick={() => toggleSection("details")}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer text-left"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-[#1F2C39] text-[#60A5FA] border border-[#3B82F6]/30 flex items-center justify-center font-bold text-[11px]">
+                  2
+                </span>
+                <span className="text-xs font-semibold text-white tracking-wide">Contract Details</span>
+              </div>
+              {openSections.details ? (
+                <ChevronUp className="w-4 h-4 text-[#8C8C8C]" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-[#8C8C8C]" />
+              )}
+            </button>
+
+            {openSections.details && (
+              <div className="p-4 pt-1 border-t border-white/5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Qualified</Label>
+                    <Select
+                      value={qualified}
+                      onValueChange={(val: any) => {
+                        if (val) setQualified(val);
+                      }}
+                    >
+                      <SelectTrigger className="h-10 bg-[#141C24] border border-white/10 text-white rounded-[10px] text-xs focus:ring-0">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#141C24] border-white/10 text-white">
+                        <SelectItem value="all" className="text-xs">All</SelectItem>
+                        <SelectItem value="yes" className="text-xs">Yes</SelectItem>
+                        <SelectItem value="no" className="text-xs">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Annuitant Not Owner</Label>
+                    <Select
+                      value={annuitantNotOwner}
+                      onValueChange={(val: any) => {
+                        if (val) setAnnuitantNotOwner(val);
+                      }}
+                    >
+                      <SelectTrigger className="h-10 bg-[#141C24] border border-white/10 text-white rounded-[10px] text-xs focus:ring-0">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#141C24] border-white/10 text-white">
+                        <SelectItem value="all" className="text-xs">All</SelectItem>
+                        <SelectItem value="yes" className="text-xs">Yes</SelectItem>
+                        <SelectItem value="no" className="text-xs">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Riders or Features (contains)</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. LTC, Lifetime Income"
+                      value={ridersOrFeatures}
+                      onChange={(e) => setRidersOrFeatures(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleApplyFilters();
+                      }}
+                      className="h-10 bg-[#141C24] border border-white/10 text-white placeholder-[#8C8C8C] text-xs rounded-[10px] px-3 focus-visible:ring-1 focus-visible:ring-[#3B82F6]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Income Mode</Label>
+                    <Select
+                      value={incomeMode}
+                      onValueChange={(val: string | null) => {
+                        if (val) setIncomeMode(val);
+                      }}
+                    >
+                      <SelectTrigger className="h-10 bg-[#141C24] border border-white/10 text-white rounded-[10px] text-xs focus:ring-0">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#141C24] border-white/10 text-white">
+                        <SelectItem value="all" className="text-xs">All</SelectItem>
+                        <SelectItem value="Daily" className="text-xs">Daily</SelectItem>
+                        <SelectItem value="Monthly" className="text-xs">Monthly</SelectItem>
+                        <SelectItem value="Quarterly" className="text-xs">Quarterly</SelectItem>
+                        <SelectItem value="Biannual" className="text-xs">Biannual</SelectItem>
+                        <SelectItem value="Annual" className="text-xs">Annual</SelectItem>
+                        <SelectItem value="Other" className="text-xs">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Group 3: Date Ranges */}
+          <div className="bg-[#0C1116] border border-white/5 rounded-[12px] overflow-hidden transition-all">
+            <button
+              type="button"
+              onClick={() => toggleSection("dates")}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer text-left"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-[#1F2C39] text-[#60A5FA] border border-[#3B82F6]/30 flex items-center justify-center font-bold text-[11px]">
+                  3
+                </span>
+                <span className="text-xs font-semibold text-white tracking-wide">Date Ranges</span>
+              </div>
+              {openSections.dates ? (
+                <ChevronUp className="w-4 h-4 text-[#8C8C8C]" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-[#8C8C8C]" />
+              )}
+            </button>
+
+            {openSections.dates && (
+              <div className="p-4 pt-1 border-t border-white/5">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Anniversary Date Range */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Anniversary Date Range</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <DatePickerInput
+                        value={anniversaryFrom}
+                        onChangeString={(val) => setAnniversaryFrom(val)}
+                        placeholder="From: MM/DD/YYYY"
+                        className="rounded-[10px]"
+                        showErrorText={false}
+                      />
+                      <DatePickerInput
+                        value={anniversaryTo}
+                        onChangeString={(val) => setAnniversaryTo(val)}
+                        placeholder="To: MM/DD/YYYY"
+                        className="rounded-[10px]"
+                        showErrorText={false}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Out of Surrender Range */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Out of Surrender Range</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <DatePickerInput
+                        value={outOfSurrenderFrom}
+                        onChangeString={(val) => setOutOfSurrenderFrom(val)}
+                        placeholder="From: MM/DD/YYYY"
+                        className="rounded-[10px]"
+                        showErrorText={false}
+                      />
+                      <DatePickerInput
+                        value={outOfSurrenderTo}
+                        onChangeString={(val) => setOutOfSurrenderTo(val)}
+                        placeholder="To: MM/DD/YYYY"
+                        className="rounded-[10px]"
+                        showErrorText={false}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Annuitant DOB Range */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Annuitant DOB Range</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <DatePickerInput
+                        value={annuitantDobFrom}
+                        onChangeString={(val) => setAnnuitantDobFrom(val)}
+                        placeholder="From: MM/DD/YYYY"
+                        className="rounded-[10px]"
+                        showErrorText={false}
+                        isDob
+                        label="Annuitant DOB"
+                      />
+                      <DatePickerInput
+                        value={annuitantDobTo}
+                        onChangeString={(val) => setAnnuitantDobTo(val)}
+                        placeholder="To: MM/DD/YYYY"
+                        className="rounded-[10px]"
+                        showErrorText={false}
+                        isDob
+                        label="Annuitant DOB"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Group 4: Financial Criteria */}
+          <div className="bg-[#0C1116] border border-white/5 rounded-[12px] overflow-hidden transition-all">
+            <button
+              type="button"
+              onClick={() => toggleSection("financial")}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer text-left"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-[#1F2C39] text-[#60A5FA] border border-[#3B82F6]/30 flex items-center justify-center font-bold text-[11px]">
+                  4
+                </span>
+                <span className="text-xs font-semibold text-white tracking-wide">Financial Criteria</span>
+              </div>
+              {openSections.financial ? (
+                <ChevronUp className="w-4 h-4 text-[#8C8C8C]" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-[#8C8C8C]" />
+              )}
+            </button>
+
+            {openSections.financial && (
+              <div className="p-4 pt-1 border-t border-white/5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  {/* Accumulated Value */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Accumulated Value</Label>
+                    <div className="flex items-center h-10 w-full rounded-[10px] bg-[#141C24] border border-white/10 focus-within:border-[#3B82F6]/60 transition-colors overflow-hidden">
+                      <Select
+                        value={contractValueFilter.op}
+                        onValueChange={(val: string | null) => {
+                          if (val) setContractValueFilter((prev) => ({ ...prev, op: val }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[58px] h-full bg-[#182430] border-0 border-r border-white/10 rounded-none text-white text-xs font-mono px-2.5 focus:ring-0 shadow-none justify-between">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#141C24] border-white/10 text-white font-mono min-w-[70px]">
+                          {OPERATORS.map((o) => (
+                            <SelectItem key={o.value} value={o.value} className="text-xs font-mono">{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        type="number"
+                        placeholder="e.g. 100000"
+                        value={contractValueFilter.value}
+                        onChange={(e) => setContractValueFilter((prev) => ({ ...prev, value: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleApplyFilters();
+                        }}
+                        className="flex-1 h-full bg-transparent border-0 text-white placeholder-[#8C8C8C] text-xs px-3 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Death Benefit */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Death Benefit</Label>
+                    <div className="flex items-center h-10 w-full rounded-[10px] bg-[#141C24] border border-white/10 focus-within:border-[#3B82F6]/60 transition-colors overflow-hidden">
+                      <Select
+                        value={deathBenefitFilter.op}
+                        onValueChange={(val: string | null) => {
+                          if (val) setDeathBenefitFilter((prev) => ({ ...prev, op: val }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[58px] h-full bg-[#182430] border-0 border-r border-white/10 rounded-none text-white text-xs font-mono px-2.5 focus:ring-0 shadow-none justify-between">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#141C24] border-white/10 text-white font-mono min-w-[70px]">
+                          {OPERATORS.map((o) => (
+                            <SelectItem key={o.value} value={o.value} className="text-xs font-mono">{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        type="number"
+                        placeholder="e.g. 500000"
+                        value={deathBenefitFilter.value}
+                        onChange={(e) => setDeathBenefitFilter((prev) => ({ ...prev, value: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleApplyFilters();
+                        }}
+                        className="flex-1 h-full bg-transparent border-0 text-white placeholder-[#8C8C8C] text-xs px-3 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Income */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Income</Label>
+                    <div className="flex items-center h-10 w-full rounded-[10px] bg-[#141C24] border border-white/10 focus-within:border-[#3B82F6]/60 transition-colors overflow-hidden">
+                      <Select
+                        value={incomeFilter.op}
+                        onValueChange={(val: string | null) => {
+                          if (val) setIncomeFilter((prev) => ({ ...prev, op: val }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[58px] h-full bg-[#182430] border-0 border-r border-white/10 rounded-none text-white text-xs font-mono px-2.5 focus:ring-0 shadow-none justify-between">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#141C24] border-white/10 text-white font-mono min-w-[70px]">
+                          {OPERATORS.map((o) => (
+                            <SelectItem key={o.value} value={o.value} className="text-xs font-mono">{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        type="number"
+                        placeholder="e.g. 1000"
+                        value={incomeFilter.value}
+                        onChange={(e) => setIncomeFilter((prev) => ({ ...prev, value: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleApplyFilters();
+                        }}
+                        className="flex-1 h-full bg-transparent border-0 text-white placeholder-[#8C8C8C] text-xs px-3 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* RMD */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">RMD</Label>
+                    <div className="flex items-center h-10 w-full rounded-[10px] bg-[#141C24] border border-white/10 focus-within:border-[#3B82F6]/60 transition-colors overflow-hidden">
+                      <Select
+                        value={rmdFilter.op}
+                        onValueChange={(val: string | null) => {
+                          if (val) setRmdFilter((prev) => ({ ...prev, op: val }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[58px] h-full bg-[#182430] border-0 border-r border-white/10 rounded-none text-white text-xs font-mono px-2.5 focus:ring-0 shadow-none justify-between">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#141C24] border-white/10 text-white font-mono min-w-[70px]">
+                          {OPERATORS.map((o) => (
+                            <SelectItem key={o.value} value={o.value} className="text-xs font-mono">{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        type="number"
+                        placeholder="e.g. 5000"
+                        value={rmdFilter.value}
+                        onChange={(e) => setRmdFilter((prev) => ({ ...prev, value: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleApplyFilters();
+                        }}
+                        className="flex-1 h-full bg-transparent border-0 text-white placeholder-[#8C8C8C] text-xs px-3 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Liquidity % */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Liquidity %</Label>
+                    <div className="flex items-center h-10 w-full rounded-[10px] bg-[#141C24] border border-white/10 focus-within:border-[#3B82F6]/60 transition-colors overflow-hidden">
+                      <Select
+                        value={liquidityFilter.op}
+                        onValueChange={(val: string | null) => {
+                          if (val) setLiquidityFilter((prev) => ({ ...prev, op: val }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[58px] h-full bg-[#182430] border-0 border-r border-white/10 rounded-none text-white text-xs font-mono px-2.5 focus:ring-0 shadow-none justify-between">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#141C24] border-white/10 text-white font-mono min-w-[70px]">
+                          {OPERATORS.map((o) => (
+                            <SelectItem key={o.value} value={o.value} className="text-xs font-mono">{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        type="number"
+                        placeholder="e.g. 10"
+                        value={liquidityFilter.value}
+                        onChange={(e) => setLiquidityFilter((prev) => ({ ...prev, value: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleApplyFilters();
+                        }}
+                        className="flex-1 h-full bg-transparent border-0 text-white placeholder-[#8C8C8C] text-xs px-3 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Penalty Free Amount */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Penalty Free Amount</Label>
+                    <div className="flex items-center h-10 w-full rounded-[10px] bg-[#141C24] border border-white/10 focus-within:border-[#3B82F6]/60 transition-colors overflow-hidden">
+                      <Select
+                        value={penaltyFreeFilter.op}
+                        onValueChange={(val: string | null) => {
+                          if (val) setPenaltyFreeFilter((prev) => ({ ...prev, op: val }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[58px] h-full bg-[#182430] border-0 border-r border-white/10 rounded-none text-white text-xs font-mono px-2.5 focus:ring-0 shadow-none justify-between">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#141C24] border-white/10 text-white font-mono min-w-[70px]">
+                          {OPERATORS.map((o) => (
+                            <SelectItem key={o.value} value={o.value} className="text-xs font-mono">{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        type="number"
+                        placeholder="e.g. 10001"
+                        value={penaltyFreeFilter.value}
+                        onChange={(e) => setPenaltyFreeFilter((prev) => ({ ...prev, value: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleApplyFilters();
+                        }}
+                        className="flex-1 h-full bg-transparent border-0 text-white placeholder-[#8C8C8C] text-xs px-3 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Current Surrender Value */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Current Surrender Value</Label>
+                    <div className="flex items-center h-10 w-full rounded-[10px] bg-[#141C24] border border-white/10 focus-within:border-[#3B82F6]/60 transition-colors overflow-hidden">
+                      <Select
+                        value={surrenderValueFilter.op}
+                        onValueChange={(val: string | null) => {
+                          if (val) setSurrenderValueFilter((prev) => ({ ...prev, op: val }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[58px] h-full bg-[#182430] border-0 border-r border-white/10 rounded-none text-white text-xs font-mono px-2.5 focus:ring-0 shadow-none justify-between">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#141C24] border-white/10 text-white font-mono min-w-[70px]">
+                          {OPERATORS.map((o) => (
+                            <SelectItem key={o.value} value={o.value} className="text-xs font-mono">{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        type="number"
+                        placeholder="e.g. 95000"
+                        value={surrenderValueFilter.value}
+                        onChange={(e) => setSurrenderValueFilter((prev) => ({ ...prev, value: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleApplyFilters();
+                        }}
+                        className="flex-1 h-full bg-transparent border-0 text-white placeholder-[#8C8C8C] text-xs px-3 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Market Value Adjustment */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Market Value Adjustment</Label>
+                    <div className="flex items-center h-10 w-full rounded-[10px] bg-[#141C24] border border-white/10 focus-within:border-[#3B82F6]/60 transition-colors overflow-hidden">
+                      <Select
+                        value={mvaFilter.op}
+                        onValueChange={(val: string | null) => {
+                          if (val) setMvaFilter((prev) => ({ ...prev, op: val }));
+                        }}
+                      >
+                        <SelectTrigger className="w-[58px] h-full bg-[#182430] border-0 border-r border-white/10 rounded-none text-white text-xs font-mono px-2.5 focus:ring-0 shadow-none justify-between">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#141C24] border-white/10 text-white font-mono min-w-[70px]">
+                          {OPERATORS.map((o) => (
+                            <SelectItem key={o.value} value={o.value} className="text-xs font-mono">{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        type="number"
+                        placeholder="e.g. 0 (can be -)"
+                        value={mvaFilter.value}
+                        onChange={(e) => setMvaFilter((prev) => ({ ...prev, value: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleApplyFilters();
+                        }}
+                        className="flex-1 h-full bg-transparent border-0 text-white placeholder-[#8C8C8C] text-xs px-3 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Contracts Table Container */}
       <div className="w-full bg-[#141C24] border border-white/5 rounded-[12px] overflow-hidden shadow-sm flex flex-col justify-between min-h-[420px]">
@@ -261,7 +1237,7 @@ export default function ContractsPage() {
                   Type
                 </TableHead>
                 <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
-                  Value
+                  Accumulated Value
                 </TableHead>
                 <TableHead className="text-white font-medium text-xs sm:text-sm h-10 px-6">
                   Anniversary
@@ -293,12 +1269,12 @@ export default function ContractsPage() {
                       <div>{contract.contractNumber}</div>
                       {contract.policyNumber ? (
                         <div className="text-xs text-[#919191] font-normal">
-                          Policy: {contract.policyNumber}
+                          Contract: {contract.policyNumber}
                         </div>
                       ) : null}
                     </TableCell>
                     <TableCell className="px-6 py-3.5 text-sm text-white">
-                      {contract.client ? `${contract.client.firstName} ${contract.client.lastName}` : 'Unknown Client'}
+                      {contract.client ? `${contract.client.firstName} ${contract.client.lastName}` : "Unknown Client"}
                     </TableCell>
                     <TableCell className="px-6 py-3.5 text-sm text-white">
                       {contract.provider}
@@ -330,7 +1306,7 @@ export default function ContractsPage() {
                     <EmptyState
                       icon={FileText}
                       title="No Contracts Found"
-                      description="No contracts found matching your search."
+                      description="No contracts found matching your search or filters."
                     />
                   </TableCell>
                 </TableRow>
@@ -356,7 +1332,10 @@ export default function ContractsPage() {
       <NewContractDialog
         isOpen={isNewContractOpen}
         onClose={() => setIsNewContractOpen(false)}
-        onSubmitSuccess={() => setIsSuccessOpen(true)}
+        onSubmitSuccess={() => {
+          setSuccessMessage("Contract created successfully.");
+          setIsSuccessOpen(true);
+        }}
       />
 
       {/* Contract Created / Export Success Popup */}
@@ -364,7 +1343,7 @@ export default function ContractsPage() {
         isOpen={isSuccessOpen}
         onClose={() => setIsSuccessOpen(false)}
         title="Success"
-        description="Operation completed successfully."
+        description={successMessage}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,6 +22,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import DatePickerInput, { parseDateSafe } from "@/components/ui/date-picker-input";
 import {
   Select,
   SelectTrigger,
@@ -65,12 +66,13 @@ export default function EditTaskDialog({
   onClose,
   onSuccess,
 }: EditTaskDialogProps) {
-  const [isDueOpen, setIsDueOpen] = useState(false);
   const {
     register,
     handleSubmit,
     control,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<EditTaskFormData>({
     resolver: zodResolver(editTaskSchema),
@@ -83,7 +85,7 @@ export default function EditTaskDialog({
         desc: task.description || "",
         priority: task.priority,
         status: task.status || "To Do",
-        due: task.dueDate ? new Date(task.dueDate) : new Date(),
+        due: task.dueDate ? parseDateSafe(task.dueDate) || new Date() : new Date(),
         client: task.client?._id || "none",
       });
     }
@@ -93,9 +95,32 @@ export default function EditTaskDialog({
   const clients = clientsData?.data || [];
 
   const updateTask = useUpdateTask();
+  const dateErrorsRef = useRef<Record<string, string | null>>({});
+
+  const handleDateValidationError = useCallback(
+    (fieldName: keyof EditTaskFormData, err: string | null) => {
+      dateErrorsRef.current[fieldName] = err;
+      if (err) {
+        setError(fieldName, { type: "manual", message: err });
+      } else {
+        clearErrors(fieldName);
+      }
+    },
+    [setError, clearErrors]
+  );
 
   const onSubmit = (data: EditTaskFormData) => {
     if (!task) return;
+
+    const activeDateErrors = Object.entries(dateErrorsRef.current).filter(([_, err]) => Boolean(err));
+    if (activeDateErrors.length > 0) {
+      activeDateErrors.forEach(([fieldName, err]) => {
+        if (err) {
+          setError(fieldName as any, { type: "manual", message: err });
+        }
+      });
+      return;
+    }
 
     updateTask.mutate({
       id: task._id || "",
@@ -244,50 +269,18 @@ export default function EditTaskDialog({
               <Controller
                 name="due"
                 control={control}
-                render={({ field }) => (
-                  <Popover open={isDueOpen} onOpenChange={setIsDueOpen}>
-                    <PopoverTrigger
-                      render={
-                        <button
-                          type="button"
-                          onClick={() => setIsDueOpen(true)}
-                          className={`h-10 w-full bg-[#141C24] border-0 text-white text-xs sm:text-sm rounded-[12px] px-3.5 flex items-center justify-between font-sans outline-none focus:ring-1 focus:ring-[#6887A0] ${
-                            errors.due ? "ring-1 ring-[#FF3E46]" : ""
-                          }`}
-                        >
-                          <span className={field.value ? "text-white" : "text-[#727272]"}>
-                            {field.value ? format(field.value, "MM/dd/yyyy") : "mm/dd/yyyy"}
-                          </span>
-                          <CalendarIcon className="w-4 h-4 text-[#727272]" />
-                        </button>
-                      }
-                    />
-                    <PopoverContent className="w-auto p-0 bg-[#141C24] border border-white/10 text-white rounded-[12px]">
-                      <Calendar
-                        mode="single"
-                        required
-                        selected={field.value}
-                        onSelect={(date) => {
-                          if (date) {
-                            field.onChange(date);
-                            setIsDueOpen(false);
-                          }
-                        }}
-                        defaultMonth={field.value || new Date()}
-                        captionLayout="dropdown"
-                        startMonth={new Date(1950, 0)}
-                        endMonth={new Date(2050, 11)}
-                        className="p-3 bg-[#141C24] text-white [color-scheme:dark]"
-                      />
-                    </PopoverContent>
-                  </Popover>
+                render={({ field, fieldState }) => (
+                  <DatePickerInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    onValidationError={(err) => handleDateValidationError("due", err)}
+                    error={fieldState.error?.message}
+                    placeholder="MM/DD/YYYY"
+                    required
+                  />
                 )}
               />
-              {errors.due && (
-                <p className="text-[11px] font-medium text-[#FF3E46] mt-1">
-                  {errors.due.message}
-                </p>
-              )}
             </div>
 
             {/* Client (Optional) */}
