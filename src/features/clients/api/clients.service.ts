@@ -2,9 +2,27 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axios";
 import { Client, ClientsResponse, CreateClientDTO, UpdateClientDTO } from "../types/clients.types";
 
+export interface GetClientsParams {
+  search?: string;
+  status?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  page?: number;
+  limit?: number;
+}
+
 export const clientsService = {
-  getClients: async (params?: { search?: string; status?: string; page?: number; limit?: number }): Promise<ClientsResponse> => {
-    const response = await axiosInstance.get("/clients", { params });
+  getClients: async (params?: GetClientsParams): Promise<ClientsResponse> => {
+    const cleanParams: Record<string, any> = {};
+    if (params) {
+      for (const [key, val] of Object.entries(params)) {
+        if (val !== "" && val !== null && val !== undefined) {
+          cleanParams[key] = val;
+        }
+      }
+    }
+    const response = await axiosInstance.get("/clients", { params: cleanParams });
     if (response.data && Array.isArray(response.data.data)) {
       response.data.data = response.data.data.map((client: any) => ({
         ...client,
@@ -71,7 +89,7 @@ export const clientsService = {
   },
 };
 
-export function useClients(params?: { search?: string; status?: string; page?: number; limit?: number }) {
+export function useClients(params?: GetClientsParams) {
   return useQuery({
     queryKey: ["clients", params],
     queryFn: () => clientsService.getClients(params),
@@ -159,18 +177,24 @@ export function useArchiveClientDocument() {
   });
 }
 
-export const exportClients = async (format: "pdf" | "csv", search?: string, status?: string) => {
-  const response = await clientsService.getClients({ search, status, limit: 100 });
+export const exportClients = async (
+  format: "pdf" | "csv",
+  filters?: { search?: string; status?: string; city?: string; state?: string; zip?: string }
+) => {
+  const response = await clientsService.getClients({ ...filters, limit: 100 });
   const clients = response.data;
   
   if (format === "csv") {
-    const headers = ["Client Name", "Email", "Phone", "Status", "Date Added", "Contracts Count"];
+    const headers = ["Client Name", "Email", "Phone", "City", "State", "Zip", "Status", "Date Added", "Contracts Count"];
     const csvContent = [
       headers.join(","),
       ...clients.map(c => [
         `${c.firstName} ${c.lastName}`,
         c.email || "N/A",
         c.phone || "N/A",
+        c.city || "N/A",
+        c.state || "N/A",
+        c.zip || c.zipCode || "N/A",
         c.status || "N/A",
         new Date(c.createdAt).toLocaleDateString(),
         c.contractsCount || 0
@@ -198,13 +222,16 @@ export const exportClients = async (format: "pdf" | "csv", search?: string, stat
       `${c.firstName} ${c.lastName}`,
       c.email || "N/A",
       c.phone || "N/A",
+      c.city || "N/A",
+      c.state || "N/A",
+      c.zip || c.zipCode || "N/A",
       c.status || "N/A",
       new Date(c.createdAt).toLocaleDateString(),
       (c.contractsCount || 0).toString()
     ]);
 
     autoTable(doc, {
-      head: [["Client Name", "Email", "Phone", "Status", "Date Added", "Contracts"]],
+      head: [["Client Name", "Email", "Phone", "City", "State", "Zip", "Status", "Date Added", "Contracts"]],
       body: tableData,
       startY: 20,
     });

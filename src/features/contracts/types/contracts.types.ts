@@ -26,7 +26,14 @@ export interface ContractClient {
   lastName: string;
   email: string;
   name: string;
+  dateOfBirth?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
 }
+
+export type TaxTreatment = "Pre-Tax" | "Roth" | "Non-Qualified";
 
 export interface Contract {
   id: string; // React query might map _id to id or just use _id
@@ -45,10 +52,11 @@ export interface Contract {
   deathBenefit?: number | null;
   income?: number | null;
   incomeMode?: string | null;
-  qualified?: boolean | null;
-  rmd?: number | null;
+  taxTreatment?: string | null;
+  rmd?: boolean | null;
   liquidityFeature?: number | null;
   outOfSurrenderDate?: string | null;
+  maturityDate?: string | null;
   penaltyFreeAmount?: number | null;
   marketValueAdjustment?: number | null;
   currentSurrenderValue?: number | null;
@@ -89,6 +97,7 @@ export interface CreateContractDTO {
   client: string;
   provider: string;
   contractType: string;
+  taxTreatment: string;
   status?: string;
   policyNumber?: string | null;
   productName?: string | null;
@@ -99,10 +108,10 @@ export interface CreateContractDTO {
   deathBenefit?: number | null;
   income?: number | null;
   incomeMode?: string | null;
-  qualified?: boolean | null;
-  rmd?: number | null;
+  rmd?: boolean | null;
   liquidityFeature?: number | null;
   outOfSurrenderDate?: string | null;
+  maturityDate?: string | null;
   penaltyFreeAmount?: number | null;
   marketValueAdjustment?: number | null;
   currentSurrenderValue?: number | null;

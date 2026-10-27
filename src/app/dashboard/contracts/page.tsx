@@ -43,19 +43,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format, differenceInDays } from "date-fns";
 import toast from "react-hot-toast";
 
+// The 8 current types in order, plus legacy Immediate & Deferred
 const ALL_CONTRACT_TYPES = [
   "All Types",
-  "FIA",
+  "Fixed Indexed",
+  "Fixed",
   "MYGA",
-  "VA",
+  "Variable",
   "RILA",
   "SPIA",
-  "Fixed",
   "Private Note",
   "Other",
-  "Fixed Indexed",
-  "Variable",
-  "Indexed",
   "Immediate",
   "Deferred",
 ];
@@ -168,7 +166,7 @@ export default function ContractsPage() {
   const [lastName, setLastName] = useState("");
   const [provider, setProvider] = useState("");
   const [productName, setProductName] = useState("");
-  const [qualified, setQualified] = useState<"all" | "yes" | "no">("all");
+  const [taxTreatment, setTaxTreatment] = useState<"all" | "Pre-Tax" | "Roth" | "Non-Qualified">("all");
   const [annuitantNotOwner, setAnnuitantNotOwner] = useState<"all" | "yes" | "no">("all");
   const [incomeMode, setIncomeMode] = useState("all");
   const [ridersOrFeatures, setRidersOrFeatures] = useState("");
@@ -178,14 +176,16 @@ export default function ContractsPage() {
   const [anniversaryTo, setAnniversaryTo] = useState("");
   const [outOfSurrenderFrom, setOutOfSurrenderFrom] = useState("");
   const [outOfSurrenderTo, setOutOfSurrenderTo] = useState("");
+  const [maturityFrom, setMaturityFrom] = useState("");
+  const [maturityTo, setMaturityTo] = useState("");
   const [annuitantDobFrom, setAnnuitantDobFrom] = useState("");
   const [annuitantDobTo, setAnnuitantDobTo] = useState("");
 
-  // Numeric filters
+  // Numeric and Boolean filters
   const [contractValueFilter, setContractValueFilter] = useState<NumericFilter>({ op: ">", value: "" });
   const [deathBenefitFilter, setDeathBenefitFilter] = useState<NumericFilter>({ op: "≥", value: "" });
   const [incomeFilter, setIncomeFilter] = useState<NumericFilter>({ op: "≥", value: "" });
-  const [rmdFilter, setRmdFilter] = useState<NumericFilter>({ op: "≥", value: "" });
+  const [rmd, setRmd] = useState<"all" | "yes" | "no">("all");
   const [liquidityFilter, setLiquidityFilter] = useState<NumericFilter>({ op: "=", value: "" });
   const [penaltyFreeFilter, setPenaltyFreeFilter] = useState<NumericFilter>({ op: "≥", value: "" });
   const [surrenderValueFilter, setSurrenderValueFilter] = useState<NumericFilter>({ op: "≥", value: "" });
@@ -196,20 +196,22 @@ export default function ContractsPage() {
     lastName: "",
     provider: "",
     productName: "",
-    qualified: "all",
-    annuitantNotOwner: "all",
+    taxTreatment: "all" as "all" | "Pre-Tax" | "Roth" | "Non-Qualified",
+    annuitantNotOwner: "all" as "all" | "yes" | "no",
     incomeMode: "all",
     ridersOrFeatures: "",
     anniversaryFrom: "",
     anniversaryTo: "",
     outOfSurrenderFrom: "",
     outOfSurrenderTo: "",
+    maturityFrom: "",
+    maturityTo: "",
     annuitantDobFrom: "",
     annuitantDobTo: "",
     contractValueFilter: { op: ">", value: "" },
     deathBenefitFilter: { op: "≥", value: "" },
     incomeFilter: { op: "≥", value: "" },
-    rmdFilter: { op: "≥", value: "" },
+    rmd: "all" as "all" | "yes" | "no",
     liquidityFilter: { op: "=", value: "" },
     penaltyFreeFilter: { op: "≥", value: "" },
     surrenderValueFilter: { op: "≥", value: "" },
@@ -228,7 +230,7 @@ export default function ContractsPage() {
       lastName,
       provider,
       productName,
-      qualified,
+      taxTreatment,
       annuitantNotOwner,
       incomeMode,
       ridersOrFeatures,
@@ -236,12 +238,14 @@ export default function ContractsPage() {
       anniversaryTo,
       outOfSurrenderFrom,
       outOfSurrenderTo,
+      maturityFrom,
+      maturityTo,
       annuitantDobFrom,
       annuitantDobTo,
       contractValueFilter: { ...contractValueFilter },
       deathBenefitFilter: { ...deathBenefitFilter },
       incomeFilter: { ...incomeFilter },
-      rmdFilter: { ...rmdFilter },
+      rmd,
       liquidityFilter: { ...liquidityFilter },
       penaltyFreeFilter: { ...penaltyFreeFilter },
       surrenderValueFilter: { ...surrenderValueFilter },
@@ -252,7 +256,7 @@ export default function ContractsPage() {
     lastName,
     provider,
     productName,
-    qualified,
+    taxTreatment,
     annuitantNotOwner,
     incomeMode,
     ridersOrFeatures,
@@ -260,12 +264,14 @@ export default function ContractsPage() {
     anniversaryTo,
     outOfSurrenderFrom,
     outOfSurrenderTo,
+    maturityFrom,
+    maturityTo,
     annuitantDobFrom,
     annuitantDobTo,
     contractValueFilter,
     deathBenefitFilter,
     incomeFilter,
-    rmdFilter,
+    rmd,
     liquidityFilter,
     penaltyFreeFilter,
     surrenderValueFilter,
@@ -281,7 +287,7 @@ export default function ContractsPage() {
     setLastName("");
     setProvider("");
     setProductName("");
-    setQualified("all");
+    setTaxTreatment("all");
     setAnnuitantNotOwner("all");
     setIncomeMode("all");
     setRidersOrFeatures("");
@@ -290,13 +296,15 @@ export default function ContractsPage() {
     setAnniversaryTo("");
     setOutOfSurrenderFrom("");
     setOutOfSurrenderTo("");
+    setMaturityFrom("");
+    setMaturityTo("");
     setAnnuitantDobFrom("");
     setAnnuitantDobTo("");
 
     setContractValueFilter({ op: ">", value: "" });
     setDeathBenefitFilter({ op: "≥", value: "" });
     setIncomeFilter({ op: "≥", value: "" });
-    setRmdFilter({ op: "≥", value: "" });
+    setRmd("all");
     setLiquidityFilter({ op: "=", value: "" });
     setPenaltyFreeFilter({ op: "≥", value: "" });
     setSurrenderValueFilter({ op: "≥", value: "" });
@@ -306,7 +314,7 @@ export default function ContractsPage() {
       lastName: "",
       provider: "",
       productName: "",
-      qualified: "all",
+      taxTreatment: "all",
       annuitantNotOwner: "all",
       incomeMode: "all",
       ridersOrFeatures: "",
@@ -314,12 +322,14 @@ export default function ContractsPage() {
       anniversaryTo: "",
       outOfSurrenderFrom: "",
       outOfSurrenderTo: "",
+      maturityFrom: "",
+      maturityTo: "",
       annuitantDobFrom: "",
       annuitantDobTo: "",
       contractValueFilter: { op: ">", value: "" },
       deathBenefitFilter: { op: "≥", value: "" },
       incomeFilter: { op: "≥", value: "" },
-      rmdFilter: { op: "≥", value: "" },
+      rmd: "all",
       liquidityFilter: { op: "=", value: "" },
       penaltyFreeFilter: { op: "≥", value: "" },
       surrenderValueFilter: { op: "≥", value: "" },
@@ -339,7 +349,7 @@ export default function ContractsPage() {
     if (appliedAdvanced.lastName.trim()) params.lastName = appliedAdvanced.lastName.trim();
     if (appliedAdvanced.provider.trim()) params.provider = appliedAdvanced.provider.trim();
     if (appliedAdvanced.productName.trim()) params.productName = appliedAdvanced.productName.trim();
-    if (appliedAdvanced.qualified !== "all") params.qualified = appliedAdvanced.qualified === "yes";
+    if (appliedAdvanced.taxTreatment !== "all") params.taxTreatment = appliedAdvanced.taxTreatment;
     if (appliedAdvanced.annuitantNotOwner !== "all") params.annuitantNotOwner = appliedAdvanced.annuitantNotOwner === "yes";
     if (appliedAdvanced.incomeMode !== "all") params.incomeMode = appliedAdvanced.incomeMode;
     if (appliedAdvanced.ridersOrFeatures.trim()) params.ridersOrFeatures = appliedAdvanced.ridersOrFeatures.trim();
@@ -348,15 +358,21 @@ export default function ContractsPage() {
     if (appliedAdvanced.anniversaryTo) params.anniversaryTo = appliedAdvanced.anniversaryTo;
     if (appliedAdvanced.outOfSurrenderFrom) params.outOfSurrenderFrom = appliedAdvanced.outOfSurrenderFrom;
     if (appliedAdvanced.outOfSurrenderTo) params.outOfSurrenderTo = appliedAdvanced.outOfSurrenderTo;
+    if (appliedAdvanced.maturityFrom) params.maturityFrom = appliedAdvanced.maturityFrom;
+    if (appliedAdvanced.maturityTo) params.maturityTo = appliedAdvanced.maturityTo;
     if (appliedAdvanced.annuitantDobFrom) params.annuitantDobFrom = appliedAdvanced.annuitantDobFrom;
     if (appliedAdvanced.annuitantDobTo) params.annuitantDobTo = appliedAdvanced.annuitantDobTo;
+
+    // RMD boolean filter (rmd=true or rmd=false)
+    if (appliedAdvanced.rmd !== "all") {
+      params.rmd = appliedAdvanced.rmd === "yes";
+    }
 
     // Numeric operators
     const numericList: { key: string; filter: NumericFilter }[] = [
       { key: "contractValue", filter: appliedAdvanced.contractValueFilter },
       { key: "deathBenefit", filter: appliedAdvanced.deathBenefitFilter },
       { key: "income", filter: appliedAdvanced.incomeFilter },
-      { key: "rmd", filter: appliedAdvanced.rmdFilter },
       { key: "liquidityFeature", filter: appliedAdvanced.liquidityFilter },
       { key: "penaltyFreeAmount", filter: appliedAdvanced.penaltyFreeFilter },
       { key: "currentSurrenderValue", filter: appliedAdvanced.surrenderValueFilter },
@@ -385,17 +401,18 @@ export default function ContractsPage() {
     if (appliedAdvanced.lastName.trim()) count++;
     if (appliedAdvanced.provider.trim()) count++;
     if (appliedAdvanced.productName.trim()) count++;
-    if (appliedAdvanced.qualified !== "all") count++;
+    if (appliedAdvanced.taxTreatment !== "all") count++;
     if (appliedAdvanced.annuitantNotOwner !== "all") count++;
     if (appliedAdvanced.incomeMode !== "all") count++;
     if (appliedAdvanced.ridersOrFeatures.trim()) count++;
     if (appliedAdvanced.anniversaryFrom || appliedAdvanced.anniversaryTo) count++;
     if (appliedAdvanced.outOfSurrenderFrom || appliedAdvanced.outOfSurrenderTo) count++;
+    if (appliedAdvanced.maturityFrom || appliedAdvanced.maturityTo) count++;
     if (appliedAdvanced.annuitantDobFrom || appliedAdvanced.annuitantDobTo) count++;
     if (appliedAdvanced.contractValueFilter.value.trim()) count++;
     if (appliedAdvanced.deathBenefitFilter.value.trim()) count++;
     if (appliedAdvanced.incomeFilter.value.trim()) count++;
-    if (appliedAdvanced.rmdFilter.value.trim()) count++;
+    if (appliedAdvanced.rmd !== "all") count++;
     if (appliedAdvanced.liquidityFilter.value.trim()) count++;
     if (appliedAdvanced.penaltyFreeFilter.value.trim()) count++;
     if (appliedAdvanced.surrenderValueFilter.value.trim()) count++;
@@ -448,72 +465,75 @@ export default function ContractsPage() {
   return (
     <div className="w-full flex flex-col gap-5 max-w-[1440px] mx-auto pb-8 font-sans">
       {/* Top Header */}
-      <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-2xl lg:text-3xl font-semibold text-white tracking-tight">
-          Contracts
-        </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            Contracts
+          </h1>
+          <p className="text-xs text-[#919191] mt-0.5">
+            Manage, filter, and track all client annuity contracts and policies.
+          </p>
+        </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
+            type="button"
             onClick={handleExportPDF}
-            className="h-10 px-4 bg-[#141C24] hover:bg-white/10 text-white rounded-[12px] text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-white/5 shadow-sm cursor-pointer"
-          >
-            <FileText className="w-4 h-4 text-[#919191]" />
-            <span>Export PDF</span>
-          </button>
-
-          <button
-            onClick={handleExportCSV}
-            className="h-10 px-4 bg-[#141C24] hover:bg-white/10 text-white rounded-[12px] text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border border-white/5 shadow-sm cursor-pointer"
+            className="h-10 px-3.5 bg-[#141C24] hover:bg-white/10 text-white border border-white/10 rounded-[10px] text-xs font-medium transition-all flex items-center gap-2 cursor-pointer shadow-sm"
           >
             <Download className="w-4 h-4 text-[#919191]" />
-            <span>Export CSV</span>
+            <span>PDF</span>
           </button>
 
           <button
-            onClick={() => setIsNewContractOpen(true)}
-            className="h-10 px-5 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white font-medium hover:opacity-90 rounded-[12px] text-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+            type="button"
+            onClick={handleExportCSV}
+            className="h-10 px-3.5 bg-[#141C24] hover:bg-white/10 text-white border border-white/10 rounded-[10px] text-xs font-medium transition-all flex items-center gap-2 cursor-pointer shadow-sm"
           >
-            <Plus className="w-4 h-4 text-white" />
+            <Download className="w-4 h-4 text-[#919191]" />
+            <span>CSV</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsNewContractOpen(true)}
+            className="h-10 px-4 bg-gradient-to-r from-[#66859E] to-[#849EB2] text-white hover:opacity-90 rounded-[10px] text-xs font-medium transition-all shadow-md flex items-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
             <span>New Contract</span>
           </button>
         </div>
       </div>
 
-      {/* Top Controls Bar: Search, Type, Status, Filters Button */}
-      <div className="w-full bg-[#18232F] border border-white/5 rounded-[12px] p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
-        {/* Search Input Box */}
-        <div className="relative w-full sm:flex-1 sm:max-w-[420px]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8C8C8C]" />
-          <input
-            type="text"
-            placeholder="Search contracts..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full h-10 pl-10 pr-9 bg-[#0F1722] border border-white/10 text-white placeholder:text-[#8C8C8C] rounded-[10px] text-xs sm:text-sm focus:outline-none focus:border-white/20 font-sans"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery("");
+      {/* Filter and Search Bar */}
+      <div className="w-full bg-[#141C24] border border-white/5 rounded-[12px] p-3 sm:p-4 shadow-sm flex flex-col gap-3 font-sans">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Main Search Input */}
+          <div className="relative w-full">
+            <Search className="w-4 h-4 text-[#919191] absolute left-3 top-1/2 -translate-y-1/2" />
+            <Input
+              type="text"
+              placeholder="Search contracts, client, policy..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C8C8C] hover:text-white transition-colors cursor-pointer p-0.5"
-              title="Clear search"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+              className="h-10 bg-[#0F1722] border border-white/10 text-white placeholder-[#8C8C8C] text-xs rounded-[10px] pl-9 pr-8 focus-visible:ring-1 focus-visible:ring-[#6887A0]"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8C8C8C] hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
 
-        {/* Quick Dropdown Filters + Filters Button */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto">
-          {/* Type Select Filter */}
-          <div className="w-full sm:w-[160px]">
+          {/* Quick Contract Type */}
+          <div>
             <Select
               value={selectedType}
               onValueChange={(val: string | null) => {
@@ -540,8 +560,8 @@ export default function ContractsPage() {
             </Select>
           </div>
 
-          {/* Status Select Filter */}
-          <div className="w-full sm:w-[160px]">
+          {/* Quick Status Filter */}
+          <div>
             <Select
               value={selectedStatus}
               onValueChange={(val: string | null) => {
@@ -760,12 +780,13 @@ export default function ContractsPage() {
             {openSections.details && (
               <div className="p-4 pt-1 border-t border-white/5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  {/* Tax Treatment replaces Qualified */}
                   <div className="flex flex-col gap-1.5">
-                    <Label className="text-[11px] font-medium text-[#919191]">Qualified</Label>
+                    <Label className="text-[11px] font-medium text-[#919191]">Tax Treatment</Label>
                     <Select
-                      value={qualified}
+                      value={taxTreatment}
                       onValueChange={(val: any) => {
-                        if (val) setQualified(val);
+                        if (val) setTaxTreatment(val);
                       }}
                     >
                       <SelectTrigger className="h-10 bg-[#141C24] border border-white/10 text-white rounded-[10px] text-xs focus:ring-0">
@@ -773,8 +794,9 @@ export default function ContractsPage() {
                       </SelectTrigger>
                       <SelectContent className="bg-[#141C24] border-white/10 text-white">
                         <SelectItem value="all" className="text-xs">All</SelectItem>
-                        <SelectItem value="yes" className="text-xs">Yes</SelectItem>
-                        <SelectItem value="no" className="text-xs">No</SelectItem>
+                        <SelectItem value="Pre-Tax" className="text-xs">Pre-Tax</SelectItem>
+                        <SelectItem value="Roth" className="text-xs">Roth</SelectItem>
+                        <SelectItem value="Non-Qualified" className="text-xs">Non-Qualified</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -861,7 +883,7 @@ export default function ContractsPage() {
 
             {openSections.dates && (
               <div className="p-4 pt-1 border-t border-white/5">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Anniversary Date Range */}
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-[11px] font-medium text-[#919191]">Anniversary Date Range</Label>
@@ -897,6 +919,27 @@ export default function ContractsPage() {
                       <DatePickerInput
                         value={outOfSurrenderTo}
                         onChangeString={(val) => setOutOfSurrenderTo(val)}
+                        placeholder="To: MM/DD/YYYY"
+                        className="rounded-[10px]"
+                        showErrorText={false}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Maturity Date Range (New) */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[11px] font-medium text-[#919191]">Maturity Date Range</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <DatePickerInput
+                        value={maturityFrom}
+                        onChangeString={(val) => setMaturityFrom(val)}
+                        placeholder="From: MM/DD/YYYY"
+                        className="rounded-[10px]"
+                        showErrorText={false}
+                      />
+                      <DatePickerInput
+                        value={maturityTo}
+                        onChangeString={(val) => setMaturityTo(val)}
                         placeholder="To: MM/DD/YYYY"
                         className="rounded-[10px]"
                         showErrorText={false}
@@ -1052,36 +1095,24 @@ export default function ContractsPage() {
                     </div>
                   </div>
 
-                  {/* RMD */}
+                  {/* RMD - Yes / No Filter (Replaced numeric operator) */}
                   <div className="flex flex-col gap-1.5">
-                    <Label className="text-[11px] font-medium text-[#919191]">RMD</Label>
-                    <div className="flex items-center h-10 w-full rounded-[10px] bg-[#141C24] border border-white/10 focus-within:border-[#3B82F6]/60 transition-colors overflow-hidden">
-                      <Select
-                        value={rmdFilter.op}
-                        onValueChange={(val: string | null) => {
-                          if (val) setRmdFilter((prev) => ({ ...prev, op: val }));
-                        }}
-                      >
-                        <SelectTrigger className="w-[58px] h-full bg-[#182430] border-0 border-r border-white/10 rounded-none text-white text-xs font-mono px-2.5 focus:ring-0 shadow-none justify-between">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#141C24] border-white/10 text-white font-mono min-w-[70px]">
-                          {OPERATORS.map((o) => (
-                            <SelectItem key={o.value} value={o.value} className="text-xs font-mono">{o.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <input
-                        type="number"
-                        placeholder="e.g. 5000"
-                        value={rmdFilter.value}
-                        onChange={(e) => setRmdFilter((prev) => ({ ...prev, value: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleApplyFilters();
-                        }}
-                        className="flex-1 h-full bg-transparent border-0 text-white placeholder-[#8C8C8C] text-xs px-3 focus:outline-none"
-                      />
-                    </div>
+                    <Label className="text-[11px] font-medium text-[#919191]">RMD (Yes / No)</Label>
+                    <Select
+                      value={rmd}
+                      onValueChange={(val: any) => {
+                        if (val) setRmd(val);
+                      }}
+                    >
+                      <SelectTrigger className="h-10 bg-[#141C24] border border-white/10 text-white rounded-[10px] text-xs focus:ring-0">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#141C24] border-white/10 text-white">
+                        <SelectItem value="all" className="text-xs">All</SelectItem>
+                        <SelectItem value="yes" className="text-xs">Yes</SelectItem>
+                        <SelectItem value="no" className="text-xs">No</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Liquidity % */}
@@ -1137,7 +1168,7 @@ export default function ContractsPage() {
                       </Select>
                       <input
                         type="number"
-                        placeholder="e.g. 10001"
+                        placeholder="e.g. 10000"
                         value={penaltyFreeFilter.value}
                         onChange={(e) => setPenaltyFreeFilter((prev) => ({ ...prev, value: e.target.value }))}
                         onKeyDown={(e) => {
@@ -1148,9 +1179,9 @@ export default function ContractsPage() {
                     </div>
                   </div>
 
-                  {/* Current Surrender Value */}
+                  {/* Surrender Value */}
                   <div className="flex flex-col gap-1.5">
-                    <Label className="text-[11px] font-medium text-[#919191]">Current Surrender Value</Label>
+                    <Label className="text-[11px] font-medium text-[#919191]">Surrender Value</Label>
                     <div className="flex items-center h-10 w-full rounded-[10px] bg-[#141C24] border border-white/10 focus-within:border-[#3B82F6]/60 transition-colors overflow-hidden">
                       <Select
                         value={surrenderValueFilter.op}
@@ -1169,7 +1200,7 @@ export default function ContractsPage() {
                       </Select>
                       <input
                         type="number"
-                        placeholder="e.g. 95000"
+                        placeholder="e.g. 90000"
                         value={surrenderValueFilter.value}
                         onChange={(e) => setSurrenderValueFilter((prev) => ({ ...prev, value: e.target.value }))}
                         onKeyDown={(e) => {

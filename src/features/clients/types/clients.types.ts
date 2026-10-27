@@ -9,6 +9,7 @@ export interface Client {
   address?: string;
   city?: string;
   state?: string;
+  zip?: string;
   zipCode?: string;
   status: "Active" | "Inactive" | "Prospect" | "Archived" | string;
   totalAUM: number;
@@ -50,6 +51,7 @@ export type CreateClientDTO = {
   address?: string;
   city?: string;
   state?: string;
+  zip?: string;
   zipCode?: string;
   status?: string;
   notes?: string;

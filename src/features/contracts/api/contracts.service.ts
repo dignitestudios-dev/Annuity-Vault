@@ -19,11 +19,14 @@ export interface GetContractsParams {
   isArchived?: boolean;
   lastName?: string;
   productName?: string;
+  taxTreatment?: string;
+  rmd?: boolean | string;
   anniversaryFrom?: string;
   anniversaryTo?: string;
-  qualified?: boolean | string;
   outOfSurrenderFrom?: string;
   outOfSurrenderTo?: string;
+  maturityFrom?: string;
+  maturityTo?: string;
   incomeMode?: string;
   annuitantNotOwner?: boolean | string;
   annuitantDobFrom?: string;

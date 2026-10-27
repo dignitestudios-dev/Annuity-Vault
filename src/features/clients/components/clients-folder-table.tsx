@@ -27,6 +27,9 @@ import { useClients } from "@/features/clients/api/clients.service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebounce } from "@/hooks/use-debounce";
 
+import { US_STATES } from "@/lib/us-states";
+import { RotateCcw } from "lucide-react";
+
 export type ClientStatus = "Active" | "Archived" | "Inactive" | "Prospect" | string;
 
 const STATUS_STYLES: Record<string, string> = {
@@ -43,20 +46,26 @@ function getInitials(name: string) {
   return name[0].toUpperCase();
 }
 
-
-
 export default function ClientsFolderTable() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("All statuses");
+  const [cityFilter, setCityFilter] = useState("");
+  const [stateFilter, setStateFilter] = useState("All states");
+  const [zipFilter, setZipFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  const debouncedSearch = useDebounce(searchQuery, 500);
+  const debouncedSearch = useDebounce(searchQuery, 400);
+  const debouncedCity = useDebounce(cityFilter, 400);
+  const debouncedZip = useDebounce(zipFilter, 400);
 
   const { data, isLoading } = useClients({
-    search: debouncedSearch || undefined,
+    search: debouncedSearch?.trim() || undefined,
     status: selectedStatus !== "All statuses" ? selectedStatus : undefined,
+    city: debouncedCity?.trim() || undefined,
+    state: stateFilter !== "All states" ? stateFilter : undefined,
+    zip: debouncedZip?.trim() || undefined,
     page: currentPage,
     limit: itemsPerPage,
   });
@@ -65,62 +74,149 @@ export default function ClientsFolderTable() {
   const totalPages = data?.total ? Math.ceil(data.total / itemsPerPage) : 1;
   const totalItems = data?.total || 0;
 
+  const hasActiveFilters = Boolean(
+    searchQuery ||
+    (selectedStatus && selectedStatus !== "All statuses") ||
+    cityFilter ||
+    (stateFilter && stateFilter !== "All states") ||
+    zipFilter
+  );
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setSelectedStatus("All statuses");
+    setCityFilter("");
+    setStateFilter("All states");
+    setZipFilter("");
+    setCurrentPage(1);
+  };
+
   return (
     <div className="w-full flex flex-col gap-4">
       {/* Top Search & Filter Bar Container matching Figma (#394A58) */}
-      <div className="w-full bg-[#394A58] border border-white/5 rounded-[12px] p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Search Input Box */}
-        <div className="relative w-full sm:w-[320px]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8C8C8C]" />
-          <Input
-            type="text"
-            placeholder="Search clients..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full h-10 pl-10 pr-9 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-sm focus-visible:ring-0 focus-visible:border-white/20 font-sans"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery("");
+      <div className="w-full bg-[#394A58] border border-white/5 rounded-[12px] p-4 flex flex-col gap-3">
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-center">
+          {/* Search Input Box */}
+          <div className="relative w-full lg:col-span-2">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8C8C8C]" />
+            <Input
+              type="text"
+              placeholder="Search clients (name, email, city...)"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C8C8C] hover:text-white transition-colors cursor-pointer p-0.5"
-              title="Clear search"
+              className="w-full h-10 pl-10 pr-9 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-xs sm:text-sm focus-visible:ring-0 focus-visible:border-white/20 font-sans"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setCurrentPage(1);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C8C8C] hover:text-white transition-colors cursor-pointer p-0.5"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* City Filter */}
+          <div className="w-full">
+            <Input
+              type="text"
+              placeholder="Filter by City"
+              value={cityFilter}
+              onChange={(e) => {
+                setCityFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full h-10 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-xs focus-visible:ring-0 focus-visible:border-white/20 font-sans"
+            />
+          </div>
+
+          {/* State Dropdown Filter */}
+          <div className="w-full">
+            <Select
+              value={stateFilter}
+              onValueChange={(val: string | null) => {
+                if (val) setStateFilter(val);
+                setCurrentPage(1);
+              }}
             >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+              <SelectTrigger className="w-full h-10 bg-[#141C24] border border-white/5 text-white rounded-[12px] text-xs focus:ring-0 font-sans">
+                <SelectValue placeholder="All states" />
+              </SelectTrigger>
+              <SelectContent
+                side="bottom"
+                alignItemWithTrigger={false}
+                className="bg-[#141C24] border-white/10 text-white font-sans max-h-60"
+              >
+                <SelectItem value="All states" className="text-xs">All states</SelectItem>
+                {US_STATES.map((s) => (
+                  <SelectItem key={s.code} value={s.code} className="text-xs">
+                    {s.code} - {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Zip Filter */}
+          <div className="w-full">
+            <Input
+              type="text"
+              placeholder="Filter by Zip"
+              value={zipFilter}
+              onChange={(e) => {
+                setZipFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full h-10 bg-[#141C24] border border-white/5 text-white placeholder:text-[#8C8C8C] rounded-[12px] text-xs focus-visible:ring-0 focus-visible:border-white/20 font-sans"
+            />
+          </div>
+
+          {/* Status Dropdown Filter */}
+          <div className="w-full">
+            <Select
+              value={selectedStatus}
+              onValueChange={(val: string | null) => {
+                if (val) setSelectedStatus(val);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full h-10 bg-[#141C24] border border-white/5 text-white rounded-[12px] text-xs focus:ring-0 font-sans">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent
+                side="bottom"
+                alignItemWithTrigger={false}
+                className="bg-[#141C24] border-white/10 text-white font-sans"
+              >
+                <SelectItem value="All statuses" className="text-xs">All statuses</SelectItem>
+                <SelectItem value="Active" className="text-xs">Active</SelectItem>
+                <SelectItem value="Inactive" className="text-xs">Inactive</SelectItem>
+                <SelectItem value="Prospect" className="text-xs">Prospect</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Status Dropdown Filter */}
-        <div className="w-full sm:w-[220px]">
-          <Select
-            value={selectedStatus}
-            onValueChange={(val: string | null) => {
-              if (val) setSelectedStatus(val);
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger className="w-full h-10 bg-[#141C24] border border-white/5 text-white rounded-[12px] text-sm focus:ring-0 font-sans">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent
-              side="bottom"
-              alignItemWithTrigger={false}
-              className="bg-[#141C24] border-white/10 text-white font-sans"
+        {hasActiveFilters && (
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="text-xs text-white/80 hover:text-white flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-[#141C24] border border-white/10 cursor-pointer transition-colors"
             >
-              <SelectItem value="All statuses">All statuses</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Inactive">Inactive</SelectItem>
-              <SelectItem value="Prospect">Prospect</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+              <RotateCcw className="w-3 h-3 text-[#919191]" />
+              <span>Reset location & status filters</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Table Card Container (#141C24) */}
@@ -137,6 +233,9 @@ export default function ClientsFolderTable() {
                 </TableHead>
                 <TableHead className="text-white font-medium text-sm h-10 px-6 font-sans">
                   Contact No.
+                </TableHead>
+                <TableHead className="text-white font-medium text-sm h-10 px-6 font-sans">
+                  Location
                 </TableHead>
                 <TableHead className="text-white font-medium text-sm h-10 px-6 font-sans text-center">
                   Contracts
@@ -155,7 +254,7 @@ export default function ClientsFolderTable() {
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i} className="border-b border-white/10 h-16">
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={8}>
                       <Skeleton className="h-6 w-full bg-white/5" />
                     </TableCell>
                   </TableRow>
@@ -163,6 +262,7 @@ export default function ClientsFolderTable() {
               ) : clients.length > 0 ? (
                 clients.map((client) => {
                   const fullName = `${client.firstName} ${client.lastName}`;
+                  const locationStr = [client.city, client.state, client.zip || client.zipCode].filter(Boolean).join(", ");
                   return (
                     <TableRow
                       key={client._id || client.id}
@@ -196,6 +296,11 @@ export default function ClientsFolderTable() {
                         {client.phone}
                       </TableCell>
 
+                      {/* Location Column (City, State, Zip) */}
+                      <TableCell className="px-6 py-3 text-sm text-[#8C8C8C] font-sans">
+                        {locationStr || "--"}
+                      </TableCell>
+
                       {/* Contracts Count Column */}
                       <TableCell className="px-6 py-3 text-sm text-white font-sans text-center">
                         {client.contractsCount || 0}
@@ -227,7 +332,7 @@ export default function ClientsFolderTable() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-12">
+                  <TableCell colSpan={8} className="py-12">
                     <EmptyState 
                       icon={Users}
                       title="No clients found matching your search"

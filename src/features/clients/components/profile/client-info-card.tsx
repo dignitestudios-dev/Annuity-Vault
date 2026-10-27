@@ -9,6 +9,9 @@ interface ClientInfoCardProps {
   email: string;
   phone: string;
   address: string;
+  city?: string;
+  state?: string;
+  zip?: string;
   dob: string;
 }
 
@@ -19,8 +22,20 @@ export default function ClientInfoCard({
   email,
   phone,
   address,
+  city,
+  state,
+  zip,
   dob,
 }: ClientInfoCardProps) {
+  const fullAddress = [
+    address && address !== "--" ? address : "",
+    city,
+    state,
+    zip,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <div className="w-full bg-[#141C24] border border-[#0F1F3D]/12 rounded-[12px] p-6 flex flex-col gap-4 shadow-sm relative overflow-hidden">
       {/* Header Row: Name & Created Date */}
@@ -58,7 +73,7 @@ export default function ClientInfoCard({
         </div>
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-white flex-shrink-0" />
-          <span className="break-all">{address}</span>
+          <span className="break-all">{fullAddress || address || "--"}</span>
         </div>
         <div className="flex items-center gap-2">
           <CalendarIcon className="w-4 h-4 text-white flex-shrink-0" />

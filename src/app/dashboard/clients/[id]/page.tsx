@@ -335,6 +335,9 @@ function ClientDetailsContent() {
         email={client.email || "--"}
         phone={client.phone || "--"}
         address={client.address || "--"}
+        city={client.city}
+        state={client.state}
+        zip={client.zip || client.zipCode}
         dob={
           client.dateOfBirth
             ? `DOB ${new Date(client.dateOfBirth).toLocaleDateString("en-US", { year: "numeric", month: "2-digit", day: "2-digit" })}`

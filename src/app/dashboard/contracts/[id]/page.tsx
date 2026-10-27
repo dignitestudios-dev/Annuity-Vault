@@ -369,6 +369,16 @@ export default function ContractDetailsPage() {
               </span>
             </div>
 
+            {/* Client Location */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Client Location
+              </span>
+              <span className="text-white font-normal">
+                {[contract.client?.city, contract.client?.state, contract.client?.zip].filter(Boolean).join(", ") || (contract.client?.address || "N/A")}
+              </span>
+            </div>
+
             {/* Provider */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
@@ -481,13 +491,13 @@ export default function ContractDetailsPage() {
               </span>
             </div>
 
-            {/* Qualified */}
+            {/* Tax Treatment */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
-                Qualified
+                Tax treatment
               </span>
               <span className="text-white font-normal">
-                {contract.qualified ? "Yes" : "No"}
+                {contract.taxTreatment || "N/A"}
               </span>
             </div>
 
@@ -497,7 +507,7 @@ export default function ContractDetailsPage() {
                 RMD
               </span>
               <span className="text-white font-normal">
-                {formatMoneyOrNA(contract.rmd)}
+                {contract.rmd === true ? "Yes" : contract.rmd === false ? "No" : "N/A"}
               </span>
             </div>
 
@@ -534,10 +544,20 @@ export default function ContractDetailsPage() {
             {/* Out of Surrender Date */}
             <div className="flex flex-col gap-1">
               <span className="text-xs uppercase tracking-wider text-[#919191]">
-                Out of surrender / Maturity
+                Out of surrender date
               </span>
               <span className="text-white font-normal">
                 {contract.outOfSurrenderDate ? format(new Date(contract.outOfSurrenderDate), "yyyy-MM-dd") : "N/A"}
+              </span>
+            </div>
+
+            {/* Maturity Date */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs uppercase tracking-wider text-[#919191]">
+                Maturity date
+              </span>
+              <span className="text-white font-normal">
+                {contract.maturityDate ? format(new Date(contract.maturityDate), "yyyy-MM-dd") : "N/A"}
               </span>
             </div>
 
@@ -546,8 +566,10 @@ export default function ContractDetailsPage() {
               <span className="text-xs uppercase tracking-wider text-[#919191]">
                 Annuitant not owner
               </span>
-              <span className="text-white font-normal">
-                {contract.annuitantNotOwner ? "Yes" : "No"}
+              <span className={cn(
+                contract.annuitantNotOwner ? "text-[#FF3E46] font-semibold" : "text-white font-normal"
+              )}>
+                {contract.annuitantNotOwner === true ? "Yes" : contract.annuitantNotOwner === false ? "No" : "N/A"}
               </span>
             </div>
 

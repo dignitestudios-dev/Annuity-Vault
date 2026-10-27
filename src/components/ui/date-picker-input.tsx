@@ -371,7 +371,7 @@ export function DatePickerInput({
       }
     }
 
-    // 1. Cleared
+         // 1. Cleared
     if (!formatted.trim()) {
       setLocalError(null);
       onChange?.(null);

@@ -35,6 +35,8 @@ import { z } from "zod";
 import toast from "react-hot-toast";
 import { useEffect } from "react";
 import { formatUSPhoneNumber } from "@/lib/utils";
+import { US_STATES, US_STATE_CODES } from "@/lib/us-states";
+import { handleFormServerErrors } from "@/lib/server-errors";
 
 const US_PHONE_REGEX = /^(?:\+?1[-.\s]?)?\(?([2-9][0-9]{2})\)?[-.\s]?([2-9][0-9]{2})[-.\s]?([0-9]{4})$/;
 
@@ -78,6 +80,34 @@ const editClientSchema = z.object({
     .min(1, "Address is required")
     .max(200, "Address cannot exceed 200 characters")
     .regex(/^[\x20-\x7E]+$/, "Address must contain only English characters and standard symbols"),
+  city: z
+    .string()
+    .trim()
+    .max(100, "City cannot exceed 100 characters")
+    .optional()
+    .or(z.literal("")),
+  state: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (val) => !val || US_STATE_CODES.includes(val.toUpperCase() as any),
+      {
+        message: "Must be a valid 2-letter US state code",
+      }
+    ),
+  zip: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (val) => !val || /^\d{5}(-\d{4})?$/.test(val),
+      {
+        message: "Must be a 5-digit ZIP or ZIP+4 (e.g. 78759 or 78759-1234)",
+      }
+    ),
   status: z.enum(["Active", "Inactive", "Prospect"], {
     message: "Please select a valid status",
   }),
@@ -165,6 +195,9 @@ export default function EditClientDialog({
       email: client.email,
       phone: client.phone || "",
       address: client.address || "",
+      city: client.city || "",
+      state: client.state || "",
+      zip: client.zip || client.zipCode || "",
       status: (client.status as any) || "Active",
       dateOfBirth: parseDateSafe(client.dateOfBirth) || undefined,
       notes: defaultNotes,
@@ -179,6 +212,9 @@ export default function EditClientDialog({
         email: client.email,
         phone: client.phone || "",
         address: client.address || "",
+        city: client.city || "",
+        state: client.state || "",
+        zip: client.zip || client.zipCode || "",
         status: (client.status as any) || "Active",
         dateOfBirth: parseDateSafe(client.dateOfBirth) || undefined,
         notes: getInitialNotesValue(client),
@@ -219,18 +255,24 @@ export default function EditClientDialog({
           firstName: data.firstName,
           lastName: data.lastName,
           email: data.email,
-          phone: data.phone,
+          phone: data.phone || undefined,
           address: data.address,
+          city: data.city?.trim() ? data.city.trim() : null,
+          state: data.state?.trim() ? data.state.trim().toUpperCase() : null,
+          zip: data.zip?.trim() ? data.zip.trim() : null,
           status: data.status,
           dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
           notes: data.notes,
-        }
+        } as any
       },
       {
         onSuccess: () => {
           toast.success("Client updated successfully!");
           onClose();
           if (onUpdateSuccess) onUpdateSuccess();
+        },
+        onError: (err: any) => {
+          handleFormServerErrors(err, setError, "Failed to update client");
         },
       }
     );
@@ -312,6 +354,60 @@ export default function EditClientDialog({
               className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.address ? "ring-1 ring-[#FF3E46]" : ""}`}
             />
             {errors.address && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.address.message}</p>}
+          </div>
+
+          {/* Row 3.5: City, State, Zip */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-white">City</Label>
+              <Input
+                type="text"
+                {...register("city")}
+                placeholder="e.g. Austin"
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.city ? "ring-1 ring-[#FF3E46]" : ""}`}
+              />
+              {errors.city && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.city.message}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-white">State</Label>
+              <Controller
+                name="state"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value || "none"}
+                    onValueChange={(val) => field.onChange(val === "none" ? "" : val)}
+                  >
+                    <SelectTrigger className={`h-10 px-3.5 bg-[#141C24] border-0 text-white rounded-[12px] text-xs font-normal w-full justify-between shadow-none focus:ring-1 focus:ring-[#6887A0] ${errors.state ? "ring-1 ring-[#FF3E46]" : ""}`}>
+                      <SelectValue placeholder="Select State" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#141C24] border border-white/10 text-white rounded-[12px] max-h-60">
+                      <SelectItem value="none" className="text-[#919191] hover:bg-white/10 cursor-pointer text-xs">
+                        None
+                      </SelectItem>
+                      {US_STATES.map((s) => (
+                        <SelectItem key={s.code} value={s.code} className="text-white hover:bg-white/10 cursor-pointer text-xs">
+                          {s.code} - {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.state && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.state.message}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-medium text-white">Zip</Label>
+              <Input
+                type="text"
+                {...register("zip")}
+                placeholder="e.g. 78759"
+                className={`h-10 bg-[#141C24] border-0 text-white placeholder-[#919191] text-xs rounded-[12px] focus-visible:ring-1 focus-visible:ring-[#6887A0] ${errors.zip ? "ring-1 ring-[#FF3E46]" : ""}`}
+              />
+              {errors.zip && <p className="text-[11px] font-medium text-[#FF3E46] mt-0.5">{errors.zip.message}</p>}
+            </div>
           </div>
 
           {/* Row 4: Date & Status */}
