@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axios";
+import { formatDateDisplay } from "@/lib/utils";
 
 export interface AnniversaryClient {
   _id: string;
@@ -76,7 +77,7 @@ export const exportAnniversaries = async (format: "pdf" | "csv", search?: string
         a.client ? `${a.client.firstName} ${a.client.lastName}` : "N/A",
         a.contractNumber || "N/A",
         a.provider || "N/A",
-        a.anniversaryDate ? new Date(a.anniversaryDate).toLocaleDateString() : "N/A",
+        a.anniversaryDate ? formatDateDisplay(a.anniversaryDate) : "N/A",
         a.daysUntil === 0 ? "Today" : a.daysUntil
       ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(","))
     ].join("\n");
@@ -102,7 +103,7 @@ export const exportAnniversaries = async (format: "pdf" | "csv", search?: string
       a.client ? `${a.client.firstName} ${a.client.lastName}` : "N/A",
       a.contractNumber || "N/A",
       a.provider || "N/A",
-      a.anniversaryDate ? new Date(a.anniversaryDate).toLocaleDateString() : "N/A",
+      a.anniversaryDate ? formatDateDisplay(a.anniversaryDate) : "N/A",
       a.daysUntil === 0 ? "Today" : a.daysUntil.toString()
     ]);
 

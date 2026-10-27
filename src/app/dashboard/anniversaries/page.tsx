@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 
 import { useAnniversaries, exportAnniversaries } from "@/features/anniversaries/api/anniversaries.service";
 import { useRouter } from "next/navigation";
@@ -292,7 +292,7 @@ export default function AnniversariesPage() {
 
                     {/* Anniversary Date */}
                     <TableCell className="px-6 py-3.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
-                      {new Date(row.anniversaryDate).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                      {formatDateDisplay(row.anniversaryDate)}
                     </TableCell>
 
                     {/* Days Countdown */}

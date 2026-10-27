@@ -22,7 +22,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import TablePagination from "@/components/shared/table-pagination";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 import { useClients } from "@/features/clients/api/clients.service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -280,7 +280,7 @@ export default function ClientsFolderTable() {
                               {fullName}
                             </span>
                             <span className="text-xs font-normal text-[#8C8C8C] font-sans">
-                              {client.dateOfBirth ? `DOB ${new Date(client.dateOfBirth).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}` : "--"}
+                              {client.dateOfBirth ? `DOB ${formatDateDisplay(client.dateOfBirth)}` : "--"}
                             </span>
                           </div>
                         </div>
@@ -320,7 +320,7 @@ export default function ClientsFolderTable() {
 
                       {/* Created Date Column */}
                       <TableCell className="px-6 py-3 text-sm text-white font-sans">
-                        {new Date(client.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                        {formatDateDisplay(client.createdAt)}
                       </TableCell>
 
                       {/* Right Chevron Arrow Icon */}

@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "../types/tasks.types";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 import { format } from "date-fns";
 
 interface TaskDetailsDialogProps {
@@ -95,7 +95,7 @@ export default function TaskDetailsDialog({
               <div>
                 <p className="text-[11px] text-[#919191]">Due Date</p>
                 <p className="text-xs sm:text-sm font-medium text-white">
-                  {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
+                  {formatDateDisplay(task.dueDate)}
                 </p>
               </div>
             </div>

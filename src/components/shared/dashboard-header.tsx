@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { useNotifications } from "@/features/notifications/api/notifications.service";
 import { useAppSelector } from "@/store";
-import { getGreeting } from "@/lib/utils";
+import { getGreeting, formatDateDisplay } from "@/lib/utils";
 
 export default function DashboardHeader() {
   const [isOpen, setIsOpen] = useState(false);
@@ -103,7 +103,7 @@ export default function DashboardHeader() {
                       {item.title}
                     </h4>
                     <span className="text-[#919191] text-xs font-normal flex-shrink-0">
-                      {new Date(item.createdAt).toLocaleDateString("en-US", { month: 'short', day: 'numeric' })}
+                      {formatDateDisplay(item.createdAt)}
                     </span>
                   </div>
 

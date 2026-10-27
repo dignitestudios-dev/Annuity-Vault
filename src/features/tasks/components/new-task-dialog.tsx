@@ -317,7 +317,7 @@ export default function NewTaskDialog({
                     onBlur={field.onBlur}
                     onValidationError={(err) => handleDateValidationError("due", err)}
                     error={fieldState.error?.message}
-                    placeholder="MM/DD/YYYY"
+                    placeholder="MM-DD-YYYY"
                     required
                   />
                 )}

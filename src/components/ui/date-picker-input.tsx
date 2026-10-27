@@ -53,7 +53,7 @@ export function parseDateSafe(val: any): Date | null {
         parseInt(isoMatch[3], 10)
       );
     }
-    const usMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    const usMatch = trimmed.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
     if (usMatch) {
       return createSafeLocalDate(
         parseInt(usMatch[3], 10),
@@ -72,7 +72,40 @@ export function formatDateToMMDDYYYY(date: Date | null | undefined): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   const year = date.getFullYear();
-  return `${month}/${day}/${year}`;
+  return `${month}-${day}-${year}`;
+}
+
+export function formatDateDisplay(val: any, fallback = "N/A"): string {
+  if (!val) return fallback;
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return fallback;
+    const month = String(val.getMonth() + 1).padStart(2, "0");
+    const day = String(val.getDate()).padStart(2, "0");
+    const year = val.getFullYear();
+    return `${month}-${day}-${year}`;
+  }
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (!trimmed) return fallback;
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      return `${isoMatch[2]}-${isoMatch[3]}-${isoMatch[1]}`;
+    }
+    const usMatch = trimmed.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+    if (usMatch) {
+      const month = usMatch[1].padStart(2, "0");
+      const day = usMatch[2].padStart(2, "0");
+      return `${month}-${day}-${usMatch[3]}`;
+    }
+    const d = new Date(trimmed);
+    if (!isNaN(d.getTime())) {
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${month}-${day}-${year}`;
+    }
+  }
+  return fallback;
 }
 
 export function formatDateToYYYYMMDD(date: Date | null | undefined): string {
@@ -84,8 +117,8 @@ export function formatDateToYYYYMMDD(date: Date | null | undefined): string {
 }
 
 /**
- * Formats user input as MM/DD/YYYY while typing or pasting, allowing natural
- * deletion, editing in the middle, and manual slashes without getting stuck.
+ * Formats user input as MM-DD-YYYY while typing or pasting, allowing natural
+ * deletion, editing in the middle, and manual hyphens/slashes without getting stuck.
  */
 export function formatRawDateInput(value: string, previousValue: string): string {
   if (!value) return "";
@@ -94,53 +127,54 @@ export function formatRawDateInput(value: string, previousValue: string): string
   if (value.includes("-")) {
     const parts = value.split("-");
     if (parts.length === 3 && parts[0].length === 4) {
-      return `${parts[1].padStart(2, "0")}/${parts[2].slice(0, 2).padStart(2, "0")}/${parts[0]}`;
+      return `${parts[1].padStart(2, "0")}-${parts[2].slice(0, 2).padStart(2, "0")}-${parts[0]}`;
     }
   }
 
-  // 2. If deleting, do NOT auto-inject slashes so backspace works freely
+  // 2. If deleting, do NOT auto-inject separators so backspace works freely
   if (value.length < previousValue.length) {
     return value;
   }
 
-  // 3. Remove non-digits and non-slashes, collapse multiple slashes
-  const cleaned = value.replace(/\/+/g, "/").replace(/[^\d/]/g, "");
+  // 3. Convert any slashes to hyphens, collapse multiple hyphens
+  const withHyphens = value.replace(/\//g, "-");
+  const cleaned = withHyphens.replace(/-+/g, "-").replace(/[^\d-]/g, "");
 
-  // 4. If user typed a manual trailing slash, respect it
-  if (cleaned.endsWith("/")) {
-    const segments = cleaned.split("/");
+  // 4. If user typed a manual trailing hyphen, respect it
+  if (cleaned.endsWith("-")) {
+    const segments = cleaned.split("-");
     if (segments.length <= 3) {
       return cleaned.slice(0, 10);
     }
   }
 
-  // 5. If user typed without any slashes, auto-format with slashes
+  // 5. If user typed without any hyphens, auto-format with hyphens
   const digits = cleaned.replace(/\D/g, "").slice(0, 8);
   if (!digits) return "";
 
-  if (!cleaned.includes("/")) {
+  if (!cleaned.includes("-")) {
     if (digits.length <= 2) return digits;
-    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
   }
 
-  // 6. If user entered some slashes, normalize parts
-  const parts = cleaned.split("/");
+  // 6. If user entered some hyphens, normalize parts
+  const parts = cleaned.split("-");
   if (parts.length === 2) {
     const m = parts[0].slice(0, 2);
     const d = parts[1].slice(0, 2);
     if (parts[1].length > 2) {
       const y = parts[1].slice(2, 6);
-      return `${m}/${d}/${y}`;
+      return `${m}-${d}-${y}`;
     }
-    return `${m}/${d}`;
+    return `${m}-${d}`;
   }
 
   if (parts.length >= 3) {
     const m = parts[0].slice(0, 2);
     const d = parts[1].slice(0, 2);
     const y = parts[2].slice(0, 4);
-    return `${m}/${d}/${y}`;
+    return `${m}-${d}-${y}`;
   }
 
   return cleaned.slice(0, 10);
@@ -163,12 +197,12 @@ export function validateDateString(
     return { isValid: true, date: null, error: null };
   }
 
-  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const match = trimmed.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
   if (!match) {
     return {
       isValid: false,
       date: null,
-      error: "Please enter a complete date (MM/DD/YYYY).",
+      error: "Please enter a complete date (MM-DD-YYYY).",
     };
   }
 
@@ -290,7 +324,7 @@ export function DatePickerInput({
   onChangeString,
   onBlur,
   onValidationError,
-  placeholder = "MM/DD/YYYY",
+  placeholder = "MM-DD-YYYY",
   disabled = false,
   required = false,
   isDob = false,
@@ -380,8 +414,8 @@ export function DatePickerInput({
       return;
     }
 
-    // 2. Complete date with 4-digit year (e.g. MM/DD/YYYY or M/D/YYYY)
-    const isComplete = /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(formatted.trim());
+    // 2. Complete date with 4-digit year (e.g. MM-DD-YYYY or MM/DD/YYYY)
+    const isComplete = /^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(formatted.trim());
     if (isComplete) {
       const validation = validateDateString(formatted, {
         isDob,
@@ -432,9 +466,9 @@ export function DatePickerInput({
       return;
     }
 
-    const isComplete = /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed);
+    const isComplete = /^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(trimmed);
     if (!isComplete) {
-      const errMsg = "Please enter a complete date (MM/DD/YYYY).";
+      const errMsg = "Please enter a complete date (MM-DD-YYYY).";
       setLocalError(errMsg);
       onChange?.(null);
       onChangeString?.("");

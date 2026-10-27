@@ -24,7 +24,7 @@ import toast from "react-hot-toast";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, differenceInDays } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useContract,
@@ -78,7 +78,7 @@ const formatAnniversary = (anniversaryDate?: string | null) => {
   }
 
   const daysDiff = differenceInDays(thisYearAnniversary, now);
-  const formattedDate = format(thisYearAnniversary, "yyyy-MM-dd");
+  const formattedDate = formatDateDisplay(thisYearAnniversary);
 
   return `${formattedDate} (${daysDiff > 0 ? 'in ' : ''}${Math.abs(daysDiff)} days)`;
 };
@@ -527,7 +527,7 @@ export default function ContractDetailsPage() {
                 Issue date
               </span>
               <span className="text-white font-normal">
-                {contract.startDate ? format(new Date(contract.startDate), "yyyy-MM-dd") : "N/A"}
+                {formatDateDisplay(contract.startDate)}
               </span>
             </div>
 
@@ -547,7 +547,7 @@ export default function ContractDetailsPage() {
                 Out of surrender date
               </span>
               <span className="text-white font-normal">
-                {contract.outOfSurrenderDate ? format(new Date(contract.outOfSurrenderDate), "yyyy-MM-dd") : "N/A"}
+                {formatDateDisplay(contract.outOfSurrenderDate)}
               </span>
             </div>
 
@@ -557,7 +557,7 @@ export default function ContractDetailsPage() {
                 Maturity date
               </span>
               <span className="text-white font-normal">
-                {contract.maturityDate ? format(new Date(contract.maturityDate), "yyyy-MM-dd") : "N/A"}
+                {formatDateDisplay(contract.maturityDate)}
               </span>
             </div>
 
@@ -579,7 +579,7 @@ export default function ContractDetailsPage() {
                 Annuitant DOB
               </span>
               <span className="text-white font-normal">
-                {contract.annuitantDob ? format(new Date(contract.annuitantDob), "yyyy-MM-dd") : "N/A"}
+                {formatDateDisplay(contract.annuitantDob)}
               </span>
             </div>
 
@@ -761,7 +761,7 @@ export default function ContractDetailsPage() {
                     <p className="text-xs sm:text-sm text-white font-normal break-words break-all [overflow-wrap:anywhere] whitespace-pre-wrap">
                       {note.body}
                     </p>
-                    <span className="text-[11px] text-[#919191]">{format(new Date(note.createdAt), "MMM d, yyyy h:mm a")}</span>
+                    <span className="text-[11px] text-[#919191]">{formatDateDisplay(note.createdAt)} {format(new Date(note.createdAt), "h:mm a")}</span>
                   </div>
                   <button
                     onClick={() =>

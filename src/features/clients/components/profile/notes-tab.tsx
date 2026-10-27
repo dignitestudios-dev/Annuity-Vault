@@ -10,6 +10,7 @@ import TablePagination from "@/components/shared/table-pagination";
 import { useAddClientNote, useArchiveClientNote } from "../../api/clients.service";
 import { ClientNote } from "../../types/clients.types";
 import { Loader } from "@/components/ui/loader";
+import { formatDateDisplay } from "@/lib/utils";
 
 interface NotesTabProps {
   clientId: string;
@@ -125,13 +126,7 @@ export default function NotesTab({ clientId, notes }: NotesTabProps) {
                       {noteText}
                     </p>
                     <span className="text-xs text-[#919191]">
-                      {dateStr
-                        ? new Date(dateStr).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })
-                        : "--"}
+                      {dateStr ? formatDateDisplay(dateStr, "--") : "--"}
                     </span>
                   </div>
                 </div>

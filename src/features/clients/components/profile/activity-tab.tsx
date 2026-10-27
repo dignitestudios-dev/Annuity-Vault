@@ -22,7 +22,7 @@ import { Loader } from "@/components/ui/loader";
 import { EmptyState } from "@/components/shared/empty-state";
 import TablePagination from "@/components/shared/table-pagination";
 import { useAuditLogs, AuditLogItem, useAuditLogsById } from "@/features/activity/api/activity.service";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 
 // Standard Field Labels for accurate human-readable display
 const FIELD_LABELS: Record<string, string> = {
@@ -82,14 +82,7 @@ const formatFieldValue = (val: any): string => {
   if (typeof val === "string") {
     // Check if ISO date
     if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/.test(val)) {
-      try {
-        const d = new Date(val);
-        if (!isNaN(d.getTime())) {
-          return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-        }
-      } catch {
-        // fall back to string
-      }
+      return formatDateDisplay(val);
     }
     return val;
   }
@@ -284,11 +277,7 @@ export default function ActivityTab({ clientId, clientName }: ActivityTabProps) 
     try {
       const date = new Date(dateString);
       return {
-        date: date.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "2-digit",
-        }),
+        date: formatDateDisplay(dateString),
         time: date.toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",

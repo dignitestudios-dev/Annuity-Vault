@@ -12,7 +12,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 
 type StatusType = "Archived" | "Active" | "Inactive" | "Prospect";
 
@@ -148,7 +148,7 @@ export default function ClientsTableCard() {
 
                   {/* Created */}
                   <TableCell className="px-6 py-3.5 text-sm text-white font-sans">
-                    {new Date(client.createdAt || client.lastContact).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                    {formatDateDisplay(client.createdAt || client.lastContact)}
                   </TableCell>
                 </TableRow>
                 );

@@ -427,7 +427,7 @@ export default function EditClientDialog({
                     error={fieldState.error?.message}
                     isDob
                     label="Date of Birth"
-                    placeholder="MM/DD/YYYY"
+                    placeholder="MM-DD-YYYY"
                     required
                   />
                 )}

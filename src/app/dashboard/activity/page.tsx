@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 
 import { useAuditLogs, exportAuditLogs, AuditLogItem } from "@/features/activity/api/activity.service";
 
@@ -296,11 +296,7 @@ export default function ActivityAuditPage() {
                       <TableCell className="px-6 py-2.5 whitespace-nowrap">
   <div className="flex flex-col gap-0.5">
     <span className="text-xs sm:text-sm font-medium text-white">
-      {new Date(log.createdAt).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      })}
+      {formatDateDisplay(log.createdAt)}
     </span>
 
     <span className="text-[11px] text-[#919191]">

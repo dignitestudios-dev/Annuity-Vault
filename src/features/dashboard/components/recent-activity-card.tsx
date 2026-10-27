@@ -6,6 +6,7 @@ import { useDashboardSummary } from "@/features/dashboard/api/dashboard.service"
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Activity } from "lucide-react";
+import { formatDateDisplay } from "@/lib/utils";
 
 export default function RecentActivityCard() {
   const { data, isLoading } = useDashboardSummary();
@@ -43,7 +44,7 @@ export default function RecentActivityCard() {
                 {activity.action} in {activity.module || activity.entityType}
               </span>
               <span className="text-xs font-normal text-[#8C8C8C] font-sans">
-                {new Date(activity.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })} by {activity.performedBy?.name || activity.userName || "Unknown"}
+                {formatDateDisplay(activity.createdAt)} by {activity.performedBy?.name || activity.userName || "Unknown"}
               </span>
             </div>
           ))

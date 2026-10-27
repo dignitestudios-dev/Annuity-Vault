@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axios";
 import { Client, ClientsResponse, CreateClientDTO, UpdateClientDTO } from "../types/clients.types";
+import { formatDateDisplay } from "@/lib/utils";
 
 export interface GetClientsParams {
   search?: string;
@@ -196,7 +197,7 @@ export const exportClients = async (
         c.state || "N/A",
         c.zip || c.zipCode || "N/A",
         c.status || "N/A",
-        new Date(c.createdAt).toLocaleDateString(),
+        formatDateDisplay(c.createdAt),
         c.contractsCount || 0
       ].map(field => `"${(field || "").toString().replace(/"/g, '""')}"`).join(","))
     ].join("\n");
@@ -226,7 +227,7 @@ export const exportClients = async (
       c.state || "N/A",
       c.zip || c.zipCode || "N/A",
       c.status || "N/A",
-      new Date(c.createdAt).toLocaleDateString(),
+      formatDateDisplay(c.createdAt),
       (c.contractsCount || 0).toString()
     ]);
 

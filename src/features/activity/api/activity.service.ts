@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axios";
+import { formatDateDisplay } from "@/lib/utils";
 
 export interface AuditLogUser {
   _id: string;
@@ -84,7 +85,7 @@ export const exportAuditLogs = async (format: "pdf" | "csv", search?: string, ac
         const user = log.performedBy;
         const userName = user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()) : "System";
         return [
-          new Date(log.createdAt).toLocaleString(),
+          `${formatDateDisplay(log.createdAt)} ${new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
           userName,
           log.action,
           log.module,
@@ -115,7 +116,7 @@ export const exportAuditLogs = async (format: "pdf" | "csv", search?: string, ac
       const user = log.performedBy;
       const userName = user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()) : "System";
       return [
-        new Date(log.createdAt).toLocaleString(),
+        `${formatDateDisplay(log.createdAt)} ${new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
         userName,
         log.action,
         log.module,

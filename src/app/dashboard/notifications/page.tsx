@@ -7,7 +7,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Calendar, CheckSquare, Info, Check, Bell } from "lucide-react";
 import SuccessModal from "@/components/shared/success-modal";
 import { EmptyState } from "@/components/shared/empty-state";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 
 import { 
   useNotifications, 
@@ -209,7 +209,7 @@ function NotificationsContent() {
                     <span className="text-white font-medium">{item.relatedName}</span>
                   )}
                   <span className="text-[#919191] font-mono">
-                    {new Date(item.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' })}
+                    {formatDateDisplay(item.createdAt)}
                   </span>
                 </div>
               </div>

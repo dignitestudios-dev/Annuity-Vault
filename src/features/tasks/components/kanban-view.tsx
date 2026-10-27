@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Loader } from "@/components/ui/loader";
 import { Task } from "../types/tasks.types";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 
 export type KanbanStatus = "To Do" | "In Progress" | "Done";
 
@@ -232,12 +232,8 @@ export default function KanbanView({
                         </p>
 
                         {/* Due Date */}
-                        {/* Due Date */}
                         <p className="text-[11px] text-[#919191] font-normal mt-2">
-                          Due{" "}
-                          {task.dueDate
-                            ? format(new Date(task.dueDate), "MMM dd, yyyy")
-                            : "N/A"}
+                          Due {formatDateDisplay(task.dueDate)}
                         </p>
 
                         {/* Delete Action - Visually separated from Edit */}

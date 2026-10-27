@@ -37,7 +37,7 @@ import NewContractDialog from "@/features/contracts/components/new-contract-dial
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
 import { EmptyState } from "@/components/shared/empty-state";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 import { useContracts, exportContracts } from "@/features/contracts/api/contracts.service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, differenceInDays } from "date-fns";
@@ -133,7 +133,7 @@ const formatAnniversary = (dateString?: string | null) => {
   }
 
   const daysDiff = differenceInDays(thisYearAnniversary, now);
-  const formattedDate = format(thisYearAnniversary, "yyyy-MM-dd");
+  const formattedDate = formatDateDisplay(thisYearAnniversary);
 
   return `${formattedDate} (${daysDiff}d)`;
 };
@@ -891,14 +891,14 @@ export default function ContractsPage() {
                       <DatePickerInput
                         value={anniversaryFrom}
                         onChangeString={(val) => setAnniversaryFrom(val)}
-                        placeholder="From: MM/DD/YYYY"
+                        placeholder="From: MM-DD-YYYY"
                         className="rounded-[10px]"
                         showErrorText={false}
                       />
                       <DatePickerInput
                         value={anniversaryTo}
                         onChangeString={(val) => setAnniversaryTo(val)}
-                        placeholder="To: MM/DD/YYYY"
+                        placeholder="To: MM-DD-YYYY"
                         className="rounded-[10px]"
                         showErrorText={false}
                       />
@@ -912,14 +912,14 @@ export default function ContractsPage() {
                       <DatePickerInput
                         value={outOfSurrenderFrom}
                         onChangeString={(val) => setOutOfSurrenderFrom(val)}
-                        placeholder="From: MM/DD/YYYY"
+                        placeholder="From: MM-DD-YYYY"
                         className="rounded-[10px]"
                         showErrorText={false}
                       />
                       <DatePickerInput
                         value={outOfSurrenderTo}
                         onChangeString={(val) => setOutOfSurrenderTo(val)}
-                        placeholder="To: MM/DD/YYYY"
+                        placeholder="To: MM-DD-YYYY"
                         className="rounded-[10px]"
                         showErrorText={false}
                       />
@@ -933,14 +933,14 @@ export default function ContractsPage() {
                       <DatePickerInput
                         value={maturityFrom}
                         onChangeString={(val) => setMaturityFrom(val)}
-                        placeholder="From: MM/DD/YYYY"
+                        placeholder="From: MM-DD-YYYY"
                         className="rounded-[10px]"
                         showErrorText={false}
                       />
                       <DatePickerInput
                         value={maturityTo}
                         onChangeString={(val) => setMaturityTo(val)}
-                        placeholder="To: MM/DD/YYYY"
+                        placeholder="To: MM-DD-YYYY"
                         className="rounded-[10px]"
                         showErrorText={false}
                       />
@@ -954,7 +954,7 @@ export default function ContractsPage() {
                       <DatePickerInput
                         value={annuitantDobFrom}
                         onChangeString={(val) => setAnnuitantDobFrom(val)}
-                        placeholder="From: MM/DD/YYYY"
+                        placeholder="From: MM-DD-YYYY"
                         className="rounded-[10px]"
                         showErrorText={false}
                         isDob
@@ -963,7 +963,7 @@ export default function ContractsPage() {
                       <DatePickerInput
                         value={annuitantDobTo}
                         onChangeString={(val) => setAnnuitantDobTo(val)}
-                        placeholder="To: MM/DD/YYYY"
+                        placeholder="To: MM-DD-YYYY"
                         className="rounded-[10px]"
                         showErrorText={false}
                         isDob

@@ -385,7 +385,7 @@ export default function NewClientDialog({
                     error={fieldState.error?.message}
                     isDob
                     label="Date of Birth"
-                    placeholder="MM/DD/YYYY"
+                    placeholder="MM-DD-YYYY"
                     required
                   />
                 )}

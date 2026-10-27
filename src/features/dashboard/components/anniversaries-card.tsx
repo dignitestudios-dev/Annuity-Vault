@@ -8,6 +8,7 @@ import { useDashboardSummary } from "@/features/dashboard/api/dashboard.service"
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Calendar } from "lucide-react";
+import { formatDateDisplay } from "@/lib/utils";
 function calculateDaysDifference(dateString: string) {
   const target = new Date(dateString);
   const now = new Date();
@@ -74,7 +75,7 @@ export default function AnniversariesCard() {
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="text-sm font-medium text-white font-sans leading-tight">
-                    {new Date(item.anniversaryDate).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                    {formatDateDisplay(item.anniversaryDate)}
                   </span>
                   <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5">
                     {countdown}

@@ -1,6 +1,7 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axios";
 import { TasksQuery, TasksResponse, TaskResponse, Task, CreateTaskDTO, UpdateTaskDTO } from "../types/tasks.types";
+import { formatDateDisplay } from "@/lib/utils";
 
 export const tasksKeys = {
   all: ["tasks"] as const,
@@ -177,7 +178,7 @@ export const exportTasks = async (format: "pdf" | "csv", search?: string, status
         return [
           t.title || "N/A",
           clientName || "N/A",
-          t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "N/A",
+          t.dueDate ? formatDateDisplay(t.dueDate) : "N/A",
           t.priority || "N/A",
           t.status || "N/A",
           t.description || "N/A"
@@ -207,7 +208,7 @@ export const exportTasks = async (format: "pdf" | "csv", search?: string, status
       return [
         t.title || "N/A",
         clientName || "N/A",
-        t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "N/A",
+        t.dueDate ? formatDateDisplay(t.dueDate) : "N/A",
         t.priority || "N/A",
         t.status || "N/A",
         t.description || "N/A"

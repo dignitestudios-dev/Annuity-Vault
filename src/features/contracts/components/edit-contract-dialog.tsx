@@ -887,7 +887,7 @@ export default function EditContractDialog({
                       onBlur={field.onBlur}
                       onValidationError={(err) => handleDateValidationError("startDate", err)}
                       error={fieldState.error?.message}
-                      placeholder="MM/DD/YYYY"
+                      placeholder="MM-DD-YYYY"
                     />
                   )}
                 />
@@ -906,7 +906,7 @@ export default function EditContractDialog({
                       onBlur={field.onBlur}
                       onValidationError={(err) => handleDateValidationError("anniversaryDate", err)}
                       error={fieldState.error?.message}
-                      placeholder="MM/DD/YYYY"
+                      placeholder="MM-DD-YYYY"
                     />
                   )}
                 />
@@ -925,7 +925,7 @@ export default function EditContractDialog({
                       onBlur={field.onBlur}
                       onValidationError={(err) => handleDateValidationError("outOfSurrenderDate", err)}
                       error={fieldState.error?.message}
-                      placeholder="MM/DD/YYYY"
+                      placeholder="MM-DD-YYYY"
                     />
                   )}
                 />
@@ -944,7 +944,7 @@ export default function EditContractDialog({
                       onBlur={field.onBlur}
                       onValidationError={(err) => handleDateValidationError("maturityDate", err)}
                       error={fieldState.error?.message}
-                      placeholder="MM/DD/YYYY"
+                      placeholder="MM-DD-YYYY"
                     />
                   )}
                 />
@@ -1036,7 +1036,7 @@ export default function EditContractDialog({
                         error={fieldState.error?.message}
                         isDob
                         label="Annuitant DOB"
-                        placeholder="MM/DD/YYYY"
+                        placeholder="MM-DD-YYYY"
                         disabled={annuitantNotOwner === "no"}
                         required={annuitantNotOwner === "yes"}
                       />

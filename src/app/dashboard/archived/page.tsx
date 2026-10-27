@@ -10,7 +10,7 @@ import RestoreModal from "@/components/shared/restore-modal";
 import SuccessModal from "@/components/shared/success-modal";
 import TablePagination from "@/components/shared/table-pagination";
 import { EmptyState } from "@/components/shared/empty-state";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 
 import { 
   useArchived, 
@@ -209,7 +209,7 @@ function ArchivedContent() {
                   </h3>
                   <p className="text-[#919191] text-xs sm:text-sm">{item.subtitle}</p>
                   <p className="text-[#919191] text-xs font-normal mt-0.5">
-                    Deleted {new Date(item.archivedAt).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                    Deleted {formatDateDisplay(item.archivedAt)}
                   </p>
                 </div>
 

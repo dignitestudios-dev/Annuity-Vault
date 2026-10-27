@@ -9,6 +9,7 @@ import ArchiveModal from "@/components/shared/archive-modal";
 import { useUploadClientDocument, useArchiveClientDocument } from "../../api/clients.service";
 import { ClientDocument } from "../../types/clients.types";
 import { Loader } from "@/components/ui/loader";
+import { formatDateDisplay } from "@/lib/utils";
 
 interface DocumentsTabProps {
   clientId: string;
@@ -143,9 +144,7 @@ export default function DocumentsTab({ clientId, documents }: DocumentsTabProps)
                 (typeof docUrl === "string" && docUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null) ||
                 (typeof docType === "string" && docType.toLowerCase().includes("image"));
               const docId = doc?._id || (doc as any)?.id || `doc-${index}`;
-              const formattedDate = doc?.createdAt
-                ? new Date(doc.createdAt).toLocaleDateString()
-                : "N/A";
+              const formattedDate = formatDateDisplay(doc?.createdAt);
 
               return (
                 <div

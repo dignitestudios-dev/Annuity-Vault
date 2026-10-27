@@ -8,6 +8,7 @@ import { useDashboardSummary } from "@/features/dashboard/api/dashboard.service"
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CheckSquare } from "lucide-react";
+import { formatDateDisplay } from "@/lib/utils";
 export default function PendingTasksCard() {
   const { data, isLoading } = useDashboardSummary();
 
@@ -53,7 +54,7 @@ export default function PendingTasksCard() {
                   {task.title} — {task.client?.firstName ? `${task.client.firstName} ${task.client.lastName}` : task.client?.name || task.clientName || "Unknown Client"}
                 </span>
                 <span className="text-xs font-normal text-[#8C8C8C] font-sans mt-0.5">
-                  Due {new Date(task.dueDate).toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                  Due {formatDateDisplay(task.dueDate)}
                 </span>
               </div>
             </div>

@@ -25,6 +25,7 @@ import NewTaskDialog from "@/features/tasks/components/new-task-dialog";
 import { Task } from "@/features/tasks/types/tasks.types";
 import { useInfiniteTasks, useUpdateTask, useDeleteTask, exportTasks } from "@/features/tasks/api/tasks.service";
 import { format, parseISO } from "date-fns";
+import { formatDateDisplay } from "@/lib/utils";
 import EditTaskDialog from "@/features/tasks/components/edit-task-dialog";
 import TaskDetailsDialog from "@/features/tasks/components/task-details-dialog";
 import DateTasksDialog from "@/features/tasks/components/date-tasks-dialog";
@@ -577,7 +578,7 @@ function TasksContent() {
                     </TableCell>
 
                     <TableCell className="px-6 py-2.5 text-xs sm:text-sm text-white font-normal whitespace-nowrap">
-                      {task.dueDate ? format(new Date(task.dueDate), "MMM dd, yyyy") : "N/A"}
+                      {formatDateDisplay(task.dueDate)}
                     </TableCell>
 
                     <TableCell className="px-6 py-2.5 whitespace-nowrap">

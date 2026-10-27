@@ -27,7 +27,7 @@ import NotesTab from "@/features/clients/components/profile/notes-tab";
 import DocumentsTab from "@/features/clients/components/profile/documents-tab";
 import TasksTab from "@/features/clients/components/profile/tasks-tab";
 import ActivityTab from "@/features/clients/components/profile/activity-tab";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDisplay } from "@/lib/utils";
 import {
   useClient,
   useDeleteClient,
@@ -196,11 +196,7 @@ function ClientDetailsContent() {
       statusStyle = "bg-[#39BDF6] text-white border-0";
 
     const date = new Date(c.anniversaryDate);
-    const dateStr = date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    const dateStr = formatDateDisplay(c.anniversaryDate);
     const diff = Math.ceil(
       (date.getTime() - new Date().getTime()) / (1000 * 3600 * 24),
     );
@@ -233,13 +229,7 @@ function ClientDetailsContent() {
       statusStyle = "bg-[#FF9D00] text-black border-0 font-semibold";
     if (t.status === "Done") statusStyle = "bg-[#42CD7F] text-white border-0";
 
-    const dateStr = t.dueDate
-      ? new Date(t.dueDate).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      })
-      : "No Date";
+    const dateStr = formatDateDisplay(t.dueDate, "No Date");
 
     return {
       id: t._id,
@@ -314,24 +304,8 @@ function ClientDetailsContent() {
       {/* Client Information Card */}
       <ClientInfoCard
         name={fullName || "Unknown Client"}
-        clientSince={
-          client.createdAt
-            ? new Date(client.createdAt).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-            })
-            : "--"
-        }
-        created={
-          client.createdAt
-            ? new Date(client.createdAt).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-            })
-            : "--"
-        }
+        clientSince={formatDateDisplay(client.createdAt, "--")}
+        created={formatDateDisplay(client.createdAt, "--")}
         email={client.email || "--"}
         phone={client.phone || "--"}
         address={client.address || "--"}
@@ -340,7 +314,7 @@ function ClientDetailsContent() {
         zip={client.zip || client.zipCode}
         dob={
           client.dateOfBirth
-            ? `DOB ${new Date(client.dateOfBirth).toLocaleDateString("en-US", { year: "numeric", month: "2-digit", day: "2-digit" })}`
+            ? `DOB ${formatDateDisplay(client.dateOfBirth)}`
             : "--"
         }
       />
